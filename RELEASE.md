@@ -37,6 +37,11 @@ A `feat` produces a minor bump, a `fix` a patch bump. A breaking change marker
 (`!` or `BREAKING CHANGE:`) produces a major bump. Scope is optional. Write the
 body for the reader of the release notes, not for the diff.
 
+While the major version is `0`, the conventional preset applies pre-1.0 rules:
+a feature is a patch bump and a breaking change is a minor bump. This is the
+tool's default and the workflow does not override it. Force a specific version
+with `--release-as` only when a target version is chosen deliberately.
+
 ## Preconditions
 
 1. The branch is the one that should carry the release, normally `main`.
