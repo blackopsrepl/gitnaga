@@ -11,6 +11,8 @@ namespace GitNaga {
 
 void CommitGraphItem::hoverMoveEvent(QHoverEvent *event)
 {
+    if (m_dragging)
+        return;
     const int row = rowAt(event->position().y());
     if (row == m_hoveredRow)
         return;

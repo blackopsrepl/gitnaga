@@ -197,10 +197,10 @@ void CommitGraphItem::ensureVisible(int row)
 int CommitGraphItem::rowAt(qreal localY) const
 {
     const qreal rowHeight = effectiveRowHeight();
-    if (rowHeight <= 0.0 || m_rows.isEmpty())
+    if (rowHeight <= 0.0 || m_rows.isEmpty() || localY < 0.0)
         return -1;
-    return std::clamp(static_cast<int>(std::floor((m_contentY + localY) / rowHeight)), 0,
-                      static_cast<int>(m_rows.size()) - 1);
+    const int row = static_cast<int>(std::floor((m_contentY + localY) / rowHeight));
+    return row >= 0 && row < m_rows.size() ? row : -1;
 }
 
 QString CommitGraphItem::oidAt(int row) const
