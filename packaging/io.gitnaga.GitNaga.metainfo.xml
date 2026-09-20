@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.gitnaga.GitNaga</id>
+  <name>GitNaga</name>
+  <summary>Native graphical Git client</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>GitNaga is a native Linux Git client centered on a clear, interactive commit graph.</p>
+  </description>
+  <launchable type="desktop-id">io.gitnaga.GitNaga.desktop</launchable>
+  <provides>
+    <binary>gitnaga</binary>
+  </provides>
+  <url type="homepage">https://github.com/gitnaga/gitnaga</url>
+</component>

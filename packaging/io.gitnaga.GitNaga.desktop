@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=GitNaga
+Comment=Native graphical Git client
+Exec=gitnaga %F
+Icon=io.gitnaga.GitNaga
+Terminal=false
+Categories=Development;RevisionControl;
+MimeType=inode/directory;
+StartupNotify=true
