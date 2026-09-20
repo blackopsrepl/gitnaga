@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.6](https://github.com/blackopsrepl/gitnaga/compare/v0.1.5...v0.1.6) (2026-09-20)
+
+### Bug Fixes
+
+* **ci:** assert the C++23 language mode, not one compiler's macro value ([a7c005a](https://github.com/blackopsrepl/gitnaga/commit/a7c005aa9a715b0d4a7bd6bcc24979f4fffb2f5b))
+* **ci:** quote the lint command so the workflow file parses ([26a53c3](https://github.com/blackopsrepl/gitnaga/commit/26a53c3114a3c8141cdd8214e2543cd72b64c608))
+
 ## [0.1.5](https://github.com/blackopsrepl/gitnaga/compare/v0.1.4...v0.1.5) (2026-09-20)
 
 ### Bug Fixes

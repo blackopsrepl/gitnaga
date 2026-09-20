@@ -1,1 +1,1 @@
-set(GITNAGA_VERSION "0.1.5")
+set(GITNAGA_VERSION "0.1.6")
