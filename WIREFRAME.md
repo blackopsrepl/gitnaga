@@ -187,54 +187,80 @@ overlaid to the right of the lane column.
 
 ### 5.2 Geometry (base values at zoom 1.0)
 
+Rows are dense and nodes are sized to the row, not to the lane.
+
 | Quantity | Value | Source |
 |----------|-------|--------|
-| Row height | `52 * zoom` | `GraphStyle.rowHeight` |
+| Row height | `36 * zoom` | `GraphStyle.rowHeight` |
 | Lane spacing | `22 * zoom` | `GraphStyle.laneSpacing` |
-| Left padding | `28` (fixed) | `GraphStyle.leftPadding` |
-| Lane x | `28 + lane * 22 * zoom` | `laneX()` |
-| Node radius | `clamp(6.5 * zoom, 3.5, 13)` | `paint()` |
-| Lane area width | `28 + (maxLane + 1) * 22 * zoom` | `laneAreaWidth()` |
+| Left padding | `26` (fixed) | `GraphStyle.leftPadding` |
+| Lane x | `26 + lane * 22 * zoom` | `laneX()` |
+| Lane area width | `26 + (maxLane + 1) * 22 * zoom` | `laneAreaWidth()` |
 | Zoom range | `0.45 .. 2.8` | `commit_graph_item.cpp` |
-| Edge shadow pen | `3.8 * zoom`, colour `#04060b` alpha 170 | `paintEdges()` |
-| Edge pen | `2.2 * zoom`, lane-colour gradient | `paintEdges()` |
-| Row band alpha | idle `30`, hover `44`, selected `64` | `paint()` |
-| Merge ring | radius `+2.6 * zoom`, pen `2.2 * zoom` | `paintNode()` |
-| Branch-tip ring | radius `+4.8 * zoom`, pen `1.2 * zoom` | `paintNode()` |
-| Selected rings | radius `+3.0` white, `+5.6` accent | `paintNode()` |
-| Hover ring | radius `+3.0 * zoom`, pen `1.5 * zoom` | `paintNode()` |
+| Edge shadow pen | `3.2 * zoom`, colour `#04060b` alpha 110 | `paintEdges()` |
+| Edge pen | `2.2 * zoom`, lane-colour gradient, round joins | `paintEdges()` |
+| Node disc radius | `clamp(6.0 * zoom, 3.0, 12.0)`, merge `* 1.2` | `paintNode()` |
+| Node ring | at disc `+2.4 * zoom`, pen `1.8 * zoom` | `paintNode()` |
+| Row band alpha | idle `26`, hover `38`, selected `56`, dimmed `10` | `paint()` |
+| Dim factor | unrelated commits at 50% alpha | `paintEdges()`, `paintNode()` |
 
-### 5.3 Paint order (back to front)
+### 5.2.1 Edge routing
+
+Edges use **elbow routing**, not a full-row S-curve. From the child node the
+path holds vertical, takes a rounded quarter turn onto the row boundary, runs
+horizontally, takes a second rounded turn, then holds vertical into the parent
+node. The turn radius is `min(|dx| / 2, rowHeight * 0.42, 12 * zoom)`.
+
+This is what keeps a lane change reading as a clean branch rather than a
+diagonal streak. `edgesFor()` samples the routed polyline by arc length so the
+point count stays stable and evenly spaced.
+
+### 5.3 Highlighting
+
+Hovering or selecting a commit computes its **ancestry** by walking parents
+through an oid to row map. Commits that are not ancestors of the active commit
+are drawn at 50% alpha; the active commit and its ancestry stay fully opaque.
+This is the "trace this line of history" behaviour, and it is the reason
+hovering is useful: the branch you are inspecting comes forward and everything
+else recedes. Setting alpha floors is unnecessary
+because the dim is a single constant in `commit_graph_paint.cpp`.
+
+### 5.4 Paint order (back to front)
 
 1. Per-row branch band, full pane width, colour = lane colour of the row.
 2. Edges, each with a dark shadow pass then a gradient main pass.
-3. Commit nodes: radial gradient fill, dark outline, optional merge ring,
-   optional branch-tip ring, optional hover ring, optional selection rings.
+3. Commit nodes: solid lane-colour disc, hairline dark rim, one coloured ring
+   with a background gap, plus a soft glow on the selected node.
 
-### 5.4 Label overlay
+> The disc is a **solid saturated** lane colour. Earlier revisions used a light
+> radial gradient with a specular highlight, which read as a pale bubble; the
+> solid disc with a crisp ring is the intended look.
+
+### 5.5 Label overlay
 
 A `ListView` with `interactive: false`, `enabled: false`, `contentY` bound to
 `graph.contentY`, so it never steals pointer events. `x = min(width - 150,
 laneWidth + 16)`.
 
-Delegate (`height = graph.effectiveRowHeight`):
+Delegate (`height = graph.effectiveRowHeight`, 11 px subject over 9 px meta,
+`spacing: 1`):
 
 ```
 Row 1:  <subject, elide right, width = parent - chips - 8>  [chip][chip][chip]
 Row 2:  <shortOid>  <author>  ·  <relativeDate>
 ```
 
-Chips show at most 3 refs. Chip colours: local `#1c2140` with border `#5b4bb8`,
+Chips are 14 px tall with 9 px text and show at most 3 refs. Chip colours: local `#1c2140` with border `#5b4bb8`,
 remote `#262d3d` with border `#3a4560`, tag `#3a2f17` with border `#7a5f1f`.
 `shortOid` uses `#a78bfa`; author and date use `#78839a`. The selected row uses
 white subject text and `Font.DemiBold`.
 
-### 5.5 Pointer model
+### 5.6 Pointer model
 
 | Gesture | Effect |
 |---------|--------|
-| Hover | Set `hoveredRow`; repaint with the hover band and hover ring |
-| Left click | Emit `commitClicked(row)`; the shell calls `selectCommit(row)` |
+| Hover | Set `hoveredRow`, recompute the ancestry highlight, repaint |
+| Left click | Emit `commitClicked(row)`; the shell calls `selectCommit(row)`, which re-highlights its ancestry |
 | Left drag (> 4 px) | Pan: `contentY = pressContentY - delta` |
 | Wheel | Scroll by one row height per 120 units of `angleDelta` |
 | Ctrl + wheel | Zoom by `pow(1.0015, delta)`, anchored under the cursor |
@@ -356,11 +382,11 @@ Lane palette (`src/graph_palette.hpp`), selected by `lane % 10`:
 
 | Index | Hex | Index | Hex |
 |-------|-----|-------|-----|
-| 0 | `#a78bfa` | 5 | `#22d3ee` |
-| 1 | `#60a5fa` | 6 | `#f472b6` |
-| 2 | `#f87171` | 7 | `#4ade80` |
-| 3 | `#34d399` | 8 | `#fb923c` |
-| 4 | `#fbbf24` | 9 | `#e879f9` |
+| 0 | `#a970ff` | 5 | `#e05252` |
+| 1 | `#3d91f4` | 6 | `#45c5e0` |
+| 2 | `#e350b0` | 7 | `#f07a3d` |
+| 3 | `#4fbf67` | 8 | `#b78af5` |
+| 4 | `#e8c545` | 9 | `#67d9a0` |
 
 Helper derivations: `lighten` mixes toward `#ffffff`, `darken` mixes toward
 `#05070c`, and `withAlpha` only changes the alpha channel.

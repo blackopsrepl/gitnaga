@@ -4,6 +4,8 @@
 #include "graph_geometry.hpp"
 
 #include <QPointF>
+#include <QSet>
+#include <QHash>
 #include <QPointer>
 #include <QQuickPaintedItem>
 
@@ -79,6 +81,7 @@ private:
     int rowAt(qreal localY) const;
     QString oidAt(int row) const;
     void recomputeHeadRow();
+    void recomputeHighlight();
     void clampContent();
     void synchronizeRows();
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
@@ -87,12 +90,15 @@ private:
     QPointer<CommitModel> m_model;
     QVector<Commit> m_rows;
     qreal m_contentY = 0.0;
-    qreal m_baseRowHeight = 52.0;
+    qreal m_baseRowHeight = 36.0;
     qreal m_zoom = 1.0;
     int m_selectedRow = -1;
     int m_hoveredRow = -1;
     int m_maximumLane = 0;
     int m_headRow = -1;
+    int m_highlightRow = -1;
+    QSet<QString> m_highlight;
+    QHash<QString, int> m_rowByOid;
     QString m_headOid;
     bool m_dragging = false;
     QPointF m_pressPosition;

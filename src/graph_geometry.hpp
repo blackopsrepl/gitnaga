@@ -8,7 +8,7 @@
 namespace GitNaga::graph {
 
 struct GraphStyle {
-    qreal rowHeight = 52.0;
+    qreal rowHeight = 36.0;
     qreal laneSpacing = 22.0;
     qreal leftPadding = 28.0;
 };

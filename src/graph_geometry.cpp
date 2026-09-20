@@ -4,6 +4,59 @@
 #include <cmath>
 
 namespace GitNaga::graph {
+namespace {
+
+struct Sample {
+    QPointF point;
+    qreal length = 0.0;
+};
+
+void appendQuad(QVector<Sample> &out, const QPointF &p0, const QPointF &control, const QPointF &p1, int steps)
+{
+    qreal previousLength = out.isEmpty() ? 0.0 : out.last().length;
+    for (int step = 1; step <= steps; ++step) {
+        const qreal t = static_cast<qreal>(step) / static_cast<qreal>(steps);
+        const qreal inverse = 1.0 - t;
+        const QPointF point = inverse * inverse * p0 + 2.0 * inverse * t * control + t * t * p1;
+        const QPointF delta = point - out.last().point;
+        previousLength += std::hypot(delta.x(), delta.y());
+        out.append({ point, previousLength });
+    }
+}
+
+void appendLine(QVector<Sample> &out, const QPointF &to, int steps)
+{
+    const QPointF from = out.last().point;
+    qreal length = out.last().length;
+    for (int step = 1; step <= steps; ++step) {
+        const qreal t = static_cast<qreal>(step) / static_cast<qreal>(steps);
+        const QPointF point = from + (to - from) * t;
+        length = out.last().length + std::hypot(point.x() - out.last().point.x(), point.y() - out.last().point.y());
+        out.append({ point, length });
+    }
+}
+
+QPointF evaluate(const QVector<Sample> &samples, qreal target)
+{
+    if (samples.isEmpty())
+        return {};
+    const qreal total = samples.last().length;
+    if (total <= 0.0)
+        return samples.last().point;
+    const qreal clamped = std::clamp(target, 0.0, total);
+    for (qsizetype index = 1; index < samples.size(); ++index) {
+        if (samples.at(index).length >= clamped) {
+            const auto &a = samples.at(index - 1);
+            const auto &b = samples.at(index);
+            const qreal span = b.length - a.length;
+            const qreal t = span <= 0.0 ? 0.0 : (clamped - a.length) / span;
+            return a.point + (b.point - a.point) * t;
+        }
+    }
+    return samples.last().point;
+}
+
+} // namespace
 
 qreal laneX(int lane, const GraphStyle &style)
 {
@@ -29,8 +82,8 @@ Node nodeFor(const Commit &commit, int row, qreal contentY, const GraphStyle &st
 QVector<Edge> edgesFor(const Commit &commit, int row, qreal contentY, const GraphStyle &style, int samples)
 {
     QVector<Edge> edges;
-    if (samples < 1)
-        samples = 1;
+    if (samples < 2)
+        samples = 2;
 
     const qreal y0 = rowCenterY(row, contentY, style);
     const qreal y1 = rowCenterY(row + 1, contentY, style);
@@ -42,24 +95,37 @@ QVector<Edge> edgesFor(const Commit &commit, int row, qreal contentY, const Grap
         Edge edge;
         edge.fromLane = segment.fromLane;
         edge.toLane = segment.toLane;
-        edge.path.reserve(samples + 1);
+
+        QVector<Sample> polyline;
+        polyline.append({ QPointF(x0, y0), 0.0 });
 
         if (qFuzzyCompare(x0, x1)) {
-            for (int index = 0; index <= samples; ++index) {
-                const qreal t = static_cast<qreal>(index) / static_cast<qreal>(samples);
-                edge.path.append(QPointF(x0, y0 + (y1 - y0) * t));
-            }
+            appendLine(polyline, QPointF(x0, y1), samples);
         } else {
-            const qreal control = y0 + (y1 - y0) * 0.5;
-            for (int index = 0; index <= samples; ++index) {
-                const qreal t = static_cast<qreal>(index) / static_cast<qreal>(samples);
-                const qreal inverse = 1.0 - t;
-                const qreal x = inverse * inverse * inverse * x0 + 3.0 * inverse * inverse * t * x0
-                                + 3.0 * inverse * t * t * x1 + t * t * t * x1;
-                const qreal y = inverse * inverse * inverse * y0 + 3.0 * inverse * inverse * t * control
-                                + 3.0 * inverse * t * t * control + t * t * t * y1;
-                edge.path.append(QPointF(x, y));
-            }
+            // Elbow routing: hold vertical, rounded turn onto the row boundary,
+            // run horizontally, rounded turn, then hold vertical into the parent.
+            const qreal boundary = (y0 + y1) / 2.0;
+            const qreal dx = x1 - x0;
+            const qreal direction = dx > 0.0 ? 1.0 : -1.0;
+            const qreal room = std::abs(y1 - y0) * 0.42;
+            qreal radius = std::min({ std::abs(dx) / 2.0, room, 12.0 * style.laneSpacing / 22.0 });
+            radius = std::max(radius, 0.5);
+
+            const int cornerSteps = std::max(2, samples / 6);
+
+            appendLine(polyline, QPointF(x0, boundary - radius), std::max(1, samples / 5));
+            appendQuad(polyline, QPointF(x0, boundary - radius), QPointF(x0, boundary),
+                       QPointF(x0 + direction * radius, boundary), cornerSteps);
+            appendLine(polyline, QPointF(x1 - direction * radius, boundary), std::max(1, samples / 5));
+            appendQuad(polyline, QPointF(x1 - direction * radius, boundary), QPointF(x1, boundary),
+                       QPointF(x1, boundary + radius), cornerSteps);
+            appendLine(polyline, QPointF(x1, y1), std::max(1, samples / 5));
+        }
+
+        edge.path.reserve(samples + 1);
+        for (int index = 0; index <= samples; ++index) {
+            const qreal t = static_cast<qreal>(index) / static_cast<qreal>(samples);
+            edge.path.append(evaluate(polyline, polyline.last().length * t));
         }
         edges.append(std::move(edge));
     }

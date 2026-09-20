@@ -11,16 +11,16 @@ namespace GitNaga::graph {
 inline const std::array<QColor, 10> &palette()
 {
     static const std::array<QColor, 10> colors = {
-        QColor(QStringLiteral("#a78bfa")),
-        QColor(QStringLiteral("#60a5fa")),
-        QColor(QStringLiteral("#f87171")),
-        QColor(QStringLiteral("#34d399")),
-        QColor(QStringLiteral("#fbbf24")),
-        QColor(QStringLiteral("#22d3ee")),
-        QColor(QStringLiteral("#f472b6")),
-        QColor(QStringLiteral("#4ade80")),
-        QColor(QStringLiteral("#fb923c")),
-        QColor(QStringLiteral("#e879f9")),
+        QColor(QStringLiteral("#a970ff")),
+        QColor(QStringLiteral("#3d91f4")),
+        QColor(QStringLiteral("#e350b0")),
+        QColor(QStringLiteral("#4fbf67")),
+        QColor(QStringLiteral("#e8c545")),
+        QColor(QStringLiteral("#e05252")),
+        QColor(QStringLiteral("#45c5e0")),
+        QColor(QStringLiteral("#f07a3d")),
+        QColor(QStringLiteral("#b78af5")),
+        QColor(QStringLiteral("#67d9a0")),
     };
     return colors;
 }

@@ -46,7 +46,11 @@ void CommitGraphItem::synchronizeRows()
 {
     m_rows = m_model ? m_model->commits() : QVector<Commit>{};
     m_maximumLane = graph::maximumLane(m_rows);
+    m_rowByOid.clear();
+    for (qsizetype row = 0; row < m_rows.size(); ++row)
+        m_rowByOid.insert(m_rows.at(row).oid, static_cast<int>(row));
     recomputeHeadRow();
+    recomputeHighlight();
     if (m_selectedRow >= m_rows.size())
         setSelectedRow(-1);
     if (m_hoveredRow >= m_rows.size())
@@ -58,7 +62,7 @@ void CommitGraphItem::synchronizeRows()
 
 graph::GraphStyle CommitGraphItem::style() const
 {
-    return graph::GraphStyle{ m_baseRowHeight * m_zoom, 22.0 * m_zoom, 28.0 };
+    return graph::GraphStyle{ m_baseRowHeight * m_zoom, 22.0 * m_zoom, 26.0 };
 }
 
 qreal CommitGraphItem::contentY() const { return m_contentY; }
@@ -108,8 +112,33 @@ void CommitGraphItem::setSelectedRow(int row)
     if (m_selectedRow == normalized)
         return;
     m_selectedRow = normalized;
+    recomputeHighlight();
     emit selectedRowChanged();
     update();
+}
+
+void CommitGraphItem::recomputeHighlight()
+{
+    const int source = m_hoveredRow >= 0 ? m_hoveredRow : m_selectedRow;
+    if (source == m_highlightRow)
+        return;
+    m_highlightRow = source;
+    m_highlight.clear();
+    if (source < 0 || source >= m_rows.size())
+        return;
+
+    QVector<int> pending{ source };
+    m_highlight.insert(m_rows.at(source).oid);
+    while (!pending.isEmpty()) {
+        const int row = pending.takeLast();
+        for (const auto &parent : m_rows.at(row).parents) {
+            const auto found = m_rowByOid.constFind(parent);
+            if (found == m_rowByOid.constEnd() || m_highlight.contains(parent))
+                continue;
+            m_highlight.insert(parent);
+            pending.append(*found);
+        }
+    }
 }
 
 int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
@@ -188,6 +217,7 @@ void CommitGraphItem::hoverMoveEvent(QHoverEvent *event)
     if (row == m_hoveredRow)
         return;
     m_hoveredRow = row;
+    recomputeHighlight();
     emit hoveredRowChanged();
     update();
 }
@@ -198,6 +228,7 @@ void CommitGraphItem::hoverLeaveEvent(QHoverEvent *event)
     if (m_hoveredRow == -1)
         return;
     m_hoveredRow = -1;
+    recomputeHighlight();
     emit hoveredRowChanged();
     update();
 }

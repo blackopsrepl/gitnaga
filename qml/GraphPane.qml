@@ -147,7 +147,7 @@ Rectangle {
                                 text: rowItem.subject
                                 color: rowItem.current ? "#ffffff" : "#dbe1ec"
                                 elide: Text.ElideRight
-                                font.pixelSize: 12
+                                font.pixelSize: 11
                                 font.weight: rowItem.current ? Font.DemiBold : Font.Normal
                             }
                             Row {
@@ -157,7 +157,7 @@ Rectangle {
                                     model: rowItem.refs.slice(0, 3)
                                     delegate: Rectangle {
                                         required property string modelData
-                                        height: 17
+                                        height: 14
                                         width: chipText.implicitWidth + 12
                                         color: modelData.indexOf("# ") === 0 ? "#3a2f17"
                                              : modelData.indexOf("⇄ ") === 0 ? "#262d3d" : "#1c2140"
@@ -168,7 +168,7 @@ Rectangle {
                                             anchors.centerIn: parent
                                             text: parent.modelData
                                             color: "#e6e2ff"
-                                            font.pixelSize: 10
+                                            font.pixelSize: 9
                                         }
                                     }
                                 }
@@ -176,10 +176,10 @@ Rectangle {
                         }
                         Row {
                             spacing: 8
-                            Text { text: rowItem.shortOid; color: "#a78bfa"; font.family: "monospace"; font.pixelSize: 10 }
-                            Text { text: rowItem.author; color: "#78839a"; font.pixelSize: 10 }
+                            Text { text: rowItem.shortOid; color: "#a78bfa"; font.family: "monospace"; font.pixelSize: 9 }
+                            Text { text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
                             Text { text: "·"; color: "#78839a" }
-                            Text { text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 10 }
+                            Text { text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
                         }
                     }
                 }
