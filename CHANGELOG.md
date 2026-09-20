@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.4](https://github.com/blackopsrepl/gitnaga/compare/v0.1.3...v0.1.4) (2026-09-20)
+
+### Features
+
+* **graph:** draw per-author avatars on commit nodes ([e3a0733](https://github.com/blackopsrepl/gitnaga/commit/e3a0733228818de741808e104b7e773947a2340b))
+* **ui:** style the menus and replace the platform folder dialog ([2251ae8](https://github.com/blackopsrepl/gitnaga/commit/2251ae81de697f87bd437e92327d63d57ec89b38))
+
+### Bug Fixes
+
+* **graph:** correct the hover triggers ([d1eb800](https://github.com/blackopsrepl/gitnaga/commit/d1eb800186aeeb5a631aadadee594dfd97b265db))
+
 ## [0.1.3](https://github.com/blackopsrepl/gitnaga/compare/v0.1.2...v0.1.3) (2026-09-20)
 
 ### Bug Fixes
