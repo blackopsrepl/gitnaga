@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
+All notable changes to this project are documented here. Entries are
+generated from conventional commits by commit-and-tag-version; do not edit
+this file by hand.
+
+## [0.1.1](https://github.com/blackopsrepl/gitnaga/compare/v0.1.0...v0.1.1) (2026-09-20)
+
+### Features
+
+* **graph:** rebuild the history view around an interactive commit graph ([cae6919](https://github.com/blackopsrepl/gitnaga/commit/cae6919686580857257696f7e6d90b627f98a395))
+
+### Documentation
+
+* add a methodical interface wireframe ([7c1d0f2](https://github.com/blackopsrepl/gitnaga/commit/7c1d0f2cddfa5261275b3af215d0545d61a42c53))
+* document the graph-centric interface with new screenshots ([7a94712](https://github.com/blackopsrepl/gitnaga/commit/7a94712ee3ca860883c7b5a99a402b3dde249706))
+* **release:** note the pre-1.0 bump rules ([e3c6a59](https://github.com/blackopsrepl/gitnaga/commit/e3c6a594360330f174f0c3bd2bc2974e4c0eb166))
+
+### Build System
+
+* **release:** establish the commit-and-tag-version release workflow ([ec21a66](https://github.com/blackopsrepl/gitnaga/commit/ec21a66a0343f9041ffc7558423763a04d17c9af))
 
 ## 0.1.0 (2026-09-20)
 
