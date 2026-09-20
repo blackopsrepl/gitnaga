@@ -31,14 +31,22 @@ target_compile_options(gitnaga_core PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wsign-conversion>
 )
 
-qt_add_executable(gitnaga src/main.cpp)
+qt_add_executable(gitnaga
+    src/commit_graph_item.cpp
+    src/commit_graph_item.hpp
+    src/main.cpp
+)
 
 qt_add_qml_module(gitnaga
     URI GitNaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/EmptyState.qml
+        qml/HistoryPane.qml
+        qml/InspectorPane.qml
         qml/Main.qml
+        qml/NagaButton.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE
