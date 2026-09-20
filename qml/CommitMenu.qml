@@ -80,9 +80,6 @@ Popup {
     function add(label, run) {
         actions.push({ label: label, run: run, separator: false })
     }
-    function separator() {
-        actions.push({ separator: true })
-    }
     function localBranches(refs) {
         var out = []
         if (!refs)

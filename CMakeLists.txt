@@ -66,7 +66,6 @@ qt_add_qml_module(gitnaga
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
         qml/OpenRepositoryDialog.qml
-        qml/NagaGlyph.qml
         qml/NagaIconButton.qml
         qml/PromptDialog.qml
         qml/ReferencesPane.qml
