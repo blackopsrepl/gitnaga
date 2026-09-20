@@ -21,6 +21,8 @@ PROGRESS := →
 VERSION := $(shell sed -n 's/^set(GITNAGA_VERSION "\(.*\)")/\1/p' cmake/GitNagaVersion.cmake)
 QT_MIN := 6.9.1
 QT_QML_DIR ?= $(shell qtpaths6 --query QT_INSTALL_QML 2>/dev/null || echo /usr/lib64/qt6/qml)
+QT_BIN_DIR ?= $(shell qtpaths6 --query QT_INSTALL_BINS 2>/dev/null)
+QML_LINT ?= $(if $(QT_BIN_DIR),$(QT_BIN_DIR)/qmllint,qmllint)
 REPO ?= $(CURDIR)
 
 # ============== Phony Targets ==============
@@ -88,7 +90,7 @@ test: build
 
 lint: build
 	@printf "$(PROGRESS) Linting QML...\n"
-	@qmllint -I build/dev -I "$(QT_QML_DIR)" qml/*.qml && \
+	@$(QML_LINT) -W 0 -I build/dev -I "$(QT_QML_DIR)" qml/*.qml && \
 		printf "$(GREEN)$(CHECK) QML clean$(RESET)\n" || \
 		(printf "$(RED)$(CROSS) QML lint failed$(RESET)\n" && exit 1)
 
@@ -105,7 +107,7 @@ ci-local: banner
 	@printf "$(PROGRESS) Step 3/4: Tests...\n"
 	@ctest --preset dev >/dev/null && printf "$(GREEN)$(CHECK) Tests passed$(RESET)\n"
 	@printf "$(PROGRESS) Step 4/4: QML lint...\n"
-	@qmllint -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
+	@$(QML_LINT) -W 0 -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
 	@printf "\n$(GREEN)$(BOLD)╔══════════════════════════════════════════════════════════╗$(RESET)\n"
 	@printf "$(GREEN)$(BOLD)║              $(CHECK) CI SIMULATION PASSED                      ║$(RESET)\n"
 	@printf "$(GREEN)$(BOLD)╚══════════════════════════════════════════════════════════╝$(RESET)\n\n"
@@ -118,7 +120,7 @@ pre-release: banner
 	@printf "$(PROGRESS) Running full test suite...\n"
 	@ctest --preset dev >/dev/null && printf "$(GREEN)$(CHECK) All tests passed$(RESET)\n"
 	@printf "$(PROGRESS) Linting QML...\n"
-	@qmllint -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
+	@$(QML_LINT) -W 0 -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
 	@printf "\n$(GREEN)$(BOLD)$(CHECK) Ready for release v$(VERSION)$(RESET)\n\n"
 
 # ============== Release (commit-and-tag-version) ==============
@@ -138,7 +140,7 @@ release: banner
 	@scripts/release-config-check.sh
 	@printf "$(ARROW) Bumping the version, changelog, and tag...\n\n"
 	@npx commit-and-tag-version
-	@printf "\n$(GREEN)$(CHECK) Released $(shell git describe --tags --abbrev=0)$(RESET)\n"
+	@printf "\n$(GREEN)$(CHECK) Released $$(git describe --tags --abbrev=0)$(RESET)\n"
 	@printf "$(GRAY)Push it with: make release-push$(RESET)\n\n"
 
 release-push: banner

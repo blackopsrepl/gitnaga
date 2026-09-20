@@ -217,7 +217,11 @@ Rectangle {
     ConfirmDialog {
         id: confirm
         property var onConfirm: null
-        onConfirmed: if (onConfirm) onConfirm()
+        onConfirmed: {
+            var callback = onConfirm
+            if (typeof callback === "function")
+                callback()
+        }
         function ask(message, callback) {
             confirm.message = message
             confirm.onConfirm = callback

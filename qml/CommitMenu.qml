@@ -73,14 +73,12 @@ Popup {
         }
     }
 
-    function add(label, run, options) {
-        var entry = { label: label, run: run, separator: false, enabled: true, destructive: false }
-        if (options) {
-            if (options.separator !== undefined) entry.separator = options.separator
-            if (options.enabled !== undefined) entry.enabled = options.enabled
-            if (options.destructive !== undefined) entry.destructive = options.destructive
-        }
-        actions.push(entry)
+    /**
+     * @param {string} label
+     * @param {function} run
+     */
+    function add(label, run) {
+        actions.push({ label: label, run: run, separator: false })
     }
     function separator() {
         actions.push({ separator: true })
@@ -108,11 +106,16 @@ Popup {
         place(localPoint)
     }
 
+    /**
+     * @param {number} row
+     * @param {string} oid
+     * @param {point} localPoint
+     */
     function show(row, oid, localPoint) {
         var info = repository.commits.at(row)
         var refs = info.refs || []
         var target = oid
-        var shortOid = info.shortOid || oid.substring(0, 8)
+        var shortOid = info.shortOid || String(oid).substring(0, 8)
         var branch = repository.currentBranch
         var branches = localBranches(refs)
         var entries = []

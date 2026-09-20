@@ -1,5 +1,8 @@
+// The CommitGraph item is a C++ type whose prototype the linter cannot resolve,
+// so grouped property scopes on it (anchors) are reported as missing. That
+// specific category is disabled for this file only.
+// qmllint disable missing-property
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import GitNaga
 
@@ -215,7 +218,11 @@ Rectangle {
     ConfirmDialog {
         id: confirm
         property var onConfirm: null
-        onConfirmed: if (onConfirm) onConfirm()
+        onConfirmed: {
+            var callback = onConfirm
+            if (typeof callback === "function")
+                callback()
+        }
         function ask(message, callback) {
             confirm.message = message
             confirm.onConfirm = callback

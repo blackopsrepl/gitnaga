@@ -154,6 +154,7 @@ Rectangle {
                 ScrollBar.vertical: ScrollBar {}
                 ScrollBar.horizontal: ScrollBar {}
                 delegate: Rectangle {
+                    id: diffRow
                     required property int kind
                     required property string text
                     required property var oldLine
@@ -167,7 +168,7 @@ Rectangle {
                         Text { width: 40; text: oldLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
                         Text { width: 40; text: newLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
                         Rectangle { width: 1; height: parent.height; color: colors.border }
-                        Text { leftPadding: 10; text: parent.parent.text; color: kind === 1 ? "#8fe6b8" : kind === 2 ? "#ffadb6" : kind === 4 ? "#9fc2ff" : kind === 3 ? "#77839a" : "#cbd0dc"; font.family: "monospace"; font.pixelSize: 12 }
+                        Text { leftPadding: 10; text: diffRow.text; color: kind === 1 ? "#8fe6b8" : kind === 2 ? "#ffadb6" : kind === 4 ? "#9fc2ff" : kind === 3 ? "#77839a" : "#cbd0dc"; font.family: "monospace"; font.pixelSize: 12 }
                     }
                 }
             }
