@@ -9,36 +9,26 @@ Item {
 
     ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(460, parent.width - 48)
-        spacing: 14
+        width: Math.min(420, parent.width - 48)
+        spacing: 10
 
-        Rectangle {
-            Layout.alignment: Qt.AlignHCenter
-            width: 72
-            height: 72
-            color: "#1c2535"
-            border.color: "#344768"
-            Label { anchors.centerIn: parent; text: "⌁"; color: "#78a9ff"; font.pixelSize: 40 }
-        }
         Label {
             Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Open a repository")
-            color: "#eef1f7"
-            font.pixelSize: 26
+            text: qsTr("No repository open")
+            font.pixelSize: 20
             font.weight: Font.DemiBold
         }
         Label {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: qsTr("Inspect branches, merges, commits and diffs through a graph built from Git itself.")
-            color: "#8d95a7"
-            font.pixelSize: 14
+            text: qsTr("Open a local Git working tree or bare repository.")
+            color: palette.placeholderText
         }
         NagaButton {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 8
-            text: qsTr("Choose repository")
+            Layout.topMargin: 6
+            text: qsTr("Open Repository…")
             onClicked: empty.openRequested()
         }
         Label {
@@ -47,7 +37,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             text: empty.errorMessage
-            color: "#ff9aaa"
+            color: "#d84f5f"
         }
     }
 }

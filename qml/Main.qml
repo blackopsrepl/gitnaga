@@ -13,79 +13,86 @@ ApplicationWindow {
     minimumHeight: 620
     visible: true
     title: repository.repositoryName.length > 0
-           ? repository.repositoryName + " · GitNaga"
+           ? repository.repositoryName + " — GitNaga"
            : qsTr("GitNaga")
-    color: "#0d0f14"
 
+    readonly property color backgroundColor: "#0d0f14"
     readonly property color panel: "#141820"
     readonly property color raised: "#1b202b"
+    readonly property color alternate: "#202631"
     readonly property color border: "#292f3d"
     readonly property color text: "#e8ebf2"
     readonly property color muted: "#8d95a7"
     readonly property color accent: "#78a9ff"
+    color: backgroundColor
 
-    palette.window: color
+    palette.window: backgroundColor
     palette.windowText: text
     palette.base: panel
+    palette.alternateBase: alternate
     palette.text: text
     palette.button: raised
     palette.buttonText: text
     palette.highlight: accent
     palette.highlightedText: "#08101f"
+    palette.placeholderText: muted
+
+    Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: StandardKey.Open; onTriggered: repositoryDialog.open() }
+    Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: StandardKey.Refresh; enabled: repository.repositoryPath.length > 0 && !repository.loading; onTriggered: repository.refresh() }
+    Action { id: quitAction; text: qsTr("&Quit"); shortcut: StandardKey.Quit; onTriggered: Qt.quit() }
+    Action { id: focusHistoryAction; text: qsTr("Focus History"); shortcut: "Ctrl+1"; onTriggered: historyPane.forceActiveFocus() }
+    Action { id: focusInspectorAction; text: qsTr("Focus Inspector"); shortcut: "Ctrl+2"; onTriggered: inspectorPane.forceActiveFocus() }
+
+    menuBar: MenuBar {
+        Menu {
+            title: qsTr("&File")
+            MenuItem { action: openAction }
+            MenuSeparator {}
+            MenuItem { action: quitAction }
+        }
+        Menu {
+            title: qsTr("&Repository")
+            MenuItem { action: refreshAction }
+        }
+        Menu {
+            title: qsTr("&View")
+            MenuItem { action: focusHistoryAction }
+            MenuItem { action: focusInspectorAction }
+        }
+    }
 
     FolderDialog {
         id: repositoryDialog
-        title: qsTr("Open a Git repository")
+        title: qsTr("Open Git Repository")
         onAccepted: repository.openRepository(selectedFolder)
     }
 
     header: ToolBar {
-        height: 52
-        background: Rectangle {
-            color: root.panel
-            border.color: root.border
-        }
+        height: 38
+        background: Rectangle { color: root.raised; border.color: root.border }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
-            spacing: 12
+            anchors.leftMargin: 6
+            anchors.rightMargin: 6
+            spacing: 6
 
-            Label {
-                text: "GITNAGA"
-                color: root.accent
-                font.pixelSize: 13
-                font.weight: Font.Bold
-                font.letterSpacing: 1.8
-            }
+            NagaButton { action: openAction; implicitHeight: 28 }
             ToolSeparator {}
-            NagaButton { text: qsTr("Open"); onClicked: repositoryDialog.open() }
             Label {
-                text: repository.repositoryName || qsTr("No repository")
-                font.pixelSize: 15
+                text: repository.repositoryName || qsTr("No repository open")
                 font.weight: Font.DemiBold
+                elide: Text.ElideMiddle
+                Layout.maximumWidth: 280
             }
-            Rectangle {
+            Label {
                 visible: repository.currentBranch.length > 0
-                implicitWidth: branchLabel.implicitWidth + 16
-                implicitHeight: 26
-                color: "#202b3d"
-                border.color: "#344768"
-                Label {
-                    id: branchLabel
-                    anchors.centerIn: parent
-                    text: "⎇  " + repository.currentBranch
-                    color: "#a9c5ff"
-                    font.pixelSize: 12
-                }
+                text: "⎇ " + repository.currentBranch
+                color: root.muted
+                font.pixelSize: 12
             }
             Item { Layout.fillWidth: true }
-            BusyIndicator { running: repository.loading; visible: running; implicitWidth: 28; implicitHeight: 28 }
-            NagaButton {
-                text: qsTr("Refresh")
-                enabled: repository.repositoryPath.length > 0 && !repository.loading
-                onClicked: repository.refresh()
-            }
+            BusyIndicator { running: repository.loading; visible: running; implicitWidth: 22; implicitHeight: 22 }
+            NagaButton { action: refreshAction; implicitHeight: 28 }
         }
     }
 
@@ -102,16 +109,31 @@ ApplicationWindow {
         orientation: Qt.Horizontal
 
         HistoryPane {
+            id: historyPane
             SplitView.preferredWidth: root.width * 0.52
             SplitView.minimumWidth: 480
             repository: root.repository
             colors: root
         }
         InspectorPane {
+            id: inspectorPane
             SplitView.fillWidth: true
             SplitView.minimumWidth: 400
             repository: root.repository
             colors: root
+        }
+    }
+
+    footer: Rectangle {
+        height: 24
+        color: root.raised
+        border.color: root.border
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
+            Label { text: repository.repositoryPath; color: root.muted; font.pixelSize: 11; elide: Text.ElideMiddle; Layout.fillWidth: true }
+            Label { text: repository.commits.count + qsTr(" commits loaded"); color: root.muted; font.pixelSize: 11 }
         }
     }
 
@@ -120,15 +142,15 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: errorText.implicitHeight + 20
-        color: "#4b2028"
-        border.color: "#8e4050"
+        height: errorText.implicitHeight + 14
+        color: "#6b242c"
+        border.color: "#a84a55"
         Label {
             id: errorText
             anchors.centerIn: parent
-            width: parent.width - 32
+            width: parent.width - 24
             text: repository.errorMessage
-            color: "#ffd6dc"
+            color: "#ffffff"
             elide: Text.ElideRight
         }
     }

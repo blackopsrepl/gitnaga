@@ -6,7 +6,7 @@ Rectangle {
     id: pane
     required property var repository
     required property var colors
-    color: colors.color
+    color: colors.backgroundColor
 
     ColumnLayout {
         anchors.fill: parent
@@ -14,16 +14,16 @@ Rectangle {
 
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: repository.selectedOid.length > 0 ? Math.min(170, details.implicitHeight + 28) : 84
+            Layout.preferredHeight: repository.selectedOid.length > 0 ? Math.min(150, details.implicitHeight + 20) : 68
             ColumnLayout {
                 id: details
                 anchors.fill: parent
-                anchors.margins: 16
-                spacing: 7
+                anchors.margins: 10
+                spacing: 5
                 Label {
                     text: repository.selectedOid.length > 0 ? repository.selectedSubject : qsTr("Select a commit")
                     color: colors.text
-                    font.pixelSize: 18
+                    font.pixelSize: 16
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
@@ -68,14 +68,13 @@ Rectangle {
                     spacing: 0
                     Label {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 38
-                        leftPadding: 12
+                        Layout.preferredHeight: 30
+                        leftPadding: 8
                         verticalAlignment: Text.AlignVCenter
-                        text: qsTr("CHANGED FILES")
-                        color: colors.muted
-                        font.pixelSize: 10
-                        font.weight: Font.Bold
-                        font.letterSpacing: 1.0
+                        text: qsTr("Changed Files")
+                        color: colors.text
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
                     }
                     ListView {
                         id: files

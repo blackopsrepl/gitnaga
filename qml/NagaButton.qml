@@ -3,9 +3,9 @@ import QtQuick.Controls
 
 Button {
     id: control
-    implicitHeight: 32
-    leftPadding: 14
-    rightPadding: 14
+    implicitHeight: 28
+    leftPadding: 10
+    rightPadding: 10
 
     contentItem: Label {
         text: control.text

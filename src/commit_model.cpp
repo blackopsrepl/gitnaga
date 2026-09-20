@@ -14,6 +14,11 @@ int CommitModel::rowCount(const QModelIndex &parent) const
     return parent.isValid() ? 0 : static_cast<int>(m_commits.size());
 }
 
+int CommitModel::count() const
+{
+    return static_cast<int>(m_commits.size());
+}
+
 QVariant CommitModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() < 0 || index.row() >= m_commits.size())
@@ -67,6 +72,7 @@ void CommitModel::replace(QVector<Commit> commits)
     beginResetModel();
     m_commits = std::move(commits);
     endResetModel();
+    emit countChanged();
 }
 
 const QVector<Commit> &CommitModel::commits() const

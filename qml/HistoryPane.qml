@@ -9,7 +9,7 @@ Rectangle {
     color: colors.panel
     border.color: colors.border
 
-    readonly property real rowHeight: 58
+    readonly property real rowHeight: 48
 
     ColumnLayout {
         anchors.fill: parent
@@ -17,10 +17,10 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 42
-            Layout.leftMargin: 16
-            Layout.rightMargin: 16
-            Label { text: qsTr("HISTORY"); color: colors.muted; font.pixelSize: 11; font.weight: Font.Bold; font.letterSpacing: 1.2 }
+            Layout.preferredHeight: 32
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            Label { text: qsTr("History"); color: colors.text; font.pixelSize: 12; font.weight: Font.DemiBold }
             Item { Layout.fillWidth: true }
             Label { text: history.count + qsTr(" commits"); color: colors.muted; font.pixelSize: 12 }
         }
@@ -56,7 +56,7 @@ Rectangle {
                     }
                     Column {
                         anchors.left: parent.left
-                        anchors.leftMargin: 164
+                        anchors.leftMargin: 150
                         anchors.right: parent.right
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
@@ -69,7 +69,7 @@ Rectangle {
                                 text: subject
                                 color: colors.text
                                 elide: Text.ElideRight
-                                font.pixelSize: 13
+                                font.pixelSize: 12
                                 font.weight: Font.Medium
                             }
                             Row {
@@ -79,7 +79,7 @@ Rectangle {
                                     model: refs.slice(0, 2)
                                     delegate: Rectangle {
                                         required property string modelData
-                                        height: 20
+                                        height: 18
                                         width: refText.implicitWidth + 12
                                         color: "#243149"
                                         border.color: "#3b5279"
