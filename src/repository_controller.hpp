@@ -62,6 +62,9 @@ public:
     Q_INVOKABLE void selectOid(const QString &oid);
     Q_INVOKABLE void selectFile(int row);
     Q_INVOKABLE void copyToClipboard(const QString &text) const;
+    Q_INVOKABLE QVariantList directories(const QString &path) const;
+    Q_INVOKABLE QString homeDirectory() const;
+    Q_INVOKABLE bool looksLikeRepository(const QString &path) const;
 
     Q_INVOKABLE void checkoutCommit(const QString &oid);
     Q_INVOKABLE void checkoutBranch(const QString &name);

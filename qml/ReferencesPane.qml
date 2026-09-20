@@ -176,32 +176,31 @@ Rectangle {
         }
     }
 
-    Menu {
+    NagaMenu {
         id: refMenu
-        background: Rectangle { color: "#12161f"; border.color: "#2b3242" }
 
-        MenuItem {
+        NagaMenuItem {
             visible: pane.target !== null && pane.target.kind === "local"
             text: qsTr("Checkout ") + (pane.target ? pane.target.name : "")
             onTriggered: pane.repository.checkoutBranch(pane.target.name)
         }
-        MenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
-        MenuItem {
+        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
+        NagaMenuItem {
             visible: pane.target !== null && pane.target.kind === "local"
             text: qsTr("Delete branch ") + (pane.target ? pane.target.name : "") + qsTr("…")
             onTriggered: confirm.ask(qsTr("Force delete branch ") + pane.target.name + qsTr("?"),
                                      function() { pane.repository.deleteBranch(pane.target.name) })
         }
-        MenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
-        MenuItem {
+        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
+        NagaMenuItem {
             text: qsTr("Show commit ") + (pane.target ? pane.target.shortOid : "")
             onTriggered: pane.repository.selectOid(pane.target.oid)
         }
-        MenuItem {
+        NagaMenuItem {
             text: qsTr("Checkout commit")
             onTriggered: pane.repository.checkoutCommit(pane.target.oid)
         }
-        MenuItem {
+        NagaMenuItem {
             text: qsTr("Copy name")
             onTriggered: pane.repository.copyToClipboard(pane.target.name)
         }

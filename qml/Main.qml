@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -50,9 +49,9 @@ ApplicationWindow {
             repository.selectCommit(row)
     }
 
-    Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: StandardKey.Open; onTriggered: repositoryDialog.open() }
-    Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: StandardKey.Refresh; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: repository.refresh() }
-    Action { id: quitAction; text: qsTr("&Quit"); shortcut: StandardKey.Quit; onTriggered: Qt.quit() }
+    Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: "Ctrl+O"; onTriggered: repositoryDialog.openAt(root.repository.repositoryPath) }
+    Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: "Ctrl+R"; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: repository.refresh() }
+    Action { id: quitAction; text: qsTr("&Quit"); shortcut: "Ctrl+Q"; onTriggered: Qt.quit() }
     Action { id: toggleReferencesAction; text: qsTr("References sidebar"); checkable: true; checked: true; shortcut: "Ctrl+1"; onTriggered: referencesVisible = checked }
     Action { id: toggleReviewAction; text: qsTr("Review sidebar"); checkable: true; checked: true; shortcut: "Ctrl+2"; onTriggered: reviewVisible = checked }
     Action { id: zoomInAction; text: qsTr("Zoom graph in"); shortcut: "Ctrl+="; onTriggered: graphPane.zoomIn() }
@@ -62,34 +61,37 @@ ApplicationWindow {
     Action { id: nextAction; text: qsTr("Next commit"); shortcut: "Alt+Down"; enabled: repository.selectedRow + 1 < repository.commits.count; onTriggered: root.step(1) }
 
     menuBar: MenuBar {
-        Menu {
+        font.pixelSize: 12
+        spacing: 2
+
+        NagaMenu {
             title: qsTr("&File")
-            MenuItem { action: openAction }
-            MenuSeparator {}
-            MenuItem { action: quitAction }
+            NagaMenuItem { action: openAction }
+            NagaMenuSeparator {}
+            NagaMenuItem { action: quitAction }
         }
-        Menu {
+        NagaMenu {
             title: qsTr("&Repository")
-            MenuItem { action: refreshAction }
+            NagaMenuItem { action: refreshAction }
         }
-        Menu {
+        NagaMenu {
             title: qsTr("&View")
-            MenuItem { action: toggleReferencesAction }
-            MenuItem { action: toggleReviewAction }
-            MenuSeparator {}
-            MenuItem { action: zoomInAction }
-            MenuItem { action: zoomOutAction }
-            MenuItem { action: resetZoomAction }
-            MenuSeparator {}
-            MenuItem { action: previousAction }
-            MenuItem { action: nextAction }
+            NagaMenuItem { action: toggleReferencesAction }
+            NagaMenuItem { action: toggleReviewAction }
+            NagaMenuSeparator {}
+            NagaMenuItem { action: zoomInAction }
+            NagaMenuItem { action: zoomOutAction }
+            NagaMenuItem { action: resetZoomAction }
+            NagaMenuSeparator {}
+            NagaMenuItem { action: previousAction }
+            NagaMenuItem { action: nextAction }
         }
     }
 
-    FolderDialog {
+    OpenRepositoryDialog {
         id: repositoryDialog
-        title: qsTr("Open Git Repository")
-        onAccepted: repository.openRepository(selectedFolder)
+        repository: root.repository
+        onAcceptedPath: (path) => root.repository.openRepositoryPath(path)
     }
 
     header: ToolBar {

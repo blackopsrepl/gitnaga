@@ -16,6 +16,7 @@ add_library(gitnaga_core STATIC
     src/avatar_provider.hpp
     src/commit_model.cpp
     src/commit_model.hpp
+    src/filesystem_operations.cpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
     src/file_change_model.cpp
@@ -61,6 +62,10 @@ qt_add_qml_module(gitnaga
         qml/InspectorPane.qml
         qml/Main.qml
         qml/NagaButton.qml
+        qml/NagaMenuItem.qml
+        qml/NagaMenuSeparator.qml
+        qml/NagaMenu.qml
+        qml/OpenRepositoryDialog.qml
         qml/NagaGlyph.qml
         qml/NagaIconButton.qml
         qml/PromptDialog.qml
