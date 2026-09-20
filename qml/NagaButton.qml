@@ -9,7 +9,7 @@ Button {
     rightPadding: 10
 
     contentItem: Label {
-        text: control.text
+        text: control.text.replace(/&/g, "")
         color: !control.enabled ? "#626a79" : control.active ? "#7cf0bd" : "#e8ebf2"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
