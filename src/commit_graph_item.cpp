@@ -47,11 +47,16 @@ void CommitGraphItem::synchronizeRows()
     for (qsizetype row = 0; row < m_rows.size(); ++row)
         m_rowByOid.insert(m_rows.at(row).oid, static_cast<int>(row));
     recomputeHeadRow();
-    recomputeHighlight();
     if (m_selectedRow >= m_rows.size())
         setSelectedRow(-1);
     if (m_hoveredRow >= m_rows.size())
         m_hoveredRow = -1;
+    // A new row set invalidates the cached ancestry: the same row index now
+    // refers to a different commit, so force a rebuild instead of reusing a set
+    // of object ids that no longer exists in the graph.
+    m_highlightRow = -1;
+    m_highlight.clear();
+    recomputeHighlight();
     clampContent();
     emit metricsChanged();
     update();
