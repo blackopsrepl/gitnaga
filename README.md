@@ -15,8 +15,11 @@ no account, and no telemetry.
 ## Highlights
 
 - **Centre stage graph.** The graph is the main surface. Each row carries a
-  tint of its branch colour, commits are drawn as ringed nodes, merges get a
-  heavier marker, and the current branch tip is highlighted. It is painted with
+  tint of its branch colour, commits are drawn as avatars ringed by their branch
+  colour, merges get a heavier marker, and the current branch tip is
+  highlighted. Avatars are resolved without any network access: a local image
+  from the cache directory when present, otherwise a deterministic monogram for
+  the author. It is painted with
   Qt's anti-aliased vector painter, so curves and gradients stay crisp at any
   zoom.
 - **Mouse first.** Hover to trace a row, click to select, drag to pan, wheel to

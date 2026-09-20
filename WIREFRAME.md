@@ -199,7 +199,7 @@ Rows are dense and nodes are sized to the row, not to the lane.
 | Zoom range | `0.45 .. 2.8` | `commit_graph_item.cpp` |
 | Edge shadow pen | `3.2 * zoom`, colour `#04060b` alpha 110 | `paintEdges()` |
 | Edge pen | `2.2 * zoom`, lane-colour gradient, round joins | `paintEdges()` |
-| Node disc radius | `clamp(6.0 * zoom, 3.0, 12.0)`, merge `* 1.2` | `paintNode()` |
+| Node disc radius | `clamp(8.0 * zoom, 4.0, 16.0)`, merge `* 1.2` | `paintNode()` |
 | Node ring | at disc `+2.4 * zoom`, pen `1.8 * zoom` | `paintNode()` |
 | Row band alpha | idle `26`, hover `38`, selected `56`, dimmed `10` | `paint()` |
 | Dim factor | unrelated commits at 50% alpha | `paintEdges()`, `paintNode()` |
@@ -225,18 +225,36 @@ hovering is useful: the branch you are inspecting comes forward and everything
 else recedes. Setting alpha floors is unnecessary
 because the dim is a single constant in `commit_graph_paint.cpp`.
 
-### 5.4 Paint order (back to front)
+### 5.4 Avatars
+
+Each node carries the author avatar inside its disc, ringed by the branch
+colour. Avatars are resolved offline with no network access:
+
+1. `<cache>/avatars/<sha256(email)>.png` is used when present, so real photos
+   can be dropped in. The cache directory is the application cache location
+   (`~/.cache/GitNaga/avatars` by default).
+2. Otherwise a deterministic **monogram** is drawn: the author initials on a
+   colour from a curated muted palette, selected by the email hash. The same
+   author always renders the same avatar, and the muted disc keeps the
+   branch-coloured ring as the dominant signal. Block identicons were tried and
+   are illegible at this node size.
+
+When a commit has no ancestors in the dimmed set the avatar is drawn at 50%
+opacity with the rest of the node.
+
+### 5.5 Paint order (back to front)
 
 1. Per-row branch band, full pane width, colour = lane colour of the row.
 2. Edges, each with a dark shadow pass then a gradient main pass.
-3. Commit nodes: solid lane-colour disc, hairline dark rim, one coloured ring
-   with a background gap, plus a soft glow on the selected node.
+3. Commit nodes: the author avatar clipped to the disc, or a solid
+   lane-colour disc when no avatar is available, then a hairline dark rim, one
+   coloured ring with a background gap, and a soft glow on the selected node.
 
-> The disc is a **solid saturated** lane colour. Earlier revisions used a light
-> radial gradient with a specular highlight, which read as a pale bubble; the
-> solid disc with a crisp ring is the intended look.
+> The disc is a **flat** fill, either the avatar or the lane colour. Earlier
+> revisions used a light radial gradient with a specular highlight, which read
+> as a pale bubble; flat fill with a crisp ring is the intended look.
 
-### 5.5 Label overlay
+### 5.6 Label overlay
 
 A `ListView` with `interactive: false`, `enabled: false`, `contentY` bound to
 `graph.contentY`, so it never steals pointer events. `x = min(width - 150,
@@ -255,20 +273,55 @@ remote `#262d3d` with border `#3a4560`, tag `#3a2f17` with border `#7a5f1f`.
 `shortOid` uses `#a78bfa`; author and date use `#78839a`. The selected row uses
 white subject text and `Font.DemiBold`.
 
-### 5.6 Pointer model
+### 5.7 Pointer model
 
 | Gesture | Effect |
 |---------|--------|
-| Hover | Set `hoveredRow`, recompute the ancestry highlight, repaint |
+| Hover | Set `hoveredRow` and recompute the ancestry highlight immediately; ignored while a pan drag is in progress |
 | Left click | Emit `commitClicked(row)`; the shell calls `selectCommit(row)`, which re-highlights its ancestry |
 | Left drag (> 4 px) | Pan: `contentY = pressContentY - delta` |
 | Wheel | Scroll by one row height per 120 units of `angleDelta` |
 | Ctrl + wheel | Zoom by `pow(1.0015, delta)`, anchored under the cursor |
 | Right click | Emit `contextRequested(row, oid, globalPos)`; a row opens the operations menu, empty space opens a refresh menu |
 
+A row is only reported when the pointer is inside the real row range: the
+pointer in the empty space below the last commit reports no row, so no ring or
+highlight is applied and a click there does nothing.
+
 Scroll range is `0 .. max(0, rowCount * effectiveRowHeight - height)`.
 `ensureVisible(row)` scrolls the minimum amount so the row is inside the
 viewport; the shell calls it whenever the selection changes.
+
+### 5.8 Menus and the repository dialog
+
+The menu bar uses the application's own menu components rather than the
+default control sizing, which was too narrow and let labels run under their
+shortcut column.
+
+| Component | Role |
+|-----------|------|
+| `NagaMenu` | Dark popup: `#12161f` fill, `#2b3242` border, `4` px padding |
+| `NagaMenuItem` | `28` px row, minimum `240` px wide, `12` px label, right-aligned shortcut column, drawn check mark for checkable actions, `#1e2634` highlight |
+| `NagaMenuSeparator` | 1 px line in `#242c3b` |
+
+Menu actions use literal key sequences (`"Ctrl+O"`) so the shortcut column can
+display them; `StandardKey` values stringify to their enum numbers and are not
+usable as labels. The checkable sidebar toggles draw their own check mark
+because the default indicator overlaps the label when the content is custom.
+
+`OpenRepositoryDialog` replaces the platform folder dialog, which ignored the
+application palette and rendered a light toolbar with unreadable text against
+the dark window. It is a modal `Dialog` with:
+
+- a title row with a close button;
+- an `Up` button, an editable path field, and a `Go` button;
+- a directory list built from `repository.directories(path)`, sorted, hidden
+  entries excluded, with a marker for entries that are repositories;
+- a footer showing whether the current directory is a repository, an
+  `Open Repository` button enabled only for a repository, and `Cancel`.
+
+Escape closes it. `repository.looksLikeRepository(path)` accepts both a `.git`
+directory and a bare repository layout.
 
 ## 6. Operations menu (right click on a commit)
 
@@ -461,7 +514,7 @@ verification loop uses to confirm state changes after an action.
 
 ## 15. Not implemented (explicit)
 
-- Author avatars on nodes (no network calls are made).
+- Remote avatars (Gravatar, GitHub). Avatars are local or generated; the application makes no network calls.
 - Staging, committing, and a working-copy view. GitNaga is a history and review
   tool.
 - Merge conflict resolution, interactive rebase editing, and stash management.
