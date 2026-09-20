@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.3](https://github.com/blackopsrepl/gitnaga/compare/v0.1.2...v0.1.3) (2026-09-20)
+
+### Bug Fixes
+
+* **build:** keep the commit graph item within the source size contract ([c35c187](https://github.com/blackopsrepl/gitnaga/commit/c35c1872559732b3068db5434ab31cc0d3ef9679))
+
+### Build System
+
+* add install and uninstall targets ([cc2eaa6](https://github.com/blackopsrepl/gitnaga/commit/cc2eaa687b8acf890ae6933f27681101c2f29757))
+
 ## [0.1.2](https://github.com/blackopsrepl/gitnaga/compare/v0.1.1...v0.1.2) (2026-09-20)
 
 ### Features
