@@ -3,3 +3,4 @@
 /.cache/
 /.qt/
 compile_commands.json
+.clangd
