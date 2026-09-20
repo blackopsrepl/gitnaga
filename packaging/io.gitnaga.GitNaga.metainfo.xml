@@ -12,5 +12,8 @@
   <provides>
     <binary>gitnaga</binary>
   </provides>
-  <url type="homepage">https://github.com/gitnaga/gitnaga</url>
+  <url type="homepage">https://github.com/blackopsrepl/gitnaga</url>
+  <releases>
+    <release version="0.1.0" date="2026-09-20"/>
+  </releases>
 </component>

@@ -24,7 +24,8 @@ QT_QML_DIR ?= $(shell qtpaths6 --query QT_INSTALL_QML 2>/dev/null || echo /usr/l
 REPO ?= $(CURDIR)
 
 # ============== Phony Targets ==============
-.PHONY: banner help configure build release run test lint ci-local pre-release \
+.PHONY: banner help configure build build-release run test lint ci-local pre-release \
+        release-check release-dry release release-push release-verify \
         version bump-patch bump-minor bump-major bump-dry clean watch
 
 # ============== Default Target ==============
@@ -60,7 +61,7 @@ build: banner
 		printf "$(GREEN)$(CHECK) Build successful$(RESET)\n\n" || \
 		(printf "$(RED)$(CROSS) Build failed$(RESET)\n\n" && exit 1)
 
-release: banner
+build-release: banner
 	@printf "$(CYAN)$(BOLD)╔══════════════════════════════════════╗$(RESET)\n"
 	@printf "$(CYAN)$(BOLD)║        Release Build                 ║$(RESET)\n"
 	@printf "$(CYAN)$(BOLD)╚══════════════════════════════════════╝$(RESET)\n\n"
@@ -120,10 +121,41 @@ pre-release: banner
 	@qmllint -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
 	@printf "\n$(GREEN)$(BOLD)$(CHECK) Ready for release v$(VERSION)$(RESET)\n\n"
 
+# ============== Release (commit-and-tag-version) ==============
+#
+# The version surface and the AppStream release history are owned by
+# commit-and-tag-version through .versionrc.js. Never hand-edit them.
+
+release-check:
+	@scripts/release-config-check.sh
+
+release-dry: banner
+	@printf "$(ARROW) Previewing the next release...\n\n"
+	@npx commit-and-tag-version --dry-run
+
+release: banner
+	@$(MAKE) pre-release --no-print-directory
+	@scripts/release-config-check.sh
+	@printf "$(ARROW) Bumping the version, changelog, and tag...\n\n"
+	@npx commit-and-tag-version
+	@printf "\n$(GREEN)$(CHECK) Released $(shell git describe --tags --abbrev=0)$(RESET)\n"
+	@printf "$(GRAY)Push it with: make release-push$(RESET)\n\n"
+
+release-push: banner
+	@scripts/push-release.sh
+	@printf "\n"
+	@scripts/verify-release.sh
+
+release-verify:
+	@scripts/verify-release.sh
+
 # ============== Version Management ==============
 
 version:
 	@printf "$(CYAN)Current version:$(RESET) $(YELLOW)$(BOLD)$(VERSION)$(RESET)\n"
+
+# Manual bumps. These call the tool directly and bypass the pre-release gate;
+# prefer `make release`.
 
 bump-patch: banner
 	@printf "$(ARROW) Bumping patch version...\n"
@@ -160,7 +192,7 @@ help: banner
 	@/bin/echo -e "$(CYAN)$(BOLD)Build Commands:$(RESET)"
 	@/bin/echo -e "  $(GREEN)make configure$(RESET)      - Configure the debug preset"
 	@/bin/echo -e "  $(GREEN)make build$(RESET)          - Build the debug preset"
-	@/bin/echo -e "  $(GREEN)make release$(RESET)        - Build the release preset"
+	@/bin/echo -e "  $(GREEN)make build-release$(RESET)  - Build the release preset"
 	@/bin/echo -e "  $(GREEN)make run REPO=path$(RESET)  - Build and run against a repository"
 	@/bin/echo -e ""
 	@/bin/echo -e "$(CYAN)$(BOLD)Test & Lint:$(RESET)"
@@ -171,11 +203,18 @@ help: banner
 	@/bin/echo -e "  $(GREEN)make ci-local$(RESET)       - $(YELLOW)$(BOLD)Simulate the CI workflow locally$(RESET)"
 	@/bin/echo -e "  $(GREEN)make pre-release$(RESET)    - Run all validation checks"
 	@/bin/echo -e ""
+	@/bin/echo -e "$(CYAN)$(BOLD)Release:$(RESET)"
+	@/bin/echo -e "  $(GREEN)make release-check$(RESET)  - Validate the release surfaces and tree"
+	@/bin/echo -e "  $(GREEN)make release-dry$(RESET)    - Preview the next release"
+	@/bin/echo -e "  $(GREEN)make release$(RESET)        - $(YELLOW)$(BOLD)Gate, then bump version, changelog, and tag$(RESET)"
+	@/bin/echo -e "  $(GREEN)make release-push$(RESET)   - Push branch and tag, then verify both remotes"
+	@/bin/echo -e "  $(GREEN)make release-verify$(RESET) - Verify the published release only"
+	@/bin/echo -e ""
 	@/bin/echo -e "$(CYAN)$(BOLD)Version Management:$(RESET)"
 	@/bin/echo -e "  $(GREEN)make version$(RESET)        - Show current version"
-	@/bin/echo -e "  $(GREEN)make bump-patch$(RESET)     - Bump patch version"
-	@/bin/echo -e "  $(GREEN)make bump-minor$(RESET)     - Bump minor version"
-	@/bin/echo -e "  $(GREEN)make bump-major$(RESET)     - Bump major version"
+	@/bin/echo -e "  $(GREEN)make bump-patch$(RESET)     - Manual patch bump (bypasses the gate)"
+	@/bin/echo -e "  $(GREEN)make bump-minor$(RESET)     - Manual minor bump (bypasses the gate)"
+	@/bin/echo -e "  $(GREEN)make bump-major$(RESET)     - Manual major bump (bypasses the gate)"
 	@/bin/echo -e "  $(GREEN)make bump-dry$(RESET)       - Preview the version bump"
 	@/bin/echo -e ""
 	@/bin/echo -e "$(CYAN)$(BOLD)Other:$(RESET)"
