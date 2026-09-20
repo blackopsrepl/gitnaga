@@ -52,7 +52,7 @@ Rectangle {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: history.currentIndex === index ? "#202838" : mouse.containsMouse ? "#191e28" : "transparent"
+                        color: history.currentIndex === index ? "#202838" : mouse.hovered ? "#191e28" : "transparent"
                     }
                     Column {
                         anchors.left: parent.left
