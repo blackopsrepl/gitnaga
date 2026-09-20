@@ -16,6 +16,7 @@ struct Commit {
     QString oid;
     QStringList parents;
     QString author;
+    QString authorEmail;
     QDateTime authoredAt;
     QString subject;
     QStringList refs;

@@ -12,6 +12,8 @@ find_package(Qt6 6.9.1 REQUIRED COMPONENTS Concurrent Core Gui Qml Quick QuickCo
 qt_standard_project_setup(REQUIRES 6.9.1)
 
 add_library(gitnaga_core STATIC
+    src/avatar_provider.cpp
+    src/avatar_provider.hpp
     src/commit_model.cpp
     src/commit_model.hpp
     src/diff_line_model.cpp

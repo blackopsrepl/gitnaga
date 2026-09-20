@@ -1,5 +1,6 @@
 #pragma once
 
+#include "avatar_provider.hpp"
 #include "commit_model.hpp"
 #include "graph_geometry.hpp"
 
@@ -99,6 +100,7 @@ private:
     int m_highlightRow = -1;
     QSet<QString> m_highlight;
     QHash<QString, int> m_rowByOid;
+    AvatarProvider m_avatars;
     QString m_headOid;
     bool m_dragging = false;
     QPointF m_pressPosition;

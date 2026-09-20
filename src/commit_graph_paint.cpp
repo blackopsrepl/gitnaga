@@ -7,9 +7,11 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <QQuickWindow>
 #include <QRadialGradient>
 
 #include <algorithm>
+#include <cmath>
 
 namespace GitNaga {
 
@@ -74,8 +76,27 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
         painter->drawEllipse(node.center, nodeRadius * 3.0, nodeRadius * 3.0);
     }
 
+    const qreal ratio = window() ? window()->devicePixelRatio() : 1.0;
+    const int avatarSize = std::max(12, static_cast<int>(std::lround(nodeRadius * 2.0 * ratio)));
+    const QImage avatar = m_avatars.avatar(commit.authorEmail, commit.author, avatarSize);
+    if (!avatar.isNull()) {
+        painter->save();
+        painter->setOpacity(dimmed ? 0.5 : 1.0);
+        QPainterPath clip;
+        clip.addEllipse(node.center, nodeRadius, nodeRadius);
+        painter->setClipPath(clip);
+        painter->drawImage(QRectF(node.center.x() - nodeRadius, node.center.y() - nodeRadius,
+                                  nodeRadius * 2.0, nodeRadius * 2.0),
+                           avatar);
+        painter->restore();
+    } else {
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(withAlpha(base, alpha));
+        painter->drawEllipse(node.center, nodeRadius, nodeRadius);
+    }
+
     painter->setPen(QPen(withAlpha(darken(base, 0.5), alpha), 1.0 * scale));
-    painter->setBrush(withAlpha(base, alpha));
+    painter->setBrush(Qt::NoBrush);
     painter->drawEllipse(node.center, nodeRadius, nodeRadius);
 
     QColor ring = lighten(base, 0.25);
@@ -119,7 +140,7 @@ void CommitGraphItem::paint(QPainter *painter)
 
     paintEdges(painter, first, last, st);
 
-    const qreal radius = std::clamp(6.0 * (st.laneSpacing / 22.0), 3.0, 12.0);
+    const qreal radius = std::clamp(8.0 * (st.laneSpacing / 22.0), 4.0, 16.0);
     for (int row = first; row <= last; ++row) {
         const auto &commit = m_rows.at(row);
         const auto node = graph::nodeFor(commit, row, m_contentY, st);

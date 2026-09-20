@@ -116,7 +116,7 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
                        { QStringLiteral("log"), QStringLiteral("--all"), QStringLiteral("--topo-order"),
                          QStringLiteral("--date-order"), QStringLiteral("--no-color"),
                          QStringLiteral("--max-count=%1").arg(maximumCommits),
-                         QStringLiteral("--format=%x1e%H%x1f%P%x1f%an%x1f%at%x1f%s") },
+                         QStringLiteral("--format=%x1e%H%x1f%P%x1f%an%x1f%ae%x1f%at%x1f%s") },
                        QStringLiteral("load history"));
     if (!history)
         return std::unexpected(history.error());
@@ -125,7 +125,7 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
         if (record.trimmed().isEmpty())
             continue;
         const auto parts = record.trimmed().split('\x1f');
-        if (parts.size() < 5)
+        if (parts.size() < 6)
             continue;
         Commit commit;
         commit.oid = decode(parts.at(0));
@@ -133,8 +133,9 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
         if (!parentText.isEmpty())
             commit.parents = parentText.split(QLatin1Char(' '), Qt::SkipEmptyParts);
         commit.author = decode(parts.at(2));
-        commit.authoredAt = QDateTime::fromSecsSinceEpoch(decode(parts.at(3)).toLongLong()).toLocalTime();
-        commit.subject = decode(parts.at(4));
+        commit.authorEmail = decode(parts.at(3)).trimmed().toLower();
+        commit.authoredAt = QDateTime::fromSecsSinceEpoch(decode(parts.at(4)).toLongLong()).toLocalTime();
+        commit.subject = decode(parts.at(5));
         commit.refs = refsByOid.value(commit.oid);
         snapshot.commits.append(std::move(commit));
     }
