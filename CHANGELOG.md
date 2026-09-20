@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.5](https://github.com/blackopsrepl/gitnaga/compare/v0.1.4...v0.1.5) (2026-09-20)
+
+### Bug Fixes
+
+* **graph:** rebuild the ancestry highlight when the row set changes ([fbea376](https://github.com/blackopsrepl/gitnaga/commit/fbea3764f483d84f661fac85195843b4a4bd83bf))
+
+### Documentation
+
+* describe avatars, menus, and the repository dialog ([bb3c6f7](https://github.com/blackopsrepl/gitnaga/commit/bb3c6f75f010893f6a15dd9b960cea3bdecf39d1))
+
 ## [0.1.4](https://github.com/blackopsrepl/gitnaga/compare/v0.1.3...v0.1.4) (2026-09-20)
 
 ### Features
