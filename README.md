@@ -83,6 +83,10 @@ lines.
 
 ## Layout
 
+See [`WIREFRAME.md`](WIREFRAME.md) for the precise interface specification:
+regions, dimensions, colours, pointer and keyboard maps, state matrix, and data
+bindings.
+
 | Path | Contents |
 |------|----------|
 | `src/git_client.*` | Git discovery, history, refs, and mutation execution |
