@@ -1,77 +1,27 @@
 #include "commit_graph_item.hpp"
 
-#include <QColor>
-#include <QSGFlatColorMaterial>
-#include <QSGGeometryNode>
 
-#include <array>
+#include <QHoverEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+
+#include <algorithm>
 #include <cmath>
 
 namespace GitNaga {
+
 namespace {
-
-constexpr qreal laneSpacing = 18.0;
-constexpr qreal leftPadding = 18.0;
-constexpr int circleSegments = 12;
-
-const std::array<QColor, 8> colors = {
-    QColor(QStringLiteral("#78a9ff")), QColor(QStringLiteral("#55d6be")),
-    QColor(QStringLiteral("#f4c95d")), QColor(QStringLiteral("#ef8354")),
-    QColor(QStringLiteral("#b892ff")), QColor(QStringLiteral("#f284b6")),
-    QColor(QStringLiteral("#72ddf7")), QColor(QStringLiteral("#a8c686")),
-};
-
-qreal laneX(int lane)
-{
-    return leftPadding + static_cast<qreal>(lane) * laneSpacing;
+constexpr qreal minimumZoom = 0.45;
+constexpr qreal maximumZoom = 2.8;
 }
-
-QSGGeometryNode *lineNode(const QVector<QPointF> &points, const QColor &color)
-{
-    auto *geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), static_cast<int>(points.size()));
-    geometry->setDrawingMode(QSGGeometry::DrawLines);
-    geometry->setLineWidth(2.0F);
-    auto *vertices = geometry->vertexDataAsPoint2D();
-    for (qsizetype index = 0; index < points.size(); ++index)
-        vertices[index].set(static_cast<float>(points.at(index).x()), static_cast<float>(points.at(index).y()));
-
-    auto *material = new QSGFlatColorMaterial;
-    material->setColor(color);
-    auto *node = new QSGGeometryNode;
-    node->setGeometry(geometry);
-    node->setFlag(QSGNode::OwnsGeometry);
-    node->setMaterial(material);
-    node->setFlag(QSGNode::OwnsMaterial);
-    return node;
-}
-
-QSGGeometryNode *circleNode(const QPointF &center, qreal radius, const QColor &color)
-{
-    auto *geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), circleSegments + 2);
-    geometry->setDrawingMode(QSGGeometry::DrawTriangleFan);
-    auto *vertices = geometry->vertexDataAsPoint2D();
-    vertices[0].set(static_cast<float>(center.x()), static_cast<float>(center.y()));
-    for (int index = 0; index <= circleSegments; ++index) {
-        const qreal angle = (static_cast<qreal>(index) / circleSegments) * 2.0 * M_PI;
-        vertices[index + 1].set(static_cast<float>(center.x() + std::cos(angle) * radius),
-                                static_cast<float>(center.y() + std::sin(angle) * radius));
-    }
-    auto *material = new QSGFlatColorMaterial;
-    material->setColor(color);
-    auto *node = new QSGGeometryNode;
-    node->setGeometry(geometry);
-    node->setFlag(QSGNode::OwnsGeometry);
-    node->setMaterial(material);
-    node->setFlag(QSGNode::OwnsMaterial);
-    return node;
-}
-
-} // namespace
 
 CommitGraphItem::CommitGraphItem(QQuickItem *parent)
-    : QQuickItem(parent)
+    : QQuickPaintedItem(parent)
 {
-    setFlag(ItemHasContents);
+    setAntialiasing(true);
+    setRenderTarget(QQuickPaintedItem::Image);
+    setAcceptHoverEvents(true);
+    setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
 }
 
 CommitModel *CommitGraphItem::model() const { return m_model; }
@@ -86,85 +36,238 @@ void CommitGraphItem::setModel(CommitModel *model)
     if (m_model) {
         connect(m_model, &QAbstractItemModel::modelReset, this, &CommitGraphItem::synchronizeRows);
         connect(m_model, &QAbstractItemModel::rowsInserted, this, &CommitGraphItem::synchronizeRows);
+        connect(m_model, &QAbstractItemModel::rowsRemoved, this, &CommitGraphItem::synchronizeRows);
     }
     synchronizeRows();
     emit modelChanged();
 }
 
-qreal CommitGraphItem::contentY() const { return m_contentY; }
-void CommitGraphItem::setContentY(qreal value)
-{
-    if (qFuzzyCompare(m_contentY, value)) return;
-    m_contentY = value;
-    update();
-    emit contentYChanged();
-}
-qreal CommitGraphItem::rowHeight() const { return m_rowHeight; }
-void CommitGraphItem::setRowHeight(qreal value)
-{
-    if (qFuzzyCompare(m_rowHeight, value)) return;
-    m_rowHeight = value;
-    update();
-    emit rowHeightChanged();
-}
-int CommitGraphItem::selectedRow() const { return m_selectedRow; }
-void CommitGraphItem::setSelectedRow(int row)
-{
-    if (m_selectedRow == row) return;
-    m_selectedRow = row;
-    update();
-    emit selectedRowChanged();
-}
-
 void CommitGraphItem::synchronizeRows()
 {
     m_rows = m_model ? m_model->commits() : QVector<Commit>{};
+    m_maximumLane = graph::maximumLane(m_rows);
+    recomputeHeadRow();
+    if (m_selectedRow >= m_rows.size())
+        setSelectedRow(-1);
+    if (m_hoveredRow >= m_rows.size())
+        m_hoveredRow = -1;
+    clampContent();
+    emit metricsChanged();
     update();
 }
 
-QSGNode *CommitGraphItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
+graph::GraphStyle CommitGraphItem::style() const
 {
-    delete oldNode;
-    auto *root = new QSGNode;
-    if (m_rows.isEmpty() || m_rowHeight <= 0.0)
-        return root;
+    return graph::GraphStyle{ m_baseRowHeight * m_zoom, 22.0 * m_zoom, 28.0 };
+}
 
-    const int first = std::max(0, static_cast<int>(std::floor(m_contentY / m_rowHeight)) - 1);
-    const int last = std::min(static_cast<int>(m_rows.size()) - 1,
-                              static_cast<int>(std::ceil((m_contentY + height()) / m_rowHeight)) + 1);
-    std::array<QVector<QPointF>, colors.size()> lines;
+qreal CommitGraphItem::contentY() const { return m_contentY; }
 
-    for (int row = first; row <= last; ++row) {
-        const auto &commit = m_rows.at(row);
-        const qreal y = static_cast<qreal>(row) * m_rowHeight - m_contentY + m_rowHeight / 2.0;
-        const qreal nextY = y + m_rowHeight;
-        for (const auto &segment : commit.segments) {
-            auto &vertices = lines.at(static_cast<size_t>(segment.fromLane) % colors.size());
-            const QPointF from(laneX(segment.fromLane), y);
-            const QPointF to(laneX(segment.toLane), nextY);
-            if (segment.fromLane == segment.toLane) {
-                vertices << from << to;
-            } else {
-                const qreal middle = y + m_rowHeight * 0.55;
-                vertices << from << QPointF(from.x(), middle)
-                         << QPointF(from.x(), middle) << QPointF(to.x(), nextY);
-            }
+void CommitGraphItem::setContentY(qreal value)
+{
+    const qreal clamped = std::clamp(value, 0.0, maxContentY());
+    if (qFuzzyCompare(m_contentY + 1.0, clamped + 1.0))
+        return;
+    m_contentY = clamped;
+    update();
+    emit contentYChanged();
+}
+
+qreal CommitGraphItem::baseRowHeight() const { return m_baseRowHeight; }
+
+void CommitGraphItem::setBaseRowHeight(qreal value)
+{
+    if (qFuzzyCompare(m_baseRowHeight, value) || value <= 0.0)
+        return;
+    m_baseRowHeight = value;
+    clampContent();
+    emit baseRowHeightChanged();
+    emit metricsChanged();
+    update();
+}
+
+qreal CommitGraphItem::zoom() const { return m_zoom; }
+
+void CommitGraphItem::setZoom(qreal value)
+{
+    const qreal clamped = std::clamp(value, minimumZoom, maximumZoom);
+    if (qFuzzyCompare(m_zoom, clamped))
+        return;
+    m_zoom = clamped;
+    clampContent();
+    emit zoomChanged();
+    emit metricsChanged();
+    update();
+}
+
+int CommitGraphItem::selectedRow() const { return m_selectedRow; }
+
+void CommitGraphItem::setSelectedRow(int row)
+{
+    const int normalized = row < 0 || row >= m_rows.size() ? -1 : row;
+    if (m_selectedRow == normalized)
+        return;
+    m_selectedRow = normalized;
+    emit selectedRowChanged();
+    update();
+}
+
+int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
+
+QString CommitGraphItem::headOid() const { return m_headOid; }
+
+void CommitGraphItem::setHeadOid(const QString &oid)
+{
+    if (m_headOid == oid)
+        return;
+    m_headOid = oid;
+    recomputeHeadRow();
+    emit headOidChanged();
+    update();
+}
+
+void CommitGraphItem::recomputeHeadRow()
+{
+    m_headRow = -1;
+    if (m_headOid.isEmpty())
+        return;
+    for (qsizetype row = 0; row < m_rows.size(); ++row) {
+        if (m_rows.at(row).oid == m_headOid) {
+            m_headRow = static_cast<int>(row);
+            return;
         }
     }
+}
 
-    for (size_t index = 0; index < colors.size(); ++index) {
-        if (!lines[index].isEmpty())
-            root->appendChildNode(lineNode(lines[index], colors[index]));
+qreal CommitGraphItem::effectiveRowHeight() const { return m_baseRowHeight * m_zoom; }
+qreal CommitGraphItem::laneWidth() const { return graph::laneAreaWidth(m_maximumLane, style()); }
+qreal CommitGraphItem::contentHeight() const { return static_cast<qreal>(m_rows.size()) * effectiveRowHeight(); }
+qreal CommitGraphItem::maxContentY() const { return std::max(0.0, contentHeight() - height()); }
+
+void CommitGraphItem::clampContent() { setContentY(m_contentY); }
+
+void CommitGraphItem::zoomIn() { setZoom(m_zoom * 1.18); }
+void CommitGraphItem::zoomOut() { setZoom(m_zoom / 1.18); }
+void CommitGraphItem::resetZoom() { setZoom(1.0); }
+
+void CommitGraphItem::scrollToRow(int row)
+{
+    setContentY(static_cast<qreal>(row) * effectiveRowHeight() + effectiveRowHeight() / 2.0 - height() / 2.0);
+}
+
+void CommitGraphItem::ensureVisible(int row)
+{
+    if (row < 0)
+        return;
+    const qreal rowHeight = effectiveRowHeight();
+    const qreal top = static_cast<qreal>(row) * rowHeight;
+    const qreal bottom = top + rowHeight;
+    if (top < m_contentY)
+        setContentY(top - rowHeight);
+    else if (bottom > m_contentY + height())
+        setContentY(bottom - height() + rowHeight);
+}
+
+int CommitGraphItem::rowAt(qreal localY) const
+{
+    const qreal rowHeight = effectiveRowHeight();
+    if (rowHeight <= 0.0 || m_rows.isEmpty())
+        return -1;
+    return std::clamp(static_cast<int>(std::floor((m_contentY + localY) / rowHeight)), 0,
+                      static_cast<int>(m_rows.size()) - 1);
+}
+
+QString CommitGraphItem::oidAt(int row) const
+{
+    return row >= 0 && row < m_rows.size() ? m_rows.at(row).oid : QString();
+}
+
+void CommitGraphItem::hoverMoveEvent(QHoverEvent *event)
+{
+    const int row = rowAt(event->position().y());
+    if (row == m_hoveredRow)
+        return;
+    m_hoveredRow = row;
+    emit hoveredRowChanged();
+    update();
+}
+
+void CommitGraphItem::hoverLeaveEvent(QHoverEvent *event)
+{
+    Q_UNUSED(event);
+    if (m_hoveredRow == -1)
+        return;
+    m_hoveredRow = -1;
+    emit hoveredRowChanged();
+    update();
+}
+
+void CommitGraphItem::mousePressEvent(QMouseEvent *event)
+{
+    m_pressPosition = event->position();
+    m_pressContentY = m_contentY;
+    m_dragging = false;
+    if (event->button() == Qt::RightButton) {
+        const int row = rowAt(event->position().y());
+        emit contextRequested(row, oidAt(row), event->globalPosition());
+        event->accept();
+        return;
     }
-    for (int row = first; row <= last; ++row) {
-        const auto &commit = m_rows.at(row);
-        const qreal y = static_cast<qreal>(row) * m_rowHeight - m_contentY + m_rowHeight / 2.0;
-        const auto color = colors.at(static_cast<size_t>(commit.lane) % colors.size());
-        if (row == m_selectedRow)
-            root->appendChildNode(circleNode({ laneX(commit.lane), y }, 8.0, QColor(QStringLiteral("#ffffff"))));
-        root->appendChildNode(circleNode({ laneX(commit.lane), y }, 5.0, color));
+    event->accept();
+}
+
+void CommitGraphItem::mouseMoveEvent(QMouseEvent *event)
+{
+    if (!(event->buttons() & Qt::LeftButton))
+        return;
+    const qreal delta = event->position().y() - m_pressPosition.y();
+    if (!m_dragging && std::abs(delta) > 4.0) {
+        m_dragging = true;
+        setKeepMouseGrab(true);
     }
-    return root;
+    if (m_dragging)
+        setContentY(m_pressContentY - delta);
+    event->accept();
+}
+
+void CommitGraphItem::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        setKeepMouseGrab(false);
+        if (!m_dragging) {
+            const int row = rowAt(event->position().y());
+            if (row >= 0)
+                emit commitClicked(row);
+        }
+    }
+    m_dragging = false;
+    event->accept();
+}
+
+void CommitGraphItem::wheelEvent(QWheelEvent *event)
+{
+    const int delta = event->angleDelta().y();
+    if (delta == 0) {
+        event->ignore();
+        return;
+    }
+    if (event->modifiers() & Qt::ControlModifier) {
+        const qreal rowHeight = effectiveRowHeight();
+        const qreal anchor = rowHeight > 0.0 ? (m_contentY + event->position().y()) / rowHeight : 0.0;
+        setZoom(m_zoom * std::pow(1.0015, delta));
+        setContentY(anchor * effectiveRowHeight() - event->position().y());
+    } else {
+        setContentY(m_contentY - (static_cast<qreal>(delta) / 120.0) * effectiveRowHeight());
+    }
+    event->accept();
+}
+
+void CommitGraphItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
+{
+    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
+    clampContent();
+    emit metricsChanged();
+    update();
 }
 
 } // namespace GitNaga

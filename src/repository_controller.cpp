@@ -9,6 +9,7 @@
 #include <QLocale>
 #include <QtConcurrentRun>
 
+
 namespace GitNaga {
 
 RepositoryController::RepositoryController(QObject *parent)
@@ -16,7 +17,10 @@ RepositoryController::RepositoryController(QObject *parent)
 {
     m_refreshTimer.setSingleShot(true);
     m_refreshTimer.setInterval(150);
+    m_messageTimer.setSingleShot(true);
+    m_messageTimer.setInterval(6000);
     connect(&m_refreshTimer, &QTimer::timeout, this, &RepositoryController::refresh);
+    connect(&m_messageTimer, &QTimer::timeout, this, [this] { setOperationMessage({}); });
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_refreshTimer.start(); });
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_refreshTimer.start(); });
 }
@@ -28,7 +32,11 @@ QString RepositoryController::repositoryPath() const { return m_repository.workt
 QString RepositoryController::repositoryName() const { return QFileInfo(m_repository.worktree).fileName(); }
 QString RepositoryController::currentBranch() const { return m_repository.currentBranch; }
 bool RepositoryController::loading() const { return m_loading; }
+bool RepositoryController::busy() const { return m_loading || m_operationActive; }
 QString RepositoryController::errorMessage() const { return m_error; }
+QString RepositoryController::operationMessage() const { return m_operationMessage; }
+int RepositoryController::selectedRow() const { return m_selectedRow; }
+QVariantList RepositoryController::references() const { return m_references; }
 QString RepositoryController::selectedOid() const { return m_selected.oid; }
 QString RepositoryController::selectedSubject() const { return m_selected.subject; }
 QString RepositoryController::selectedAuthor() const { return m_selected.author; }
@@ -72,6 +80,7 @@ void RepositoryController::refresh()
         m_commits.replace(m_repository.commits);
         clearSelection();
         configureWatcher();
+        rebuildReferences();
         emit repositoryChanged();
     });
     watcher->setFuture(QtConcurrent::run([path] { return GitClient::loadRepository(path); }));
@@ -82,6 +91,9 @@ void RepositoryController::selectCommit(int row)
     const auto *commit = m_commits.commitAt(row);
     if (!commit || m_repository.worktree.isEmpty())
         return;
+
+    m_selectedRow = row;
+    emit selectionChanged();
 
     const auto generation = ++m_selectionGeneration;
     ++m_diffGeneration;
@@ -133,12 +145,42 @@ void RepositoryController::selectFile(int row)
     watcher->setFuture(QtConcurrent::run([worktree, oid, path] { return GitClient::loadDiff(worktree, oid, path); }));
 }
 
+void RepositoryController::runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage)
+{
+    if (m_repository.worktree.isEmpty() || m_operationActive)
+        return;
+    m_operationActive = true;
+    emit busyChanged();
+
+    const auto worktree = m_repository.worktree;
+    auto *watcher = new QFutureWatcher<GitResult<QString>>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, successMessage] {
+        const auto result = watcher->result();
+        watcher->deleteLater();
+        m_operationActive = false;
+        emit busyChanged();
+        if (!result) {
+            const auto message = result.error().message.isEmpty() ? result.error().operation : result.error().message;
+            setOperationMessage(message);
+            emit operationFinished(false, message);
+            return;
+        }
+        setOperationMessage(successMessage);
+        emit operationFinished(true, successMessage);
+        refresh();
+    });
+    watcher->setFuture(QtConcurrent::run([worktree, arguments, operation] {
+        return GitClient::mutate(worktree, arguments, operation);
+    }));
+}
+
 void RepositoryController::setLoading(bool loading)
 {
     if (m_loading == loading)
         return;
     m_loading = loading;
     emit loadingChanged();
+    emit busyChanged();
 }
 
 void RepositoryController::setError(QString message)
@@ -147,6 +189,16 @@ void RepositoryController::setError(QString message)
         return;
     m_error = std::move(message);
     emit errorChanged();
+}
+
+void RepositoryController::setOperationMessage(QString message)
+{
+    if (m_operationMessage == message)
+        return;
+    m_operationMessage = std::move(message);
+    if (!m_operationMessage.isEmpty())
+        m_messageTimer.start();
+    emit operationMessageChanged();
 }
 
 void RepositoryController::configureWatcher()
@@ -183,6 +235,7 @@ void RepositoryController::clearSelection()
     ++m_selectionGeneration;
     ++m_diffGeneration;
     m_selected = {};
+    m_selectedRow = -1;
     m_changedFiles.replace({});
     m_diffLines.clear();
     emit selectionChanged();

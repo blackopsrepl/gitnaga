@@ -7,23 +7,27 @@ ApplicationWindow {
     id: root
     required property var repository
 
-    width: 1440
-    height: 860
-    minimumWidth: 960
+    width: 1480
+    height: 900
+    minimumWidth: 980
     minimumHeight: 620
     visible: true
     title: repository.repositoryName.length > 0
-           ? repository.repositoryName + " — GitNaga"
+           ? repository.repositoryName + " · GitNaga"
            : qsTr("GitNaga")
 
-    readonly property color backgroundColor: "#0d0f14"
-    readonly property color panel: "#141820"
-    readonly property color raised: "#1b202b"
-    readonly property color alternate: "#202631"
-    readonly property color border: "#292f3d"
+    property bool referencesVisible: true
+    property bool reviewVisible: true
+    property bool lastOperationOk: true
+
+    readonly property color backgroundColor: "#080b12"
+    readonly property color panel: "#0e1420"
+    readonly property color raised: "#141b2a"
+    readonly property color alternate: "#1a2233"
+    readonly property color border: "#222c40"
     readonly property color text: "#e8ebf2"
-    readonly property color muted: "#8d95a7"
-    readonly property color accent: "#78a9ff"
+    readonly property color muted: "#8590a3"
+    readonly property color accent: "#34d399"
     color: backgroundColor
 
     palette.window: backgroundColor
@@ -34,14 +38,28 @@ ApplicationWindow {
     palette.button: raised
     palette.buttonText: text
     palette.highlight: accent
-    palette.highlightedText: "#08101f"
+    palette.highlightedText: "#04160f"
     palette.placeholderText: muted
 
+    onReferencesVisibleChanged: toggleReferencesAction.checked = referencesVisible
+    onReviewVisibleChanged: toggleReviewAction.checked = reviewVisible
+
+    function step(delta) {
+        var row = repository.selectedRow + delta
+        if (row >= 0 && row < repository.commits.count)
+            repository.selectCommit(row)
+    }
+
     Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: StandardKey.Open; onTriggered: repositoryDialog.open() }
-    Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: StandardKey.Refresh; enabled: repository.repositoryPath.length > 0 && !repository.loading; onTriggered: repository.refresh() }
+    Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: StandardKey.Refresh; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: repository.refresh() }
     Action { id: quitAction; text: qsTr("&Quit"); shortcut: StandardKey.Quit; onTriggered: Qt.quit() }
-    Action { id: focusHistoryAction; text: qsTr("Focus History"); shortcut: "Ctrl+1"; onTriggered: historyPane.forceActiveFocus() }
-    Action { id: focusInspectorAction; text: qsTr("Focus Inspector"); shortcut: "Ctrl+2"; onTriggered: inspectorPane.forceActiveFocus() }
+    Action { id: toggleReferencesAction; text: qsTr("References sidebar"); checkable: true; checked: true; shortcut: "Ctrl+1"; onTriggered: referencesVisible = checked }
+    Action { id: toggleReviewAction; text: qsTr("Review sidebar"); checkable: true; checked: true; shortcut: "Ctrl+2"; onTriggered: reviewVisible = checked }
+    Action { id: zoomInAction; text: qsTr("Zoom graph in"); shortcut: "Ctrl+="; onTriggered: graphPane.zoomIn() }
+    Action { id: zoomOutAction; text: qsTr("Zoom graph out"); shortcut: "Ctrl+-"; onTriggered: graphPane.zoomOut() }
+    Action { id: resetZoomAction; text: qsTr("Reset graph zoom"); shortcut: "Ctrl+0"; onTriggered: graphPane.resetZoom() }
+    Action { id: previousAction; text: qsTr("Previous commit"); shortcut: "Alt+Up"; enabled: repository.selectedRow > 0; onTriggered: root.step(-1) }
+    Action { id: nextAction; text: qsTr("Next commit"); shortcut: "Alt+Down"; enabled: repository.selectedRow + 1 < repository.commits.count; onTriggered: root.step(1) }
 
     menuBar: MenuBar {
         Menu {
@@ -56,8 +74,15 @@ ApplicationWindow {
         }
         Menu {
             title: qsTr("&View")
-            MenuItem { action: focusHistoryAction }
-            MenuItem { action: focusInspectorAction }
+            MenuItem { action: toggleReferencesAction }
+            MenuItem { action: toggleReviewAction }
+            MenuSeparator {}
+            MenuItem { action: zoomInAction }
+            MenuItem { action: zoomOutAction }
+            MenuItem { action: resetZoomAction }
+            MenuSeparator {}
+            MenuItem { action: previousAction }
+            MenuItem { action: nextAction }
         }
     }
 
@@ -68,7 +93,7 @@ ApplicationWindow {
     }
 
     header: ToolBar {
-        height: 38
+        height: 40
         background: Rectangle { color: root.raised; border.color: root.border }
         RowLayout {
             anchors.fill: parent
@@ -76,23 +101,35 @@ ApplicationWindow {
             anchors.rightMargin: 6
             spacing: 6
 
-            NagaButton { action: openAction; implicitHeight: 28 }
+            NagaButton { action: openAction; implicitHeight: 26 }
             ToolSeparator {}
             Label {
                 text: repository.repositoryName || qsTr("No repository open")
                 font.weight: Font.DemiBold
                 elide: Text.ElideMiddle
-                Layout.maximumWidth: 280
+                Layout.maximumWidth: 240
             }
             Label {
                 visible: repository.currentBranch.length > 0
                 text: "⎇ " + repository.currentBranch
-                color: root.muted
+                color: root.accent
                 font.pixelSize: 12
             }
             Item { Layout.fillWidth: true }
-            BusyIndicator { running: repository.loading; visible: running; implicitWidth: 22; implicitHeight: 22 }
-            NagaButton { action: refreshAction; implicitHeight: 28 }
+            NagaButton {
+                text: qsTr("References")
+                active: root.referencesVisible
+                implicitHeight: 26
+                onClicked: root.referencesVisible = !root.referencesVisible
+            }
+            NagaButton {
+                text: qsTr("Review")
+                active: root.reviewVisible
+                implicitHeight: 26
+                onClicked: root.reviewVisible = !root.reviewVisible
+            }
+            BusyIndicator { running: repository.busy; visible: running; implicitWidth: 22; implicitHeight: 22 }
+            NagaButton { action: refreshAction; implicitHeight: 26 }
         }
     }
 
@@ -108,32 +145,68 @@ ApplicationWindow {
         visible: repository.repositoryPath.length > 0
         orientation: Qt.Horizontal
 
-        HistoryPane {
-            id: historyPane
-            SplitView.preferredWidth: root.width * 0.52
-            SplitView.minimumWidth: 480
+        ReferencesPane {
+            id: referencesPane
+            visible: root.referencesVisible
+            SplitView.preferredWidth: root.width * 0.24
+            SplitView.minimumWidth: 200
+            repository: root.repository
+            colors: root
+            onCloseRequested: root.referencesVisible = false
+        }
+        GraphPane {
+            id: graphPane
+            SplitView.fillWidth: true
+            SplitView.minimumWidth: 380
             repository: root.repository
             colors: root
         }
         InspectorPane {
-            id: inspectorPane
-            SplitView.fillWidth: true
-            SplitView.minimumWidth: 400
+            id: reviewPane
+            visible: root.reviewVisible
+            SplitView.preferredWidth: root.width * 0.38
+            SplitView.minimumWidth: 320
             repository: root.repository
             colors: root
+            onCloseRequested: root.reviewVisible = false
         }
     }
 
     footer: Rectangle {
-        height: 24
+        height: 26
         color: root.raised
         border.color: root.border
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 8
             anchors.rightMargin: 8
-            Label { text: repository.repositoryPath; color: root.muted; font.pixelSize: 11; elide: Text.ElideMiddle; Layout.fillWidth: true }
-            Label { text: repository.commits.count + qsTr(" commits loaded"); color: root.muted; font.pixelSize: 11 }
+            spacing: 10
+            Label {
+                text: repository.repositoryPath
+                color: root.muted
+                font.pixelSize: 11
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
+            }
+            Label {
+                visible: repository.operationMessage.length > 0
+                text: repository.operationMessage
+                color: root.lastOperationOk ? "#4ade80" : "#ff7d8b"
+                font.pixelSize: 11
+                elide: Text.ElideRight
+            }
+            Label {
+                text: repository.commits.count + qsTr(" commits")
+                color: root.muted
+                font.pixelSize: 11
+            }
+        }
+    }
+
+    Connections {
+        target: root.repository
+        function onOperationFinished(ok, message) {
+            root.lastOperationOk = ok
         }
     }
 
@@ -143,7 +216,7 @@ ApplicationWindow {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: errorText.implicitHeight + 14
-        color: "#6b242c"
+        color: "#5c1f28"
         border.color: "#a84a55"
         Label {
             id: errorText

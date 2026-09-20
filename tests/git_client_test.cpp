@@ -75,6 +75,64 @@ private slots:
             return line.kind == DiffLine::Kind::Addition && line.text.contains(QStringLiteral("feature"));
         }));
     }
+
+    void performsBranchTagAndResetOperations()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto root = directory.path();
+        runGit(root, { QStringLiteral("init"), QStringLiteral("-b"), QStringLiteral("main") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("GitNaga Test") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("test@gitnaga.invalid") });
+
+        writeFile(root + QStringLiteral("/readme.txt"), QByteArrayLiteral("hello\n"));
+        runGit(root, { QStringLiteral("add"), QStringLiteral("readme.txt") });
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial") });
+
+        const auto head = GitClient::mutate(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") },
+                                            QStringLiteral("read HEAD"));
+        QVERIFY(head.has_value());
+        const auto base = head->trimmed();
+
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("branch"), QStringLiteral("feature"), base },
+                                  QStringLiteral("create branch")).has_value());
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("tag"), QStringLiteral("v-test"), base },
+                                  QStringLiteral("create tag")).has_value());
+
+        const auto branches = GitClient::mutate(root, { QStringLiteral("branch"), QStringLiteral("--list"),
+                                                        QStringLiteral("feature") }, QStringLiteral("list branches"));
+        QVERIFY(branches.has_value());
+        QVERIFY(branches->contains(QStringLiteral("feature")));
+
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("checkout"), QStringLiteral("feature") },
+                                  QStringLiteral("switch branch")).has_value());
+        auto snapshot = GitClient::loadRepository(root);
+        QVERIFY(snapshot.has_value());
+        QCOMPARE(snapshot->currentBranch, QStringLiteral("feature"));
+
+        writeFile(root + QStringLiteral("/readme.txt"), QByteArrayLiteral("hello\nfeature\n"));
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-am"), QStringLiteral("feature work") });
+        const auto featureHead = GitClient::mutate(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") },
+                                                   QStringLiteral("read HEAD"));
+        QVERIFY(featureHead.has_value());
+        QVERIFY(featureHead->trimmed() != base);
+
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("reset"), QStringLiteral("--hard"), base },
+                                  QStringLiteral("reset branch")).has_value());
+        const auto resetHead = GitClient::mutate(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") },
+                                                 QStringLiteral("read HEAD"));
+        QVERIFY(resetHead.has_value());
+        QCOMPARE(resetHead->trimmed(), base);
+
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("checkout"), QStringLiteral("main") },
+                                  QStringLiteral("switch branch")).has_value());
+        QVERIFY(GitClient::mutate(root, { QStringLiteral("branch"), QStringLiteral("-D"), QStringLiteral("feature") },
+                                  QStringLiteral("delete branch")).has_value());
+        const auto remaining = GitClient::mutate(root, { QStringLiteral("branch"), QStringLiteral("--list"),
+                                                         QStringLiteral("feature") }, QStringLiteral("list branches"));
+        QVERIFY(remaining.has_value());
+        QVERIFY(remaining->trimmed().isEmpty());
+    }
 };
 
 QTEST_GUILESS_MAIN(GitClientTest)

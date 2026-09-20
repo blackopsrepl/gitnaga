@@ -20,12 +20,20 @@ add_library(gitnaga_core STATIC
     src/file_change_model.hpp
     src/git_client.cpp
     src/git_client.hpp
+    src/git_inspect.cpp
+    src/git_parse.cpp
+    src/git_parse.hpp
+    src/graph_geometry.cpp
+    src/graph_geometry.hpp
+    src/graph_palette.hpp
     src/repository_controller.cpp
     src/repository_controller.hpp
+    src/repository_operations.cpp
+    src/repository_references.cpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
-target_link_libraries(gitnaga_core PUBLIC Qt6::Concurrent Qt6::Core)
+target_link_libraries(gitnaga_core PUBLIC Qt6::Concurrent Qt6::Core Qt6::Gui)
 target_compile_definitions(gitnaga_core PUBLIC QT_NO_CAST_FROM_ASCII QT_NO_CAST_TO_ASCII)
 target_compile_options(gitnaga_core PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wsign-conversion>
@@ -34,6 +42,7 @@ target_compile_options(gitnaga_core PRIVATE
 qt_add_executable(gitnaga
     src/commit_graph_item.cpp
     src/commit_graph_item.hpp
+    src/commit_graph_paint.cpp
     src/main.cpp
 )
 
@@ -42,11 +51,17 @@ qt_add_qml_module(gitnaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/CommitMenu.qml
+        qml/ConfirmDialog.qml
         qml/EmptyState.qml
-        qml/HistoryPane.qml
+        qml/GraphPane.qml
         qml/InspectorPane.qml
         qml/Main.qml
         qml/NagaButton.qml
+        qml/NagaGlyph.qml
+        qml/NagaIconButton.qml
+        qml/PromptDialog.qml
+        qml/ReferencesPane.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

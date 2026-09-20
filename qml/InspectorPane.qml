@@ -6,35 +6,62 @@ Rectangle {
     id: pane
     required property var repository
     required property var colors
-    color: colors.backgroundColor
+    signal closeRequested()
+
+    color: colors.panel
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 34
+            color: colors.panel
+            border.color: colors.border
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 6
+                Text {
+                    text: qsTr("Review")
+                    color: colors.text
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.4
+                }
+                Item { Layout.fillWidth: true }
+                NagaIconButton {
+                    text: "✕"
+                    tooltip: qsTr("Close review")
+                    onClicked: pane.closeRequested()
+                }
+            }
+        }
+
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: repository.selectedOid.length > 0 ? Math.min(150, details.implicitHeight + 20) : 68
+            Layout.preferredHeight: repository.selectedOid.length > 0 ? Math.min(150, details.implicitHeight + 20) : 62
             ColumnLayout {
                 id: details
                 anchors.fill: parent
                 anchors.margins: 10
                 spacing: 5
-                Label {
-                    text: repository.selectedOid.length > 0 ? repository.selectedSubject : qsTr("Select a commit")
-                    color: colors.text
-                    font.pixelSize: 16
+                Text {
+                    text: repository.selectedOid.length > 0 ? repository.selectedSubject : qsTr("Select a commit to review")
+                    color: repository.selectedOid.length > 0 ? colors.text : colors.muted
+                    font.pixelSize: 15
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                 }
-                Label {
+                Text {
                     visible: repository.selectedOid.length > 0
                     text: repository.selectedAuthor + "  ·  " + repository.selectedDate
                     color: colors.muted
                     font.pixelSize: 12
                 }
-                Label {
+                Text {
                     visible: repository.selectedBody.length > 0
                     text: repository.selectedBody
                     color: "#b5bbca"
@@ -43,16 +70,16 @@ Rectangle {
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                 }
-                Label {
+                Text {
                     visible: repository.selectedOid.length > 0
                     text: repository.selectedOid
-                    color: colors.accent
+                    color: "#34d399"
                     font.family: "monospace"
                     font.pixelSize: 11
                 }
             }
         }
-        Rectangle { Layout.fillWidth: true; height: 1; color: colors.border }
+        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: colors.border }
 
         SplitView {
             Layout.fillWidth: true
@@ -60,18 +87,18 @@ Rectangle {
             orientation: Qt.Horizontal
 
             Rectangle {
-                SplitView.preferredWidth: 220
-                SplitView.minimumWidth: 160
+                SplitView.preferredWidth: 200
+                SplitView.minimumWidth: 150
                 color: colors.panel
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
-                    Label {
+                    Text {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 30
-                        leftPadding: 8
+                        Layout.preferredHeight: 28
+                        leftPadding: 10
                         verticalAlignment: Text.AlignVCenter
-                        text: qsTr("Changed Files")
+                        text: qsTr("Changed files")
                         color: colors.text
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
@@ -83,6 +110,7 @@ Rectangle {
                         model: repository.changedFiles
                         currentIndex: count > 0 ? 0 : -1
                         clip: true
+                        boundsBehavior: Flickable.StopAtBounds
                         ScrollBar.vertical: ScrollBar {}
                         delegate: ItemDelegate {
                             required property int index
@@ -90,15 +118,24 @@ Rectangle {
                             required property string fileName
                             required property string directory
                             width: files.width
-                            highlighted: files.currentIndex === index
-                            onClicked: { files.currentIndex = index; repository.selectFile(index) }
+                            highlighted: index === files.currentIndex
+                            onClicked: {
+                                files.currentIndex = index
+                                repository.selectFile(index)
+                            }
                             contentItem: RowLayout {
-                                Label { text: status; color: status === "A" ? "#63d89b" : status === "D" ? "#ff7d8b" : "#f1c75b"; font.bold: true }
+                                spacing: 8
+                                Text {
+                                    text: status
+                                    color: status === "A" ? "#4ade80" : status === "D" ? "#ff7d8b" : "#fbbf24"
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                }
                                 ColumnLayout {
                                     spacing: 1
                                     Layout.fillWidth: true
-                                    Label { text: fileName; color: colors.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
-                                    Label { visible: directory.length > 0; text: directory; color: colors.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
+                                    Text { text: fileName; color: colors.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
+                                    Text { visible: directory.length > 0; text: directory; color: colors.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
                                 }
                             }
                         }
@@ -109,7 +146,7 @@ Rectangle {
             ListView {
                 id: diff
                 SplitView.fillWidth: true
-                SplitView.minimumWidth: 260
+                SplitView.minimumWidth: 240
                 model: repository.diffLines
                 clip: true
                 reuseItems: true
@@ -123,14 +160,14 @@ Rectangle {
                     required property var newLine
                     width: Math.max(diff.width, lineRow.implicitWidth + 24)
                     height: 22
-                    color: kind === 1 ? "#132d25" : kind === 2 ? "#341b22" : kind === 4 ? "#1b2b45" : "transparent"
+                    color: kind === 1 ? "#12291f" : kind === 2 ? "#331a20" : kind === 4 ? "#182b3f" : "transparent"
                     Row {
                         id: lineRow
                         height: parent.height
-                        Label { width: 42; text: oldLine || ""; color: "#626b7d"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
-                        Label { width: 42; text: newLine || ""; color: "#626b7d"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
+                        Text { width: 40; text: oldLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
+                        Text { width: 40; text: newLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
                         Rectangle { width: 1; height: parent.height; color: colors.border }
-                        Label { leftPadding: 10; text: parent.parent.text; color: kind === 1 ? "#9aebbf" : kind === 2 ? "#ffadb6" : kind === 4 ? "#9fc2ff" : kind === 3 ? "#77839a" : "#cbd0dc"; font.family: "monospace"; font.pixelSize: 12 }
+                        Text { leftPadding: 10; text: parent.parent.text; color: kind === 1 ? "#8fe6b8" : kind === 2 ? "#ffadb6" : kind === 4 ? "#9fc2ff" : kind === 3 ? "#77839a" : "#cbd0dc"; font.family: "monospace"; font.pixelSize: 12 }
                     }
                 }
             }

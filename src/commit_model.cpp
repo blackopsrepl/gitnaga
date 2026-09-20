@@ -85,4 +85,20 @@ const Commit *CommitModel::commitAt(int row) const
     return row >= 0 && row < m_commits.size() ? &m_commits.at(row) : nullptr;
 }
 
+QVariantMap CommitModel::at(int row) const
+{
+    const auto *commit = commitAt(row);
+    if (!commit)
+        return {};
+    QVariantMap map;
+    map.insert(QStringLiteral("oid"), commit->oid);
+    map.insert(QStringLiteral("shortOid"), commit->oid.left(8));
+    map.insert(QStringLiteral("subject"), commit->subject);
+    map.insert(QStringLiteral("author"), commit->author);
+    map.insert(QStringLiteral("refs"), commit->refs);
+    map.insert(QStringLiteral("parents"), commit->parents);
+    map.insert(QStringLiteral("lane"), commit->lane);
+    return map;
+}
+
 } // namespace GitNaga

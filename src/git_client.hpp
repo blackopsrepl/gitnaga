@@ -24,6 +24,7 @@ public:
     static GitResult<RepositorySnapshot> loadRepository(const QString &path, int maximumCommits = 5000);
     static GitResult<CommitInspection> inspectCommit(const QString &worktree, const QString &oid);
     static GitResult<QVector<DiffLine>> loadDiff(const QString &worktree, const QString &oid, const QString &path);
+    static GitResult<QString> mutate(const QString &worktree, const QStringList &arguments, const QString &operation);
 
 private:
     static GitResult<QByteArray> run(const QString &workingDirectory, const QStringList &arguments, const QString &operation);

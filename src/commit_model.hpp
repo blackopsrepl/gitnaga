@@ -3,6 +3,7 @@
 #include "domain.hpp"
 
 #include <QAbstractListModel>
+#include <QVariantMap>
 
 namespace GitNaga {
 
@@ -36,6 +37,7 @@ public:
     void replace(QVector<Commit> commits);
     const QVector<Commit> &commits() const;
     const Commit *commitAt(int row) const;
+    Q_INVOKABLE QVariantMap at(int row) const;
 
 signals:
     void countChanged();
