@@ -8,12 +8,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.9.1 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Test)
+find_package(Qt6 6.9.1 REQUIRED COMPONENTS Concurrent Core Gui Qml Quick QuickControls2 Test)
 qt_standard_project_setup(REQUIRES 6.9.1)
 
-qt_add_executable(gitnaga
-    src/main.cpp
+add_library(gitnaga_core STATIC
+    src/commit_model.cpp
+    src/commit_model.hpp
+    src/diff_line_model.cpp
+    src/diff_line_model.hpp
+    src/file_change_model.cpp
+    src/file_change_model.hpp
+    src/git_client.cpp
+    src/git_client.hpp
+    src/repository_controller.cpp
+    src/repository_controller.hpp
 )
+
+target_include_directories(gitnaga_core PUBLIC src)
+target_link_libraries(gitnaga_core PUBLIC Qt6::Concurrent Qt6::Core)
+target_compile_definitions(gitnaga_core PUBLIC QT_NO_CAST_FROM_ASCII QT_NO_CAST_TO_ASCII)
+target_compile_options(gitnaga_core PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wsign-conversion>
+)
+
+qt_add_executable(gitnaga src/main.cpp)
 
 qt_add_qml_module(gitnaga
     URI GitNaga
@@ -34,6 +52,7 @@ target_compile_options(gitnaga PRIVATE
 )
 
 target_link_libraries(gitnaga PRIVATE
+    gitnaga_core
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -55,5 +74,9 @@ install(FILES packaging/io.gitnaga.GitNaga.metainfo.xml
 
 include(CTest)
 if(BUILD_TESTING)
+    add_test(
+        NAME source_size_contract
+        COMMAND ${CMAKE_COMMAND} -DSOURCE_ROOT=${CMAKE_SOURCE_DIR} -P ${CMAKE_SOURCE_DIR}/cmake/CheckSourceSize.cmake
+    )
     add_subdirectory(tests)
 endif()

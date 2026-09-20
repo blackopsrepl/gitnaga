@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 ApplicationWindow {
     id: root
+    required property var repository
     width: 1280
     height: 800
     minimumWidth: 900
