@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.2](https://github.com/blackopsrepl/gitnaga/compare/v0.1.1...v0.1.2) (2026-09-20)
+
+### Features
+
+* **graph:** rebuild graph rendering around edges, ancestry, and density ([a27f8e4](https://github.com/blackopsrepl/gitnaga/commit/a27f8e4a7406adbb522bfe6c07cf26df79711d73))
+
+### Bug Fixes
+
+* **lint:** run the Qt 6 qmllint instead of the Qt 5 binary ([f564862](https://github.com/blackopsrepl/gitnaga/commit/f564862971adbc4d2a49276cd1956d79da2678cf))
+* **ui:** strip mnemonic markers from action buttons ([522bb28](https://github.com/blackopsrepl/gitnaga/commit/522bb289e5ee8cd6303dd0a59bfa015ff3356db5))
+
+### Documentation
+
+* describe the hosted CI and add a build badge ([5dbac93](https://github.com/blackopsrepl/gitnaga/commit/5dbac934da8542ae104ac36bfa05f92cd233513d))
+* refresh the graph screenshots ([857d4e3](https://github.com/blackopsrepl/gitnaga/commit/857d4e3dc9784cc33b15acf97175674f02c60939))
+
+### Continuous Integration
+
+* build, test, and lint on GitHub and Forgejo ([6a8664e](https://github.com/blackopsrepl/gitnaga/commit/6a8664e04b3ab77b77161ad0e611db237e129fd4))
+
 ## [0.1.1](https://github.com/blackopsrepl/gitnaga/compare/v0.1.0...v0.1.1) (2026-09-20)
 
 ### Features
