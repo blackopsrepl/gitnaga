@@ -1,5 +1,7 @@
 # GitNaga
 
+[![CI](https://github.com/blackopsrepl/gitnaga/actions/workflows/ci.yml/badge.svg)](https://github.com/blackopsrepl/gitnaga/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="docs/history.png" alt="GitNaga showing a reference sidebar, the commit graph in the centre with a selected commit, and a review sidebar with the changed files and a coloured diff" width="920">
 </p>

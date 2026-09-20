@@ -101,10 +101,20 @@ against a subset with `REMOTES="origin" make release-verify`.
 
 ## Continuous integration
 
-The gate for a release is `make pre-release`. It is intentionally local: the
-local Forgejo runners provide `rust`, `ruby`, and `python` images only, and
-there is no Qt 6 toolchain runner, so a hosted build job would fail for a
-reason unrelated to the change. Do not add a workflow that cannot run.
+The gate for a release is `make pre-release`. It also runs hosted:
+
+- GitHub Actions: `.github/workflows/ci.yml` installs Qt 6.9.1, Ninja, and
+  ccache, then configures, builds, tests, and lints on every push and pull
+  request. `.github/workflows/release.yml` runs on `v*` tags, checks the tag
+  against the version surface, builds the release preset, and publishes the
+  GitHub release.
+- Forgejo Actions: `.forgejo/workflows/ci.yml` runs the same configure, build,
+  test, and lint steps on the `cpp` runner label. The local Forgejo stack
+  provides that runner (Qt 6.9.1 on openSUSE Tumbleweed); `cpp-latest`, `qt`,
+  and `qt-latest` are aliases.
+
+Both workflows run the same repository steps, so a change that passes locally
+passes hosted.
 
 ## Rollback
 
