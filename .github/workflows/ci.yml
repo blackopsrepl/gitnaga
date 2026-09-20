@@ -39,4 +39,4 @@ jobs:
         run: ctest --preset dev --output-on-failure
 
       - name: Lint QML
-        run: "${QT_ROOT_DIR}/bin/qmllint" -I build/dev -I "${QT_ROOT_DIR}/qml" qml/*.qml
+        run: '"${QT_ROOT_DIR}/bin/qmllint" -I build/dev -I "${QT_ROOT_DIR}/qml" qml/*.qml'
