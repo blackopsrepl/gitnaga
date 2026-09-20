@@ -40,6 +40,7 @@ target_compile_options(gitnaga_core PRIVATE
 )
 
 qt_add_executable(gitnaga
+    src/commit_graph_input.cpp
     src/commit_graph_item.cpp
     src/commit_graph_item.hpp
     src/commit_graph_paint.cpp
