@@ -24,11 +24,12 @@ QT_QML_DIR ?= $(shell qtpaths6 --query QT_INSTALL_QML 2>/dev/null || echo /usr/l
 QT_BIN_DIR ?= $(shell qtpaths6 --query QT_INSTALL_BINS 2>/dev/null)
 QML_LINT ?= $(if $(QT_BIN_DIR),$(QT_BIN_DIR)/qmllint,qmllint)
 REPO ?= $(CURDIR)
+PREFIX ?= $(HOME)/.local
 
 # ============== Phony Targets ==============
 .PHONY: banner help configure build build-release run test lint ci-local pre-release \
         release-check release-dry release release-push release-verify \
-        version bump-patch bump-minor bump-major bump-dry clean watch
+        version bump-patch bump-minor bump-major bump-dry install uninstall clean watch
 
 # ============== Default Target ==============
 .DEFAULT_GOAL := help
@@ -177,6 +178,28 @@ bump-major: banner
 bump-dry:
 	@npx commit-and-tag-version --dry-run
 
+# ============== Install ==============
+#
+# Installs the release binary, the desktop entry, and the AppStream metadata.
+# Override the destination with PREFIX=/usr/local.
+
+install: build-release
+	@printf "$(CYAN)$(BOLD)╔══════════════════════════════════════╗$(RESET)\n"
+	@printf "$(CYAN)$(BOLD)║             Installing               ║$(RESET)\n"
+	@printf "$(CYAN)$(BOLD)╚══════════════════════════════════════╝$(RESET)\n\n"
+	@printf "$(ARROW) Installing to $(YELLOW)$(PREFIX)$(RESET)\n"
+	@cmake --install build/release --prefix "$(PREFIX)" && \
+		printf "$(GREEN)$(CHECK) Installed$(RESET)\n" || \
+		(printf "$(RED)$(CROSS) Install failed$(RESET)\n" && exit 1)
+	@printf "$(GRAY)Run it with: $(PREFIX)/bin/gitnaga$(RESET)\n"
+
+uninstall:
+	@printf "$(ARROW) Removing files installed under $(YELLOW)$(PREFIX)$(RESET)\n"
+	@rm -f "$(PREFIX)/bin/gitnaga" \
+	       "$(PREFIX)/share/applications/io.gitnaga.GitNaga.desktop" \
+	       "$(PREFIX)/share/metainfo/io.gitnaga.GitNaga.metainfo.xml"
+	@printf "$(GREEN)$(CHECK) Uninstalled$(RESET)\n"
+
 # ============== Housekeeping ==============
 
 clean:
@@ -218,6 +241,10 @@ help: banner
 	@/bin/echo -e "  $(GREEN)make bump-minor$(RESET)     - Manual minor bump (bypasses the gate)"
 	@/bin/echo -e "  $(GREEN)make bump-major$(RESET)     - Manual major bump (bypasses the gate)"
 	@/bin/echo -e "  $(GREEN)make bump-dry$(RESET)       - Preview the version bump"
+	@/bin/echo -e ""
+	@/bin/echo -e "$(CYAN)$(BOLD)Install:$(RESET)"
+	@/bin/echo -e "  $(GREEN)make install$(RESET)        - Install to PREFIX ($(YELLOW)$(PREFIX)$(RESET))"
+	@/bin/echo -e "  $(GREEN)make uninstall$(RESET)      - Remove the installed files"
 	@/bin/echo -e ""
 	@/bin/echo -e "$(CYAN)$(BOLD)Other:$(RESET)"
 	@/bin/echo -e "  $(GREEN)make clean$(RESET)          - Remove build artifacts"
