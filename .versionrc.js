@@ -17,6 +17,6 @@ module.exports = {
   bumpFiles: [{ filename: "cmake/GitNagaVersion.cmake", updater: versionUpdater }],
   tagPrefix: "v",
   releaseCommitMessageFormat: "chore(release): {{currentTag}}",
-  commitUrlFormat: "https://github.com/gitnaga/gitnaga/commit/{{hash}}",
-  compareUrlFormat: "https://github.com/gitnaga/gitnaga/compare/{{previousTag}}...{{currentTag}}",
+  commitUrlFormat: "https://github.com/blackopsrepl/gitnaga/commit/{{hash}}",
+  compareUrlFormat: "https://github.com/blackopsrepl/gitnaga/compare/{{previousTag}}...{{currentTag}}",
 };
