@@ -4,6 +4,19 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.7](https://github.com/blackopsrepl/gitnaga/compare/v0.1.6...v0.1.7) (2026-09-21)
+
+### Features
+
+* **graph:** add a slim scrollbar and collapse labels at low zoom ([1adb5be](https://github.com/blackopsrepl/gitnaga/commit/1adb5bedeff998afe8a8cc5968dca98108d43eaf))
+* **ui:** draw folder and refresh vector icons for the toolbar ([7e1139e](https://github.com/blackopsrepl/gitnaga/commit/7e1139e73db237893089cf74f5aa92b332e93746))
+* **ui:** drop the classic menu bar ([0180b0f](https://github.com/blackopsrepl/gitnaga/commit/0180b0fc42a68d09e8fe977b19ddafa74caf62d2))
+* **ui:** switch branches by double click with a visible HEAD marker ([951710c](https://github.com/blackopsrepl/gitnaga/commit/951710ca4b55cddb11a0234d064b64052405a2ea))
+
+### Bug Fixes
+
+* **controller:** honour a newly requested repository path ([38b629b](https://github.com/blackopsrepl/gitnaga/commit/38b629b279874686ffc1128ecef2ea78acafb374))
+
 ## [0.1.6](https://github.com/blackopsrepl/gitnaga/compare/v0.1.5...v0.1.6) (2026-09-20)
 
 ### Bug Fixes
