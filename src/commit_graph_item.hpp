@@ -27,6 +27,8 @@ class CommitGraphItem : public QQuickPaintedItem
     Q_PROPERTY(qreal laneWidth READ laneWidth NOTIFY metricsChanged)
     Q_PROPERTY(qreal contentHeight READ contentHeight NOTIFY metricsChanged)
     Q_PROPERTY(qreal maxContentY READ maxContentY NOTIFY metricsChanged)
+    Q_PROPERTY(qreal minimumZoom READ minimumZoom CONSTANT)
+    Q_PROPERTY(qreal maximumZoom READ maximumZoom CONSTANT)
 
 public:
     explicit CommitGraphItem(QQuickItem *parent = nullptr);
@@ -48,6 +50,8 @@ public:
     qreal laneWidth() const;
     qreal contentHeight() const;
     qreal maxContentY() const;
+    static qreal minimumZoom();
+    static qreal maximumZoom();
 
     Q_INVOKABLE void zoomIn();
     Q_INVOKABLE void zoomOut();

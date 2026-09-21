@@ -61,7 +61,7 @@ Rectangle {
                 NagaIconButton {
                     text: "−"
                     tooltip: qsTr("Zoom out")
-                    enabled: graph.zoom > 0.46
+                    enabled: graph.zoom > graph.minimumZoom + 0.001
                     onClicked: graph.zoomOut()
                 }
                 Text {
@@ -74,7 +74,7 @@ Rectangle {
                 NagaIconButton {
                     text: "+"
                     tooltip: qsTr("Zoom in")
-                    enabled: graph.zoom < 2.79
+                    enabled: graph.zoom < graph.maximumZoom - 0.001
                     onClicked: graph.zoomIn()
                 }
                 NagaIconButton {
@@ -131,8 +131,25 @@ Rectangle {
                     width: labels.width
                     height: graph.effectiveRowHeight
                     readonly property bool current: index === repository.selectedRow
+                    // Below ~26 px per row a two-line layout cannot fit without
+                    // colliding with its neighbours, so collapse to one line.
+                    readonly property bool compact: graph.effectiveRowHeight < 26
+
+                    Text {
+                        visible: rowItem.compact
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: rowItem.subject
+                        color: rowItem.current ? "#ffffff" : "#b9c2d2"
+                        elide: Text.ElideRight
+                        font.pixelSize: 10
+                        font.weight: rowItem.current ? Font.DemiBold : Font.Normal
+                    }
 
                     Column {
+                        visible: !rowItem.compact
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.rightMargin: 16
@@ -183,6 +200,13 @@ Rectangle {
                         }
                     }
                 }
+            }
+
+            GraphScrollBar {
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                graph: graph
             }
 
         }

@@ -178,9 +178,9 @@ overlaid to the right of the lane column.
 
 | Control | Action |
 |---------|--------|
-| `−` | `graph.zoomOut()` (divide by 1.18), disabled at `zoom <= 0.46` |
+| `−` | `graph.zoomOut()` (divide by 1.18), disabled at `zoom <= graph.minimumZoom` |
 | Zoom readout | `Math.round(zoom * 100) + "%"`, `Layout.preferredWidth: 34` |
-| `+` | `graph.zoomIn()` (multiply by 1.18), disabled at `zoom >= 2.79` |
+| `+` | `graph.zoomIn()` (multiply by 1.18), disabled at `zoom >= graph.maximumZoom` |
 | `⟲` | `graph.resetZoom()` |
 
 ### 5.2 Geometry (base values at zoom 1.0)
@@ -258,18 +258,36 @@ A `ListView` with `interactive: false`, `enabled: false`, `contentY` bound to
 `graph.contentY`, so it never steals pointer events. `x = min(width - 150,
 laneWidth + 16)`.
 
-Delegate (`height = graph.effectiveRowHeight`, 11 px subject over 9 px meta,
-`spacing: 1`):
+Delegate (`height = graph.effectiveRowHeight`). The layout is density
+adaptive so rows never collide:
+
+- Comfortable, `effectiveRowHeight >= 26`: 11 px subject over 9 px meta,
+  `spacing: 1`:
 
 ```
 Row 1:  <subject, elide right, width = parent - chips - 8>  [chip][chip][chip]
 Row 2:  <shortOid>  <author>  ·  <relativeDate>
 ```
 
+- Compact, `effectiveRowHeight < 26`: a single vertically centred 10 px
+  subject line, elided; chips and the meta row are hidden.
+
 Chips are 14 px tall with 9 px text and show at most 3 refs. Chip colours: local `#1c2140` with border `#5b4bb8`,
 remote `#262d3d` with border `#3a4560`, tag `#3a2f17` with border `#7a5f1f`.
 `shortOid` uses `#a78bfa`; author and date use `#78839a`. The selected row uses
 white subject text and `Font.DemiBold`.
+
+### 5.6.1 Graph scrollbar
+
+`GraphScrollBar` (`qml/GraphScrollBar.qml`) overlays the right edge of the
+graph surface. It is hidden when `maxContentY <= 0.5`. The thumb is a rounded
+pill: 4 px wide at 28% opacity idle, 6 px at 55% on hover, 7 px at 85% while
+dragging (`#97a1b4`, near-white when held), with 90–120 ms ease transitions.
+Thumb height is proportional (`track² / contentHeight`, minimum 28 px) and its
+position tracks `graph.contentY / maxContentY`. Clicking the track centres the
+thumb on the click; dragging scrolls by writing `graph.contentY`, which the
+label overlay follows through its existing binding. Wheel events over the
+strip still reach the graph.
 
 ### 5.7 Pointer model
 

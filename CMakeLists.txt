@@ -59,6 +59,7 @@ qt_add_qml_module(gitnaga
         qml/ConfirmDialog.qml
         qml/EmptyState.qml
         qml/GraphPane.qml
+        qml/GraphScrollBar.qml
         qml/InspectorPane.qml
         qml/Main.qml
         qml/NagaButton.qml

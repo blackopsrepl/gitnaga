@@ -8,8 +8,8 @@
 namespace GitNaga {
 
 namespace {
-constexpr qreal minimumZoom = 0.45;
-constexpr qreal maximumZoom = 2.8;
+constexpr qreal kMinimumZoom = 0.45;
+constexpr qreal kMaximumZoom = 2.8;
 }
 
 CommitGraphItem::CommitGraphItem(QQuickItem *parent)
@@ -96,7 +96,7 @@ qreal CommitGraphItem::zoom() const { return m_zoom; }
 
 void CommitGraphItem::setZoom(qreal value)
 {
-    const qreal clamped = std::clamp(value, minimumZoom, maximumZoom);
+    const qreal clamped = std::clamp(value, kMinimumZoom, kMaximumZoom);
     if (qFuzzyCompare(m_zoom, clamped))
         return;
     m_zoom = clamped;
@@ -174,6 +174,10 @@ qreal CommitGraphItem::effectiveRowHeight() const { return m_baseRowHeight * m_z
 qreal CommitGraphItem::laneWidth() const { return graph::laneAreaWidth(m_maximumLane, style()); }
 qreal CommitGraphItem::contentHeight() const { return static_cast<qreal>(m_rows.size()) * effectiveRowHeight(); }
 qreal CommitGraphItem::maxContentY() const { return std::max(0.0, contentHeight() - height()); }
+
+qreal CommitGraphItem::minimumZoom() { return kMinimumZoom; }
+
+qreal CommitGraphItem::maximumZoom() { return kMaximumZoom; }
 
 void CommitGraphItem::clampContent() { setContentY(m_contentY); }
 
