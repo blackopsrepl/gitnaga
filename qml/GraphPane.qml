@@ -195,10 +195,13 @@ Rectangle {
                                         height: 14
                                         width: chipText.implicitWidth + 12
                                         radius: 3
-                                        color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b, 0.22)
-                                        border.color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b,
-                                                               chipMouse.containsMouse ? 1.0 : 0.75)
-                                        Behavior on border.color {
+                                        // Hover raises the fill and the text; the
+                                        // border keeps the branch colour, so hover
+                                        // never introduces a hue of its own.
+                                        color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b,
+                                                       chipMouse.containsMouse ? 0.38 : 0.22)
+                                        border.color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b, 0.7)
+                                        Behavior on color {
                                             ColorAnimation { duration: 90 }
                                         }
                                         MouseArea {
@@ -220,7 +223,7 @@ Rectangle {
                                             id: chipText
                                             anchors.centerIn: parent
                                             text: parent.modelData
-                                            color: "#f2f4fa"
+                                            color: chipMouse.containsMouse ? "#ffffff" : "#f2f4fa"
                                             font.pixelSize: 9
                                         }
                                     }

@@ -22,6 +22,9 @@ using graph::withAlpha;
 namespace {
 const QColor selectionColor(QStringLiteral("#f2fffa"));
 const QColor headColor(QStringLiteral("#ffe9a8"));
+// Pointer cue, shared with the palette so the rule stays testable: hue is for
+// branch identity, never for the pointer.
+const QColor hoverColor = graph::pointerColor();
 constexpr int dimmedAlpha = 128;
 } // namespace
 
@@ -70,7 +73,9 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
         // Uncommitted work: a hollow dashed disc instead of an author avatar,
         // so it reads as pending rather than as a recorded commit. Selection
         // reads from the dashed ring's colour, not from a glow.
-        const QColor pending = selected && !dimmed ? selectionColor : QColor(151, 161, 180);
+        const QColor pending = selected && !dimmed ? selectionColor
+                             : hovered && !dimmed ? hoverColor
+                                                 : QColor(151, 161, 180);
         painter->setBrush(withAlpha(QColor(11, 17, 32), dimmed ? qMin(alpha, 90) : 200));
         painter->setPen(QPen(withAlpha(pending, alpha), 1.4 * scale, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
         painter->drawEllipse(node.center, nodeRadius, nodeRadius);
@@ -106,12 +111,15 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
 
     QColor ring = lighten(base, 0.25);
     qreal ringWidth = 1.8 * scale;
-    if (selected && !dimmed)
+    if (selected && !dimmed) {
         ring = selectionColor;
-    else if (hovered && !dimmed)
-        ring = lighten(base, 0.55);
-    else if (isHead)
+        ringWidth = 2.8 * scale;
+    } else if (hovered && !dimmed) {
+        ring = hoverColor;
         ringWidth = 2.2 * scale;
+    } else if (isHead) {
+        ringWidth = 2.2 * scale;
+    }
     painter->setBrush(Qt::NoBrush);
     painter->setPen(QPen(withAlpha(ring, dimmed ? qMin(alpha, 150) : 255), ringWidth));
     painter->drawEllipse(node.center, nodeRadius + 2.4 * scale, nodeRadius + 2.4 * scale);
@@ -131,12 +139,16 @@ void CommitGraphItem::paint(QPainter *painter)
 
     for (int row = first; row <= last; ++row) {
         const qreal y = graph::rowCenterY(row, m_contentY, st) - st.rowHeight / 2.0;
-        const QColor band = laneColor(m_rows.at(row).colorIndex);
+        // Branch colour is identity, so it tints its line's rows and the
+        // selected row; the pointer's row takes a neutral wash so hover never
+        // reads as a brighter version of the branch hue.
+        const bool hoveredRow = row == m_hoveredRow && row != m_selectedRow;
+        const QColor band = hoveredRow ? hoverColor : laneColor(m_rows.at(row).colorIndex);
         const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(m_rows.at(row).oid);
         int alpha = 26;
         if (row == m_selectedRow)
             alpha = 56;
-        else if (row == m_hoveredRow)
+        else if (hoveredRow)
             alpha = 38;
         if (dimmed)
             alpha = 10;

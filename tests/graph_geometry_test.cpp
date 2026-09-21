@@ -221,6 +221,38 @@ private slots:
                  qPrintable(QStringLiteral("first entry hue %1 is not green").arg(firstHue)));
     }
 
+    void pointerCueStaysNeutral()
+    {
+        // The pointer highlight must not carry a hue: deriving it from the
+        // branch colour made hovering the green line look like a green state.
+        const QColor pointer = pointerColor();
+        const auto toLab = [](const QColor &color) {
+            const auto linear = [](double channel) {
+                return channel <= 0.04045 ? channel / 12.92 : std::pow((channel + 0.055) / 1.055, 2.4);
+            };
+            const double r = linear(color.redF());
+            const double g = linear(color.greenF());
+            const double b = linear(color.blueF());
+            const double x = (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047;
+            const double y = r * 0.2126729 + g * 0.7151522 + b * 0.0721750;
+            const double z = (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) / 1.08883;
+            const auto f = [](double t) { return t > 0.008856 ? std::cbrt(t) : 7.787 * t + 16.0 / 116.0; };
+            return std::array<double, 3>{ 116.0 * f(y) - 16.0, 500.0 * (f(x) - f(y)), 200.0 * (f(y) - f(z)) };
+        };
+        const auto lab = toLab(pointer);
+        QVERIFY2(lab[0] >= 80.0, qPrintable(QStringLiteral("pointer L* %1 too dark").arg(lab[0])));
+        QVERIFY2(std::hypot(lab[1], lab[2]) <= 10.0,
+                 qPrintable(QStringLiteral("pointer chroma %1 is not neutral").arg(std::hypot(lab[1], lab[2]))));
+        QVERIFY(contrastOnBackground(pointer) >= 8.0);
+
+        // Branch colours, by contrast, are required to be chromatic, so the
+        // pointer and the identity can never converge on the same treatment.
+        for (const auto &color : palette()) {
+            const auto colorLab = toLab(color);
+            QVERIFY(std::hypot(colorLab[1], colorLab[2]) >= 25.0);
+        }
+    }
+
     void branchLinesKeepTheirColour()
     {
         // main-tip and feature-tip diverge from base; the colour must follow

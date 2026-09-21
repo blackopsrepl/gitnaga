@@ -36,6 +36,13 @@ inline const std::array<QColor, 12> &palette()
     return colors;
 }
 
+// Pointer highlight. Deliberately neutral and low-chroma: hue is reserved for
+// branch identity, so hovering the green line cannot read as a green state.
+inline QColor pointerColor()
+{
+    return QColor(QStringLiteral("#cfd9e8"));
+}
+
 inline QColor laneColor(int lane)
 {
     const int count = static_cast<int>(palette().size());

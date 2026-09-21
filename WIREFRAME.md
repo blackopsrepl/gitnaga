@@ -235,6 +235,15 @@ nothing is dimmed, so hover tracing still works on its own.
 Commits outside the set are drawn at 50% alpha; everything inside stays fully
 opaque, the selected row band keeps its stronger alpha, and the selected node
 keeps its white ring and its band colour regardless of what the pointer is over. Nodes are drawn flat: there is no radial glow behind the selection or the uncommitted snapshot, so the ring, the band, and the branch colour carry the state instead.
+
+The pointer cue is deliberately **neutral** (`#cfd9e8`, `graph::pointerColor()`): the
+hovered node's ring widens to `2.2 * scale`, the hovered row takes a neutral
+wash at alpha 38, and a hovered badge raises its fill alpha instead of
+brightening its border. Hover must never be read as a brighter version of the
+branch hue — on the green line that made a pointer highlight look like a green
+state, and green belongs to branch identity. Hierarchy: idle ring `lighten(base,
+0.25)` at `1.8 * scale`, hover neutral at `2.2`, selected near-white
+`#f2fffa` at `2.8`, HEAD amber at `2.2`.
 Setting alpha floors is unnecessary because the dim is a single constant in
 `commit_graph_paint.cpp`.
 
@@ -289,8 +298,9 @@ Row 2:  <shortOid>  <author>  ·  <relativeDate>
 
 Chips are 14 px tall with 9 px text and show at most 3 refs. Each chip is
 tinted from its commit's branch colour (the `color` model role = the lane
-palette entry for that line): fill `Qt.rgba(r, g, b, 0.22)`, border at 0.75
-alpha, text `#f2f4fa`, hovering the border to full strength over 90 ms. Kind
+palette entry for that line): fill `Qt.rgba(r, g, b, 0.22)`, border at 0.7
+alpha, text `#f2f4fa`. Hover raises the fill to 0.38 and the text to white,
+over 90 ms, leaving the border as the branch colour. Kind
 still reads because the ref prefix is part of the text — bare name for a local
 branch, `⇄ ` for a remote, `# ` for a tag. `shortOid` uses `#a78bfa`; author
 and date use `#78839a`. The selected row uses white subject text and
