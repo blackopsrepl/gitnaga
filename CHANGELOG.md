@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.9](https://github.com/blackopsrepl/gitnaga/compare/v0.1.8...v0.1.9) (2026-09-21)
+
+### Code Refactoring
+
+* **wip:** model uncommitted work as an ephemeral commit ([81f09d8](https://github.com/blackopsrepl/gitnaga/commit/81f09d80b56a03123dead11eb523e6731e8fde01))
+
 ## [0.1.8](https://github.com/blackopsrepl/gitnaga/compare/v0.1.7...v0.1.8) (2026-09-21)
 
 ### Features
