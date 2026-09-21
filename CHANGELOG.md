@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.10](https://github.com/blackopsrepl/gitnaga/compare/v0.1.9...v0.1.10) (2026-09-21)
+
+### Bug Fixes
+
+* **graph:** keep the selected commit emphasised while hovering ([2e74150](https://github.com/blackopsrepl/gitnaga/commit/2e7415002b8d947d7e881c1db996b09bee87f21f))
+
 ## [0.1.9](https://github.com/blackopsrepl/gitnaga/compare/v0.1.8...v0.1.9) (2026-09-21)
 
 ### Code Refactoring
