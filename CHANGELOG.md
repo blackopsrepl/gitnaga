@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.15](https://github.com/blackopsrepl/gitnaga/compare/v0.1.14...v0.1.15) (2026-09-21)
+
+### Bug Fixes
+
+* **graph:** dim the traced line, not the row, and ramp the trace ([87fcdde](https://github.com/blackopsrepl/gitnaga/commit/87fcdde0f448f223dcb523052c9c609e4ed398fe))
+
 ## [0.1.14](https://github.com/blackopsrepl/gitnaga/compare/v0.1.13...v0.1.14) (2026-09-21)
 
 ### Code Refactoring
