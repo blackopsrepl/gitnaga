@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.14](https://github.com/blackopsrepl/gitnaga/compare/v0.1.13...v0.1.14) (2026-09-21)
+
+### Code Refactoring
+
+* **graph:** extract the commit label overlay ([4c32e64](https://github.com/blackopsrepl/gitnaga/commit/4c32e64209bfcadb29b26d40adb85af9dadac903))
+
+### Tests
+
+* **palette:** split the colour contracts into their own test ([402e0ea](https://github.com/blackopsrepl/gitnaga/commit/402e0ea077c2a7e8fe94b1b68c33521b4e394c56))
+
 ## [0.1.13](https://github.com/blackopsrepl/gitnaga/compare/v0.1.12...v0.1.13) (2026-09-21)
 
 ### Bug Fixes
