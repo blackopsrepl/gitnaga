@@ -127,13 +127,23 @@ Rectangle {
                             delegate: Rectangle {
                                 id: refRow
                                 required property var modelData
+                                // The branch HEAD points at, mirroring the
+                                // toolbar's ⎇ label, so it reads at a glance.
+                                readonly property bool checkedOut: modelData.kind === "local"
+                                                                   && modelData.name === pane.repository.currentBranch
                                 width: sectionColumn.width
                                 height: 26
                                 color: refHover.hovered ? colors.alternate : "transparent"
 
                                 HoverHandler { id: refHover }
                                 TapHandler {
+                                    acceptedButtons: Qt.LeftButton
                                     onTapped: pane.repository.selectOid(refRow.modelData.oid)
+                                    onDoubleTapped: {
+                                        if (refRow.checkedOut)
+                                            return
+                                        pane.repository.checkoutBranch(refRow.modelData.name)
+                                    }
                                 }
                                 TapHandler {
                                     acceptedButtons: Qt.RightButton
@@ -154,9 +164,10 @@ Rectangle {
                                     anchors.right: parent.right
                                     anchors.rightMargin: 64
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: refRow.modelData.name
-                                    color: colors.text
+                                    text: refRow.checkedOut ? "⎇ " + refRow.modelData.name : refRow.modelData.name
+                                    color: refRow.checkedOut ? colors.accent : colors.text
                                     font.pixelSize: 12
+                                    font.weight: refRow.checkedOut ? Font.DemiBold : Font.Normal
                                     elide: Text.ElideRight
                                 }
                                 Text {

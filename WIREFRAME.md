@@ -138,6 +138,10 @@ of the referenced commit, the reference name at `leftMargin: 28` (elide right,
 `font.pixelSize: 12`), and the short oid at `rightMargin: 10` (monospace,
 `font.pixelSize: 10`, colour `#8590a3`). Hover fills the row with `#1a2233`.
 
+The row that HEAD points at is marked in place: the name renders as
+`⎇ <name>` in the accent colour `#34d399` with `Font.DemiBold`, mirroring the
+toolbar branch label.
+
 Sections are derived from the refs Git stores: local branches (no prefix),
 remotes (`⇄ ` prefix), and tags (`# ` prefix). Each section header shows the
 filtered count. The filter box matches case-insensitively against the name.
@@ -153,6 +157,9 @@ Right-click a row opens a static `Menu`:
 | `Copy name` | all |
 
 Left-click selects the referenced commit through `repository.selectOid(oid)`.
+Double-clicking a local branch row (that is not already checked out) runs
+`repository.checkoutBranch(name)`; the toolbar branch label, the ⎇ marker in
+this pane, and the graph head highlight all follow once the refresh lands.
 
 ## 5. Commit graph pane (centre)
 
@@ -276,6 +283,13 @@ Chips are 14 px tall with 9 px text and show at most 3 refs. Chip colours: local
 remote `#262d3d` with border `#3a4560`, tag `#3a2f17` with border `#7a5f1f`.
 `shortOid` uses `#a78bfa`; author and date use `#78839a`. The selected row uses
 white subject text and `Font.DemiBold`.
+
+The list enables input for the chips only (the list itself stays
+non-interactive, so wheel and drag pass through to the graph). A chip hover
+lights the border to `#8f7ff0` with a 90 ms colour ease. A single click
+selects the chip's commit; a double click on a branch chip whose name differs
+from `currentBranch` checks the branch out. Branch chips show the pointing
+hand cursor; remote and tag chips keep the arrow.
 
 ### 5.6.1 Graph scrollbar
 

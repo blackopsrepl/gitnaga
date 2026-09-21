@@ -113,8 +113,11 @@ Rectangle {
                 x: Math.min(parent.width - 150, graph.laneWidth + 16)
                 width: parent.width - x
                 model: repository.commits
+                // Interactive stays off so wheel and drag still reach the
+                // graph; enabling the list lets the reference chips take
+                // clicks for selection and branch checkout.
                 interactive: false
-                enabled: false
+                enabled: true
                 clip: true
                 reuseItems: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -173,13 +176,38 @@ Rectangle {
                                 Repeater {
                                     model: rowItem.refs.slice(0, 3)
                                     delegate: Rectangle {
+                                        id: chip
                                         required property string modelData
+                                        // Local branches carry no prefix;
+                                        // remotes start with "⇄ ", tags with "# ".
+                                        readonly property bool isBranch: modelData.indexOf("# ") !== 0
+                                                                         && modelData.indexOf("⇄ ") !== 0
                                         height: 14
                                         width: chipText.implicitWidth + 12
+                                        radius: 3
                                         color: modelData.indexOf("# ") === 0 ? "#3a2f17"
                                              : modelData.indexOf("⇄ ") === 0 ? "#262d3d" : "#1c2140"
-                                        border.color: modelData.indexOf("# ") === 0 ? "#7a5f1f"
-                                                    : modelData.indexOf("⇄ ") === 0 ? "#3a4560" : "#5b4bb8"
+                                        border.color: chipMouse.containsMouse ? "#8f7ff0"
+                                                     : modelData.indexOf("# ") === 0 ? "#7a5f1f"
+                                                     : modelData.indexOf("⇄ ") === 0 ? "#3a4560" : "#5b4bb8"
+                                        Behavior on border.color {
+                                            ColorAnimation { duration: 90 }
+                                        }
+                                        MouseArea {
+                                            id: chipMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: chip.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                            onClicked: repository.selectCommit(rowItem.index)
+                                            onDoubleClicked: {
+                                                if (!chip.isBranch || chip.modelData === repository.currentBranch)
+                                                    return
+                                                repository.checkoutBranch(chip.modelData)
+                                            }
+                                        }
+                                        Accessible.role: Accessible.PushButton
+                                        Accessible.name: chip.modelData
+                                        Accessible.onPressAction: repository.selectCommit(rowItem.index)
                                         Text {
                                             id: chipText
                                             anchors.centerIn: parent
