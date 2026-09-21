@@ -133,6 +133,7 @@ Rectangle {
                     required property string shortOid
                     required property string relativeDate
                     required property string oid
+                    required property string color
                     required property var refs
                     width: labels.width
                     height: graph.effectiveRowHeight
@@ -188,14 +189,15 @@ Rectangle {
                                         // remotes start with "⇄ ", tags with "# ".
                                         readonly property bool isBranch: modelData.indexOf("# ") !== 0
                                                                          && modelData.indexOf("⇄ ") !== 0
+                                        // The chip wears its branch's colour, so a
+                                        // badge, its node, and its line agree.
+                                        readonly property color branchColor: rowItem.color
                                         height: 14
                                         width: chipText.implicitWidth + 12
                                         radius: 3
-                                        color: modelData.indexOf("# ") === 0 ? "#3a2f17"
-                                             : modelData.indexOf("⇄ ") === 0 ? "#262d3d" : "#1c2140"
-                                        border.color: chipMouse.containsMouse ? "#8f7ff0"
-                                                     : modelData.indexOf("# ") === 0 ? "#7a5f1f"
-                                                     : modelData.indexOf("⇄ ") === 0 ? "#3a4560" : "#5b4bb8"
+                                        color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b, 0.22)
+                                        border.color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b,
+                                                               chipMouse.containsMouse ? 1.0 : 0.75)
                                         Behavior on border.color {
                                             ColorAnimation { duration: 90 }
                                         }
@@ -218,7 +220,7 @@ Rectangle {
                                             id: chipText
                                             anchors.centerIn: parent
                                             text: parent.modelData
-                                            color: "#e6e2ff"
+                                            color: "#f2f4fa"
                                             font.pixelSize: 9
                                         }
                                     }

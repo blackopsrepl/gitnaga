@@ -287,10 +287,14 @@ Row 2:  <shortOid>  <author>  ·  <relativeDate>
 - Compact, `effectiveRowHeight < 26`: a single vertically centred 10 px
   subject line, elided; chips and the meta row are hidden.
 
-Chips are 14 px tall with 9 px text and show at most 3 refs. Chip colours: local `#1c2140` with border `#5b4bb8`,
-remote `#262d3d` with border `#3a4560`, tag `#3a2f17` with border `#7a5f1f`.
-`shortOid` uses `#a78bfa`; author and date use `#78839a`. The selected row uses
-white subject text and `Font.DemiBold`.
+Chips are 14 px tall with 9 px text and show at most 3 refs. Each chip is
+tinted from its commit's branch colour (the `color` model role = the lane
+palette entry for that line): fill `Qt.rgba(r, g, b, 0.22)`, border at 0.75
+alpha, text `#f2f4fa`, hovering the border to full strength over 90 ms. Kind
+still reads because the ref prefix is part of the text — bare name for a local
+branch, `⇄ ` for a remote, `# ` for a tag. `shortOid` uses `#a78bfa`; author
+and date use `#78839a`. The selected row uses white subject text and
+`Font.DemiBold`.
 
 The list enables input for the chips only (the list itself stays
 non-interactive, so wheel and drag pass through to the graph). A chip hover
