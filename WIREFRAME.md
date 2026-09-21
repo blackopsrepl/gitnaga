@@ -13,7 +13,7 @@ this document disagree, the source wins and this document is a bug.
 - Lane palette: `src/graph_palette.hpp`
 - Operations menu: `qml/CommitMenu.qml`
 - Dialogs: `qml/PromptDialog.qml`, `qml/ConfirmDialog.qml`
-- Controls: `qml/NagaButton.qml`, `qml/NagaIconButton.qml`, `qml/NagaGlyph.qml`
+- Controls: `qml/NagaButton.qml`, `qml/NagaIconButton.qml`, `qml/NagaIcon.qml`
 - Empty state: `qml/EmptyState.qml`
 
 ## 1. Design rules (hard constraints)
@@ -67,7 +67,7 @@ repository is open.
 
 | Control | Width rule | State |
 |---------|-----------|-------|
-| `Open Repository…` button | `NagaButton`, `implicitHeight: 26` | Always enabled |
+| `Open Repository…` icon button | `NagaIconButton` with `iconName: "folder-open"`, `implicitHeight: 26` | Always enabled, tooltip `Open repository… (Ctrl+O)` |
 | `ToolSeparator` | 1 px | Static |
 | Repository name label | `Layout.maximumWidth: 240`, elide middle | `repositoryName` or `No repository open` |
 | Branch label | implicit | Visible only when `currentBranch` is non-empty, text `⎇ <branch>`, color `#34d399` |
@@ -75,7 +75,7 @@ repository is open.
 | `References` toggle | `implicitHeight: 26` | `active` when the pane is visible |
 | `Review` toggle | `implicitHeight: 26` | `active` when the pane is visible |
 | `BusyIndicator` | `22 x 22` | Running only while `repository.busy` |
-| `Refresh` button | `implicitHeight: 26` | Enabled when a repo is open and not busy |
+| `Refresh` icon button | `NagaIconButton` with `iconName: "refresh"`, `implicitHeight: 26` | Enabled when a repo is open and not busy, tooltip `Refresh (Ctrl+R)` |
 
 ### 2.2 Footer (region C), left to right
 

@@ -79,7 +79,12 @@ ApplicationWindow {
             anchors.rightMargin: 6
             spacing: 6
 
-            NagaButton { action: openAction; implicitHeight: 26 }
+            NagaIconButton {
+                action: openAction
+                iconName: "folder-open"
+                tooltip: qsTr("Open repository… (Ctrl+O)")
+                implicitHeight: 26
+            }
             ToolSeparator {}
             Label {
                 text: repository.repositoryName || qsTr("No repository open")
@@ -107,7 +112,12 @@ ApplicationWindow {
                 onClicked: root.reviewVisible = !root.reviewVisible
             }
             BusyIndicator { running: repository.busy; visible: running; implicitWidth: 22; implicitHeight: 22 }
-            NagaButton { action: refreshAction; implicitHeight: 26 }
+            NagaIconButton {
+                action: refreshAction
+                iconName: "refresh"
+                tooltip: qsTr("Refresh (Ctrl+R)")
+                implicitHeight: 26
+            }
         }
     }
 

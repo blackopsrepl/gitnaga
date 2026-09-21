@@ -67,6 +67,7 @@ qt_add_qml_module(gitnaga
         qml/NagaMenu.qml
         qml/OpenRepositoryDialog.qml
         qml/NagaIconButton.qml
+        qml/NagaIcon.qml
         qml/PromptDialog.qml
         qml/ReferencesPane.qml
 )
