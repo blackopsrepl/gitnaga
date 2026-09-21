@@ -223,13 +223,20 @@ point count stays stable and evenly spaced.
 
 ### 5.3 Highlighting
 
-Hovering or selecting a commit computes its **ancestry** by walking parents
-through an oid to row map. Commits that are not ancestors of the active commit
-are drawn at 50% alpha; the active commit and its ancestry stay fully opaque.
-This is the "trace this line of history" behaviour, and it is the reason
-hovering is useful: the branch you are inspecting comes forward and everything
-else recedes. Setting alpha floors is unnecessary
-because the dim is a single constant in `commit_graph_paint.cpp`.
+The **emphasis set** is the union of two ancestries, computed by walking
+parents through an oid to row map: the ancestry of the **selected** commit and
+the ancestry of the **hovered** row (`graph::emphasisOids`). Selection is the
+durable emphasis and hover is a transient one, so the union is what keeps the
+two from fighting: pointing at a sibling branch adds that line to the trace
+without ever dropping the selected commit, which would otherwise lose its
+selection ring and band to the dim. With neither active the set is empty and
+nothing is dimmed, so hover tracing still works on its own.
+
+Commits outside the set are drawn at 50% alpha; everything inside stays fully
+opaque, the selected row band keeps its stronger alpha, and the selected node
+keeps its glow and its white ring regardless of what the pointer is over.
+Setting alpha floors is unnecessary because the dim is a single constant in
+`commit_graph_paint.cpp`.
 
 ### 5.4 Avatars
 

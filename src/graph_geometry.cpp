@@ -58,6 +58,39 @@ QPointF evaluate(const QVector<Sample> &samples, qreal target)
 
 } // namespace
 
+namespace {
+
+void appendAncestry(QSet<QString> &oids, const QVector<Commit> &commits, const QHash<QString, int> &rowByOid,
+                    int row)
+{
+    if (row < 0 || row >= commits.size())
+        return;
+    QVector<int> pending{ row };
+    oids.insert(commits.at(row).oid);
+    while (!pending.isEmpty()) {
+        const int current = pending.takeLast();
+        for (const auto &parent : commits.at(current).parents) {
+            const auto found = rowByOid.constFind(parent);
+            if (found == rowByOid.constEnd() || oids.contains(parent))
+                continue;
+            oids.insert(parent);
+            pending.append(*found);
+        }
+    }
+}
+
+} // namespace
+
+QSet<QString> emphasisOids(const QVector<Commit> &commits, const QHash<QString, int> &rowByOid,
+                           int selectedRow, int hoveredRow)
+{
+    QSet<QString> oids;
+    appendAncestry(oids, commits, rowByOid, selectedRow);
+    if (hoveredRow != selectedRow)
+        appendAncestry(oids, commits, rowByOid, hoveredRow);
+    return oids;
+}
+
 qreal laneX(int lane, const GraphStyle &style)
 {
     return style.leftPadding + static_cast<qreal>(lane) * style.laneSpacing;

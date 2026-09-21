@@ -54,8 +54,7 @@ void CommitGraphItem::synchronizeRows()
     // A new row set invalidates the cached ancestry: the same row index now
     // refers to a different commit, so force a rebuild instead of reusing a set
     // of object ids that no longer exists in the graph.
-    m_highlightRow = -1;
-    m_highlight.clear();
+    invalidateHighlight();
     recomputeHighlight();
     clampContent();
     emit metricsChanged();
@@ -121,26 +120,14 @@ void CommitGraphItem::setSelectedRow(int row)
 
 void CommitGraphItem::recomputeHighlight()
 {
-    const int source = m_hoveredRow >= 0 ? m_hoveredRow : m_selectedRow;
-    if (source == m_highlightRow)
+    // Both sources matter: the selection is the durable emphasis and the hover
+    // is a transient one, so hovering must never drop the selected commit's
+    // ancestry (which would dim the selected node and hide its selection ring).
+    if (m_selectedRow == m_highlightSelectedRow && m_hoveredRow == m_highlightHoveredRow)
         return;
-    m_highlightRow = source;
-    m_highlight.clear();
-    if (source < 0 || source >= m_rows.size())
-        return;
-
-    QVector<int> pending{ source };
-    m_highlight.insert(m_rows.at(source).oid);
-    while (!pending.isEmpty()) {
-        const int row = pending.takeLast();
-        for (const auto &parent : m_rows.at(row).parents) {
-            const auto found = m_rowByOid.constFind(parent);
-            if (found == m_rowByOid.constEnd() || m_highlight.contains(parent))
-                continue;
-            m_highlight.insert(parent);
-            pending.append(*found);
-        }
-    }
+    m_highlightSelectedRow = m_selectedRow;
+    m_highlightHoveredRow = m_hoveredRow;
+    m_highlight = graph::emphasisOids(m_rows, m_rowByOid, m_selectedRow, m_hoveredRow);
 }
 
 int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
@@ -154,6 +141,13 @@ void CommitGraphItem::setHeadOid(const QString &oid)
     m_headOid = oid;
     recomputeHeadRow();
     emit headOidChanged();
+}
+
+void CommitGraphItem::invalidateHighlight()
+{
+    m_highlightSelectedRow = -2;
+    m_highlightHoveredRow = -2;
+    m_highlight.clear();
 }
 
 QString CommitGraphItem::workInProgressOid() const { return m_workInProgressOid; }

@@ -2,7 +2,9 @@
 
 #include "domain.hpp"
 
+#include <QHash>
 #include <QPointF>
+#include <QSet>
 #include <QVector>
 
 namespace GitNaga::graph {
@@ -24,6 +26,13 @@ struct Edge {
     int fromLane = 0;
     int toLane = 0;
 };
+
+// Object ids that stay at full strength for the current selection and hover:
+// the union of both ancestries, so pointing at one line never erases the
+// emphasis of the commit the user actually selected. Empty means "no
+// emphasis", which callers read as "dim nothing".
+QSet<QString> emphasisOids(const QVector<Commit> &commits, const QHash<QString, int> &rowByOid,
+                           int selectedRow, int hoveredRow);
 
 qreal laneX(int lane, const GraphStyle &style);
 qreal rowCenterY(int row, qreal contentY, const GraphStyle &style);

@@ -100,6 +100,39 @@ private slots:
         QCOMPARE(lastVisibleRow(0.0, 400.0, 0, style), -1);
     }
 
+    void emphasisKeepsSelectionWhileHoveringElsewhere()
+    {
+        // Two divergent branches: selecting one tip and hovering the other
+        // must keep both ancestries emphasised. The regression this guards is
+        // hover replacing the selection, which dimmed the selected node.
+        QVector<Commit> commits;
+        commits.append(makeCommit(QStringLiteral("main-tip"), 0, { QStringLiteral("base") }));
+        commits.append(makeCommit(QStringLiteral("feature-tip"), 1, { QStringLiteral("base") }));
+        commits.append(makeCommit(QStringLiteral("base"), 0));
+
+        QHash<QString, int> rowByOid;
+        for (qsizetype row = 0; row < commits.size(); ++row)
+            rowByOid.insert(commits.at(row).oid, static_cast<int>(row));
+        const auto rowOf = [&rowByOid](const QString &oid) { return rowByOid.value(oid, -1); };
+
+        // Nothing active: nothing is emphasised, so nothing is dimmed.
+        QVERIFY(emphasisOids(commits, rowByOid, -1, -1).isEmpty());
+
+        // Selection alone traces its own line.
+        const auto selectedOnly = emphasisOids(commits, rowByOid, rowOf(QStringLiteral("main-tip")), -1);
+        QCOMPARE(selectedOnly, QSet<QString>({ QStringLiteral("main-tip"), QStringLiteral("base") }));
+
+        // Hovering the sibling branch adds its line and keeps the selected one.
+        const auto both = emphasisOids(commits, rowByOid, rowOf(QStringLiteral("main-tip")),
+                                       rowOf(QStringLiteral("feature-tip")));
+        QCOMPARE(both, QSet<QString>({ QStringLiteral("main-tip"), QStringLiteral("feature-tip"),
+                                       QStringLiteral("base") }));
+
+        // Hovering alone still traces, which is the reason hover exists.
+        const auto hoverOnly = emphasisOids(commits, rowByOid, -1, rowOf(QStringLiteral("feature-tip")));
+        QCOMPARE(hoverOnly, QSet<QString>({ QStringLiteral("feature-tip"), QStringLiteral("base") }));
+    }
+
     void paletteWrapsAndStaysDistinct()
     {
         QVERIFY(laneColor(0).isValid());

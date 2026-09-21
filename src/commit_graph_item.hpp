@@ -91,6 +91,7 @@ private:
     QString oidAt(int row) const;
     void recomputeHeadRow();
     void recomputeHighlight();
+    void invalidateHighlight();
     void clampContent();
     void synchronizeRows();
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
@@ -105,7 +106,10 @@ private:
     int m_hoveredRow = -1;
     int m_maximumLane = 0;
     int m_headRow = -1;
-    int m_highlightRow = -1;
+    // Cache keys for the emphasis set: the row pair it was computed for. A
+    // value of -2 means "no valid computation yet".
+    int m_highlightSelectedRow = -2;
+    int m_highlightHoveredRow = -2;
     QSet<QString> m_highlight;
     QHash<QString, int> m_rowByOid;
     AvatarProvider m_avatars;
