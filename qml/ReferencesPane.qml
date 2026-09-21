@@ -6,12 +6,11 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
-    required property var colors
     signal closeRequested()
 
     property var target: null
 
-    color: colors.panel
+    color: NagaTheme.panel
 
     readonly property var sections: [
         { kind: "local", label: qsTr("Branches") },
@@ -45,15 +44,15 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 34
-            color: colors.panel
-            border.color: colors.border
+            color: NagaTheme.panel
+            border.color: NagaTheme.border
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 6
                 Text {
                     text: qsTr("References")
-                    color: colors.text
+                    color: NagaTheme.text
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.4
@@ -70,7 +69,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
-            color: colors.panel
+            color: NagaTheme.panel
             TextField {
                 id: filterField
                 anchors.fill: parent
@@ -102,7 +101,7 @@ Rectangle {
                         Rectangle {
                             width: parent.width
                             height: 24
-                            color: colors.panel
+                            color: NagaTheme.panel
                             Row {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 10
@@ -110,14 +109,14 @@ Rectangle {
                                 spacing: 6
                                 Text {
                                     text: sectionColumn.modelData.label
-                                    color: colors.muted
+                                    color: NagaTheme.muted
                                     font.pixelSize: 10
                                     font.weight: Font.Bold
                                     font.letterSpacing: 0.8
                                 }
                                 Text {
                                     text: pane.countOf(sectionColumn.modelData.kind)
-                                    color: colors.muted
+                                    color: NagaTheme.muted
                                     font.pixelSize: 10
                                 }
                             }
@@ -166,7 +165,7 @@ Rectangle {
                                     anchors.rightMargin: 64
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: refRow.checkedOut ? "⎇ " + refRow.modelData.name : refRow.modelData.name
-                                    color: refRow.checkedOut ? colors.accent : colors.text
+                                    color: refRow.checkedOut ? NagaTheme.accent : NagaTheme.text
                                     font.pixelSize: 12
                                     font.weight: refRow.checkedOut ? Font.DemiBold : Font.Normal
                                     elide: Text.ElideRight
@@ -176,7 +175,7 @@ Rectangle {
                                     anchors.rightMargin: 10
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: refRow.modelData.shortOid
-                                    color: colors.muted
+                                    color: NagaTheme.muted
                                     font.family: "monospace"
                                     font.pixelSize: 10
                                 }

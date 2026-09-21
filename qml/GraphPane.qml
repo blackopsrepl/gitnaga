@@ -9,7 +9,6 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
-    required property var colors
 
     readonly property string headOid: {
         var branch = repository.currentBranch
@@ -29,7 +28,7 @@ Rectangle {
     function zoomOut() { graph.zoomOut() }
     function resetZoom() { graph.resetZoom() }
 
-    color: colors.backgroundColor
+    color: NagaTheme.background
 
     ColumnLayout {
         anchors.fill: parent
@@ -38,8 +37,8 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 34
-            color: colors.panel
-            border.color: colors.border
+            color: NagaTheme.panel
+            border.color: NagaTheme.border
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
@@ -47,14 +46,14 @@ Rectangle {
                 spacing: 8
                 Text {
                     text: qsTr("Commit graph")
-                    color: colors.text
+                    color: NagaTheme.text
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.4
                 }
                 Text {
                     text: repository.commitCount + qsTr(" commits")
-                    color: colors.muted
+                    color: NagaTheme.muted
                     font.pixelSize: 11
                 }
                 Item { Layout.fillWidth: true }
@@ -66,7 +65,7 @@ Rectangle {
                 }
                 Text {
                     text: Math.round(graph.zoom * 100) + "%"
-                    color: colors.muted
+                    color: NagaTheme.muted
                     font.pixelSize: 11
                     Layout.preferredWidth: 34
                     horizontalAlignment: Text.AlignHCenter

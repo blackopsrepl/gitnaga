@@ -146,7 +146,6 @@ ApplicationWindow {
             SplitView.preferredWidth: root.width * 0.24
             SplitView.minimumWidth: 200
             repository: root.repository
-            colors: NagaTheme
             onCloseRequested: root.referencesVisible = false
         }
         GraphPane {
@@ -154,7 +153,6 @@ ApplicationWindow {
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
             repository: root.repository
-            colors: NagaTheme
         }
         InspectorPane {
             id: reviewPane
@@ -162,7 +160,6 @@ ApplicationWindow {
             SplitView.preferredWidth: root.width * 0.38
             SplitView.minimumWidth: 320
             repository: root.repository
-            colors: NagaTheme
             onCloseRequested: root.reviewVisible = false
         }
     }

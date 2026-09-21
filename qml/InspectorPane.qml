@@ -6,10 +6,9 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
-    required property var colors
     signal closeRequested()
 
-    color: colors.panel
+    color: NagaTheme.panel
 
     ColumnLayout {
         anchors.fill: parent
@@ -18,15 +17,15 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 34
-            color: colors.panel
-            border.color: colors.border
+            color: NagaTheme.panel
+            border.color: NagaTheme.border
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 6
                 Text {
                     text: qsTr("Review")
-                    color: colors.text
+                    color: NagaTheme.text
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.4
@@ -50,7 +49,7 @@ Rectangle {
                 spacing: 5
                 Text {
                     text: repository.selectedOid.length > 0 ? repository.selectedSubject : qsTr("Select a commit to review")
-                    color: repository.selectedOid.length > 0 ? colors.text : colors.muted
+                    color: repository.selectedOid.length > 0 ? NagaTheme.text : NagaTheme.muted
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
@@ -59,7 +58,7 @@ Rectangle {
                 Text {
                     visible: repository.selectedOid.length > 0
                     text: repository.selectedAuthor + "  ·  " + repository.selectedDate
-                    color: colors.muted
+                    color: NagaTheme.muted
                     font.pixelSize: 12
                 }
                 Text {
@@ -80,7 +79,7 @@ Rectangle {
                 }
             }
         }
-        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: colors.border }
+        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: NagaTheme.border }
 
         SplitView {
             Layout.fillWidth: true
@@ -90,7 +89,7 @@ Rectangle {
             Rectangle {
                 SplitView.preferredWidth: 200
                 SplitView.minimumWidth: 150
-                color: colors.panel
+                color: NagaTheme.panel
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 0
@@ -100,7 +99,7 @@ Rectangle {
                         leftPadding: 10
                         verticalAlignment: Text.AlignVCenter
                         text: qsTr("Changed files")
-                        color: colors.text
+                        color: NagaTheme.text
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
                     }
@@ -162,8 +161,8 @@ Rectangle {
                                 ColumnLayout {
                                     spacing: 1
                                     Layout.fillWidth: true
-                                    Text { text: fileRow.fileName; color: colors.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
-                                    Text { visible: fileRow.directory.length > 0; text: fileRow.directory; color: colors.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
+                                    Text { text: fileRow.fileName; color: NagaTheme.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
+                                    Text { visible: fileRow.directory.length > 0; text: fileRow.directory; color: NagaTheme.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
                                 }
                             }
                         }
@@ -195,7 +194,7 @@ Rectangle {
                         height: parent.height
                         Text { width: 40; text: oldLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
                         Text { width: 40; text: newLine || ""; color: "#5b6577"; horizontalAlignment: Text.AlignRight; rightPadding: 8; font.family: "monospace"; font.pixelSize: 11 }
-                        Rectangle { width: 1; height: parent.height; color: colors.border }
+                        Rectangle { width: 1; height: parent.height; color: NagaTheme.border }
                         Text { leftPadding: 10; text: diffRow.text; color: kind === 1 ? "#8fe6b8" : kind === 2 ? "#ffadb6" : kind === 4 ? "#9fc2ff" : kind === 3 ? "#77839a" : "#cbd0dc"; font.family: "monospace"; font.pixelSize: 12 }
                     }
                 }
