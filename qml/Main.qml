@@ -100,8 +100,8 @@ ApplicationWindow {
             }
             Label {
                 id: wipBadge
-                visible: repository.workInProgress
-                text: qsTr("● %1 uncommitted").arg(repository.uncommittedCount)
+                visible: repository.workInProgressOid.length > 0
+                text: qsTr("● Work in progress")
                 color: "#e6b45a"
                 font.pixelSize: 12
                 MouseArea {
@@ -196,7 +196,8 @@ ApplicationWindow {
                 elide: Text.ElideRight
             }
             Label {
-                text: repository.commitCount + qsTr(" commits") + (repository.workInProgress ? qsTr(" · work in progress") : "")
+                text: repository.commitCount + qsTr(" commits")
+                      + (repository.workInProgressOid.length > 0 ? qsTr(" · work in progress") : "")
                 color: root.muted
                 font.pixelSize: 11
             }

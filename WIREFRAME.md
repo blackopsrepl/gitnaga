@@ -71,7 +71,7 @@ repository is open.
 | `ToolSeparator` | 1 px | Static |
 | Repository name label | `Layout.maximumWidth: 240`, elide middle | `repositoryName` or `No repository open` |
 | Branch label | implicit | Visible only when `currentBranch` is non-empty, text `⎇ <branch>`, color `#34d399` |
-| WIP badge | implicit | Visible only when the worktree is dirty, text `● <n> uncommitted`, color `#e6b45a`; clicking selects the WIP row (row 0) |
+| WIP badge | implicit | Visible only when `workInProgressOid` is non-empty, text `● Work in progress`, color `#e6b45a`; clicking selects the snapshot row (row 0) |
 | Spacer | `Layout.fillWidth: true` | Pushes the rest right |
 | `References` toggle | `implicitHeight: 26` | `active` when the pane is visible |
 | `Review` toggle | `implicitHeight: 26` | `active` when the pane is visible |
@@ -304,40 +304,51 @@ thumb on the click; dragging scrolls by writing `graph.contentY`, which the
 label overlay follows through its existing binding. Wheel events over the
 strip still reach the graph.
 
-### 5.7 Work in progress (synthetic WIP row)
+### 5.7 Work in progress (ephemeral snapshot commit)
 
-When `git status --porcelain=v1 -z --untracked-files=all` reports any staged,
-unstaged, or untracked entry, `GitClient::loadRepository` prepends one
-synthetic `Commit` with `workInProgress = true`, an empty oid, subject
-`Work in progress`, `workSummary` like `1 staged · 2 untracked`, and HEAD's
-commit as its single parent (no parent in an empty repository). Graph layout
-runs after the prepend, so the WIP row continues HEAD's lane and the edge
-into it draws normally.
+Uncommitted work is presented as an ordinary commit, not a special row.
+`GitClient::loadRepository` copies the repository index into a temporary
+directory, stages the whole worktree against that copy (`git add --all` with
+`GIT_INDEX_FILE` pointing at it), writes the tree, and creates a throwaway
+commit whose parent is HEAD:
 
-Rendering and behaviour differences:
+```
+cp .git/index <tmp>/index
+GIT_INDEX_FILE=<tmp>/index git add --all
+GIT_INDEX_FILE=<tmp>/index git write-tree
+git commit-tree <tree> -p HEAD -m "Work in progress"
+```
+
+The repository's own index, refs, and objects the user can reach are never
+modified; the commit and its tree/blobs are unreferenced and git's automatic
+gc reclaims them. Tree equality decides whether a snapshot exists at all: a
+worktree that differs from HEAD only in stat data collapses to HEAD's tree,
+so a clean repository produces no snapshot and no row. Author and committer
+come from `user.name`/`user.email`, falling back to `Work in progress
+<uncommitted@gitnaga.invalid>`. Bare repositories are skipped, and if the
+snapshot cannot be created (read-only repository, no space) the failure is
+logged and the repository still opens without a WIP row.
+
+Because the snapshot is a real commit, every other layer treats it normally —
+inspection (`inspectCommit`), per-file diffs (`loadDiff`, which names both
+paths so a staged rename stays a rename), the review pane, and the operations
+menu. Only four things distinguish it, all keyed on
+`repository.workInProgressOid`:
 
 - Node: hollow dashed disc in `#97a1b4` with a small centre dot; no avatar,
-  no branch colour, no head ring.
-- Label overlay: subject in `#e6b45a`; the meta row shows `workSummary`
-  instead of oid/author/date; refs list is empty so no badges.
-- Toolbar: the `● <n> uncommitted` badge appears and clicking it selects the
-  WIP row.
-- Counts: `repository.commitCount` excludes the WIP row; the footer appends
-  `· work in progress` when dirty.
-- Right-click on the WIP row opens the blank-space menu (refresh), not the
-  commit operations menu.
-- Selection: `selectCommit` routes to `inspectWorktree`, which lists the
-  status entries (untracked mapped to status `A`); per-file diffs use
-  `git diff HEAD -- <path>` (both paths for staged renames) so staged and
-  unstaged edits appear combined, and untracked files fall back to
-  `git diff --no-index -- /dev/null <path>`, whose exit code 1 is accepted as
-  success. The review header shows `Work in progress` with the summary line
-  in place of author/date.
+  no branch colour, no head ring (`commit_graph_paint.cpp`).
+- Label overlay: subject in `#e6b45a`; oid, author, and date are the real
+  values from the snapshot commit.
+- Toolbar: the `● Work in progress` badge appears and clicking it selects
+  row 0. The footer appends `· work in progress`.
+- Counts and the operations menu: `repository.commitCount` excludes the
+  snapshot, and right-clicking it opens the blank-space refresh menu.
 
-The WIP row refreshes with the repository snapshot. The `.git` watcher fires
-on index and HEAD changes, so staging, committing, and resetting update it
-immediately; plain edits to tracked files in the worktree show up on the next
-refresh (Refresh button, Ctrl+R, or any git operation) rather than on save.
+The row refreshes with the repository snapshot. The `.git` watcher fires on
+index and HEAD changes, so staging, committing, and resetting update it
+immediately; plain edits to tracked files show up on the next refresh
+(Refresh button, Ctrl+R, or any git operation) rather than on save. Snapshot
+objects are not watched, so creating one cannot retrigger the watcher.
 
 ### 5.8 Pointer model
 

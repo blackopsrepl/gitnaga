@@ -67,7 +67,7 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
     const int alpha = dimmed ? dimmedAlpha : 255;
     const qreal nodeRadius = isMerge ? radius * 1.2 : radius;
 
-    if (commit.workInProgress) {
+    if (!m_workInProgressOid.isEmpty() && commit.oid == m_workInProgressOid) {
         // Uncommitted work: a hollow dashed disc instead of an author avatar,
         // so it reads as pending rather than as a recorded commit.
         if (selected && !dimmed) {

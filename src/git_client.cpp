@@ -2,10 +2,14 @@
 
 #include "git_parse.hpp"
 
+#include <QDebug>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QHash>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QTemporaryDir>
 
 namespace GitNaga {
 
@@ -28,17 +32,8 @@ GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList 
     return decode(*output).trimmed();
 }
 
-GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments, const QString &operation)
-{
-    return runImpl(workingDirectory, arguments, operation, false);
-}
-
-GitResult<QByteArray> GitClient::runAllowingDiffExit(const QString &workingDirectory, const QStringList &arguments, const QString &operation)
-{
-    return runImpl(workingDirectory, arguments, operation, true);
-}
-
-GitResult<QByteArray> GitClient::runImpl(const QString &workingDirectory, const QStringList &arguments, const QString &operation, bool acceptExitOne)
+GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments,
+                                     const QString &operation, const QHash<QString, QString> &extraEnvironment)
 {
     QProcess process;
     process.setWorkingDirectory(workingDirectory);
@@ -48,6 +43,8 @@ GitResult<QByteArray> GitClient::runImpl(const QString &workingDirectory, const 
     environment.insert(QStringLiteral("GIT_TERMINAL_PROMPT"), QStringLiteral("0"));
     environment.insert(QStringLiteral("GIT_EDITOR"), QStringLiteral("true"));
     environment.insert(QStringLiteral("GIT_SEQUENCE_EDITOR"), QStringLiteral("true"));
+    for (auto it = extraEnvironment.constBegin(); it != extraEnvironment.constEnd(); ++it)
+        environment.insert(it.key(), it.value());
     process.setProcessEnvironment(environment);
     process.setProgram(QStringLiteral("git"));
     process.setArguments(arguments);
@@ -61,62 +58,69 @@ GitResult<QByteArray> GitClient::runImpl(const QString &workingDirectory, const 
         process.waitForFinished();
         return std::unexpected(GitError{ operation, QStringLiteral("Git command timed out") });
     }
-    const auto output = process.readAllStandardOutput();
-    // `git diff --no-index` exits 1 whenever the compared content differs;
-    // for the untracked-file viewer that is the success path and the diff
-    // itself still arrives on stdout.
-    const bool acceptable = process.exitCode() == 0 || (acceptExitOne && process.exitCode() == 1);
-    if (process.exitStatus() != QProcess::NormalExit || !acceptable)
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
         return std::unexpected(processError(operation, process));
-    return output;
+    return process.readAllStandardOutput();
 }
 
-GitResult<WorktreeState> GitClient::readStatus(const QString &worktree)
+GitResult<QString> GitClient::createWorktreeCommit(const QString &worktree, const QString &gitDirectory,
+                                                  const QString &headOid, const QString &authorName,
+                                                  const QString &authorEmail)
 {
-    auto output = run(worktree,
-                      { QStringLiteral("status"), QStringLiteral("--porcelain=v1"), QStringLiteral("-z"),
-                        QStringLiteral("--untracked-files=all") },
-                      QStringLiteral("read worktree status"));
-    if (!output)
-        return std::unexpected(output.error());
+    // Copy the real index so staged stat data is reused, then stage the whole
+    // worktree into the copy. Nothing here touches the repository's own index.
+    QTemporaryDir scratch;
+    if (!scratch.isValid())
+        return std::unexpected(GitError{ QStringLiteral("uncommitted snapshot"), QStringLiteral("No temporary directory") });
+    const auto scratchIndex = QDir(scratch.path()).filePath(QStringLiteral("index"));
+    const auto realIndex = QDir(gitDirectory).filePath(QStringLiteral("index"));
+    if (QFileInfo::exists(realIndex) && !QFile::copy(realIndex, scratchIndex))
+        return std::unexpected(GitError{ QStringLiteral("uncommitted snapshot"), QStringLiteral("Cannot copy the index") });
 
-    WorktreeState state;
-    // With -z every entry is "XY path" followed by NUL, and rename entries
-    // carry a second NUL-separated field with the original path.
-    const auto fields = output->split('\0');
-    for (qsizetype index = 0; index < fields.size(); ++index) {
-        const auto entry = decode(fields.at(index));
-        if (entry.size() < 3)
-            continue;
-        const QChar stagedCode = entry.at(0);
-        const QChar unstagedCode = entry.at(1);
-        if (stagedCode == QLatin1Char('?') && unstagedCode == QLatin1Char('?')) {
-            ++state.untracked;
-            continue;
-        }
-        if (stagedCode != QLatin1Char(' '))
-            ++state.staged;
-        if (unstagedCode != QLatin1Char(' '))
-            ++state.unstaged;
-        if (stagedCode == QLatin1Char('R') || stagedCode == QLatin1Char('C')) {
-            // Skip the stored original path so it is not read as an entry.
-            if (index + 1 < fields.size())
-                ++index;
-        }
+    const QHash<QString, QString> indexEnvironment{
+        { QStringLiteral("GIT_INDEX_FILE"), scratchIndex }
+    };
+    auto staged = run(worktree, { QStringLiteral("add"), QStringLiteral("--all") },
+                      QStringLiteral("snapshot worktree"), indexEnvironment);
+    if (!staged)
+        return std::unexpected(staged.error());
+
+    auto tree = run(worktree, { QStringLiteral("write-tree") },
+                    QStringLiteral("snapshot worktree"), indexEnvironment);
+    if (!tree)
+        return std::unexpected(tree.error());
+    const auto treeOid = decode(*tree).trimmed();
+
+    // Tree equality is exact: stat-only differences collapse to the same tree,
+    // so a clean worktree produces no snapshot at all.
+    QString headTreeOid = QStringLiteral("4b825dc642cb6eb9a060e54bf8d69288fbee4904");
+    if (!headOid.isEmpty()) {
+        auto headTree = run(worktree, { QStringLiteral("rev-parse"), QStringLiteral("--verify"),
+                                        headOid + QStringLiteral("^{tree}") },
+                            QStringLiteral("read HEAD tree"));
+        if (!headTree)
+            return std::unexpected(headTree.error());
+        headTreeOid = decode(*headTree).trimmed();
     }
-    return state;
-}
+    if (headTreeOid == treeOid)
+        return QString();
 
-QString workSummaryText(const WorktreeState &state)
-{
-    QStringList parts;
-    if (state.staged > 0)
-        parts << QStringLiteral("%1 staged").arg(state.staged);
-    if (state.unstaged > 0)
-        parts << QStringLiteral("%1 unstaged").arg(state.unstaged);
-    if (state.untracked > 0)
-        parts << QStringLiteral("%1 untracked").arg(state.untracked);
-    return parts.join(QStringLiteral(" · "));
+    const QHash<QString, QString> identityEnvironment{
+        { QStringLiteral("GIT_AUTHOR_NAME"), authorName },
+        { QStringLiteral("GIT_AUTHOR_EMAIL"), authorEmail },
+        { QStringLiteral("GIT_COMMITTER_NAME"), authorName },
+        { QStringLiteral("GIT_COMMITTER_EMAIL"), authorEmail },
+    };
+
+    QStringList arguments{ QStringLiteral("commit-tree"), treeOid };
+    if (!headOid.isEmpty())
+        arguments << QStringLiteral("-p") << headOid;
+    arguments << QStringLiteral("-m") << QStringLiteral("Work in progress");
+
+    auto commit = run(worktree, arguments, QStringLiteral("snapshot worktree"), identityEnvironment);
+    if (!commit)
+        return std::unexpected(commit.error());
+    return decode(*commit).trimmed();
 }
 
 GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int maximumCommits)
@@ -202,24 +206,43 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
         commit.refs = refsByOid.value(commit.oid);
         snapshot.commits.append(std::move(commit));
     }
-    detail::assignGraphLayout(snapshot.commits);
+    if (!isBare) {
+        auto head = run(snapshot.worktree, { QStringLiteral("rev-parse"), QStringLiteral("--verify"), QStringLiteral("HEAD") },
+                        QStringLiteral("read HEAD"));
+        const auto headOid = head ? decode(*head).trimmed() : QString();
 
-    // Surface uncommitted work as a synthetic row above HEAD so the graph and
-    // the review pane can treat work in progress like a first-class entry.
-    auto status = readStatus(snapshot.worktree);
-    if (!status)
-        return std::unexpected(status.error());
-    snapshot.changes = *status;
-    if (status->dirty()) {
-        Commit wip;
-        wip.workInProgress = true;
-        wip.subject = QStringLiteral("Work in progress");
-        wip.workSummary = workSummaryText(*status);
-        if (!snapshot.commits.isEmpty())
-            wip.parents.append(snapshot.commits.first().oid);
-        snapshot.commits.prepend(wip);
-        detail::assignGraphLayout(snapshot.commits);
+        auto name = run(snapshot.worktree, { QStringLiteral("config"), QStringLiteral("--get"), QStringLiteral("user.name") },
+                        QStringLiteral("read git identity"));
+        auto mail = run(snapshot.worktree, { QStringLiteral("config"), QStringLiteral("--get"), QStringLiteral("user.email") },
+                        QStringLiteral("read git identity"));
+        const auto author = name && !decode(*name).trimmed().isEmpty()
+            ? decode(*name).trimmed() : QStringLiteral("Work in progress");
+        const auto authorEmail = mail && !decode(*mail).trimmed().isEmpty()
+            ? decode(*mail).trimmed() : QStringLiteral("uncommitted@gitnaga.invalid");
+
+        auto snapshotCommit = createWorktreeCommit(snapshot.worktree, snapshot.gitDirectory, headOid, author, authorEmail);
+        if (!snapshotCommit) {
+            // Snapshotting is a bonus, not a prerequisite: a read-only or
+            // otherwise unwritable repository still browses history normally.
+            // Report it rather than silently pretending the tree is clean.
+            qWarning() << "gitnaga: cannot snapshot uncommitted work:"
+                       << snapshotCommit.error().operation << snapshotCommit.error().message;
+        } else if (!snapshotCommit->isEmpty()) {
+            snapshot.workInProgressOid = *snapshotCommit;
+            // The row is the real commit object, so every surface below the
+            // client treats it like any other commit.
+            Commit entry;
+            entry.oid = snapshot.workInProgressOid;
+            if (!headOid.isEmpty())
+                entry.parents.append(headOid);
+            entry.author = author;
+            entry.authorEmail = authorEmail.toLower();
+            entry.authoredAt = QDateTime::currentDateTime();
+            entry.subject = QStringLiteral("Work in progress");
+            snapshot.commits.prepend(std::move(entry));
+        }
     }
+    detail::assignGraphLayout(snapshot.commits);
     return snapshot;
 }
 

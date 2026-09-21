@@ -29,6 +29,11 @@ no account, and no telemetry.
   and tag creation, cherry-pick, merge, revert, reset (soft, mixed, hard),
   rebase, branch deletion, and copy hash. Right-click empty graph space for a
   refresh. Destructive actions ask for confirmation.
+- **Uncommitted work in view.** A pending row sits above HEAD whenever the
+  worktree differs from it, holding the real diff of staged, unstaged, and
+  untracked changes. It is an ephemeral commit object, so reviewing it uses the
+  same inspection and diff paths as any other commit without touching the
+  repository's own index.
 - **References, not a duplicate list.** The left sidebar lists local branches,
   remotes, and tags from the refs Git actually stores, with a filter box and a
   context menu. The right sidebar is the review: metadata, changed files, and

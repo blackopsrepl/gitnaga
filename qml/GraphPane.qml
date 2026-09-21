@@ -96,11 +96,12 @@ Rectangle {
                 model: repository.commits
                 selectedRow: repository.selectedRow
                 headOid: pane.headOid
+                workInProgressOid: repository.workInProgressOid
                 onCommitClicked: (row) => repository.selectCommit(row)
                 onContextRequested: (row, oid, pos) => {
                     var local = pane.mapFromItem(null, pos)
                     var info = row >= 0 ? repository.commits.at(row) : null
-                    if (row < 0 || (info && info.workInProgress))
+                    if (row < 0 || (info && info.oid === repository.workInProgressOid))
                         commitMenu.showBlank(local)
                     else
                         commitMenu.show(row, oid, local)
@@ -131,12 +132,14 @@ Rectangle {
                     required property string author
                     required property string shortOid
                     required property string relativeDate
-                    required property string workSummary
-                    required property bool workInProgress
+                    required property string oid
                     required property var refs
                     width: labels.width
                     height: graph.effectiveRowHeight
                     readonly property bool current: index === repository.selectedRow
+                    // The uncommitted snapshot is a real commit, so it renders
+                    // through the same path and only its identity differs.
+                    readonly property bool snapshot: oid.length > 0 && oid === repository.workInProgressOid
                     // Below ~26 px per row a two-line layout cannot fit without
                     // colliding with its neighbours, so collapse to one line.
                     readonly property bool compact: graph.effectiveRowHeight < 26
@@ -148,7 +151,7 @@ Rectangle {
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
                         text: rowItem.subject
-                        color: rowItem.workInProgress ? "#e6b45a" : rowItem.current ? "#ffffff" : "#b9c2d2"
+                        color: rowItem.snapshot ? "#e6b45a" : rowItem.current ? "#ffffff" : "#b9c2d2"
                         elide: Text.ElideRight
                         font.pixelSize: 10
                         font.weight: rowItem.current ? Font.DemiBold : Font.Normal
@@ -168,7 +171,7 @@ Rectangle {
                             Text {
                                 width: Math.max(60, parent.width - chipRow.width - 8)
                                 text: rowItem.subject
-                                color: rowItem.workInProgress ? "#e6b45a" : rowItem.current ? "#ffffff" : "#dbe1ec"
+                                color: rowItem.snapshot ? "#e6b45a" : rowItem.current ? "#ffffff" : "#dbe1ec"
                                 elide: Text.ElideRight
                                 font.pixelSize: 11
                                 font.weight: rowItem.current ? Font.DemiBold : Font.Normal
@@ -224,16 +227,10 @@ Rectangle {
                         }
                         Row {
                             spacing: 8
-                            Text {
-                                text: rowItem.workInProgress ? rowItem.workSummary : rowItem.shortOid
-                                color: rowItem.workInProgress ? "#e6b45a" : "#a78bfa"
-                                font.family: rowItem.workInProgress ? "sans-serif" : "monospace"
-                                font.pixelSize: 9
-                                font.italic: rowItem.workInProgress
-                            }
-                            Text { visible: !rowItem.workInProgress; text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
-                            Text { visible: !rowItem.workInProgress; text: "·"; color: "#78839a" }
-                            Text { visible: !rowItem.workInProgress; text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
+                            Text { text: rowItem.shortOid; color: "#a78bfa"; font.family: "monospace"; font.pixelSize: 9 }
+                            Text { text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
+                            Text { text: "·"; color: "#78839a" }
+                            Text { text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
                         }
                     }
                 }

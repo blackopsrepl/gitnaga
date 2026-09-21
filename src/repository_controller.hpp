@@ -23,10 +23,7 @@ class RepositoryController final : public QObject
     Q_PROPERTY(QString repositoryName READ repositoryName NOTIFY repositoryChanged)
     Q_PROPERTY(QString currentBranch READ currentBranch NOTIFY repositoryChanged)
     Q_PROPERTY(int commitCount READ commitCount NOTIFY repositoryChanged)
-    Q_PROPERTY(bool workInProgress READ workInProgress NOTIFY repositoryChanged)
-    Q_PROPERTY(int uncommittedCount READ uncommittedCount NOTIFY repositoryChanged)
-    Q_PROPERTY(QString uncommittedSummary READ uncommittedSummary NOTIFY repositoryChanged)
-    Q_PROPERTY(bool selectedWorkInProgress READ selectedWorkInProgress NOTIFY selectionChanged)
+    Q_PROPERTY(QString workInProgressOid READ workInProgressOid NOTIFY repositoryChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorChanged)
@@ -49,10 +46,7 @@ public:
     QString repositoryName() const;
     QString currentBranch() const;
     int commitCount() const;
-    bool workInProgress() const;
-    int uncommittedCount() const;
-    QString uncommittedSummary() const;
-    bool selectedWorkInProgress() const;
+    QString workInProgressOid() const;
     bool loading() const;
     bool busy() const;
     QString errorMessage() const;
@@ -121,7 +115,6 @@ private:
     int m_selectedRow = -1;
     bool m_loading = false;
     bool m_operationActive = false;
-    bool m_selectedWorkInProgress = false;
     quint64 m_repositoryGeneration = 0;
     quint64 m_selectionGeneration = 0;
     quint64 m_diffGeneration = 0;

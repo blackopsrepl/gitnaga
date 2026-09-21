@@ -154,7 +154,17 @@ void CommitGraphItem::setHeadOid(const QString &oid)
     m_headOid = oid;
     recomputeHeadRow();
     emit headOidChanged();
+}
+
+QString CommitGraphItem::workInProgressOid() const { return m_workInProgressOid; }
+
+void CommitGraphItem::setWorkInProgressOid(const QString &oid)
+{
+    if (m_workInProgressOid == oid)
+        return;
+    m_workInProgressOid = oid;
     update();
+    emit workInProgressOidChanged();
 }
 
 void CommitGraphItem::recomputeHeadRow()

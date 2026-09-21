@@ -23,6 +23,7 @@ class CommitGraphItem : public QQuickPaintedItem
     Q_PROPERTY(int selectedRow READ selectedRow WRITE setSelectedRow NOTIFY selectedRowChanged)
     Q_PROPERTY(int hoveredRow READ hoveredRow NOTIFY hoveredRowChanged)
     Q_PROPERTY(QString headOid READ headOid WRITE setHeadOid NOTIFY headOidChanged)
+    Q_PROPERTY(QString workInProgressOid READ workInProgressOid WRITE setWorkInProgressOid NOTIFY workInProgressOidChanged)
     Q_PROPERTY(qreal effectiveRowHeight READ effectiveRowHeight NOTIFY metricsChanged)
     Q_PROPERTY(qreal laneWidth READ laneWidth NOTIFY metricsChanged)
     Q_PROPERTY(qreal contentHeight READ contentHeight NOTIFY metricsChanged)
@@ -46,6 +47,8 @@ public:
     int hoveredRow() const;
     QString headOid() const;
     void setHeadOid(const QString &oid);
+    QString workInProgressOid() const;
+    void setWorkInProgressOid(const QString &oid);
     qreal effectiveRowHeight() const;
     qreal laneWidth() const;
     qreal contentHeight() const;
@@ -67,6 +70,7 @@ signals:
     void selectedRowChanged();
     void hoveredRowChanged();
     void headOidChanged();
+    void workInProgressOidChanged();
     void metricsChanged();
     void commitClicked(int row);
     void contextRequested(int row, const QString &oid, const QPointF &globalPosition);
@@ -106,6 +110,7 @@ private:
     QHash<QString, int> m_rowByOid;
     AvatarProvider m_avatars;
     QString m_headOid;
+    QString m_workInProgressOid;
     bool m_dragging = false;
     QPointF m_pressPosition;
     qreal m_pressContentY = 0.0;
