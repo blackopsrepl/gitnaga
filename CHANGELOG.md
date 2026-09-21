@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.11](https://github.com/blackopsrepl/gitnaga/compare/v0.1.10...v0.1.11) (2026-09-21)
+
+### Features
+
+* **graph:** give branch lines stable, well-separated neon colours ([22beee7](https://github.com/blackopsrepl/gitnaga/commit/22beee75031d3756926c00de8e9d5019346f767b))
+* **ui:** tint commit badges with their branch colour ([8b96e02](https://github.com/blackopsrepl/gitnaga/commit/8b96e023890b0ed443f72d042b7d887b18626660))
+
+### Bug Fixes
+
+* **graph:** carry the edge colour fields the palette commit referenced ([2e4774f](https://github.com/blackopsrepl/gitnaga/commit/2e4774f5fbacc9a021c8319aba390af33c421078))
+
 ## [0.1.10](https://github.com/blackopsrepl/gitnaga/compare/v0.1.9...v0.1.10) (2026-09-21)
 
 ### Bug Fixes
