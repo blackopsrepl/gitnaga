@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GitNaga
 
 // Folder picker for opening a repository. Replaces the platform dialog so the
 // surface matches the application instead of the system theme.
@@ -77,6 +78,7 @@ Dialog {
             Layout.margins: 8
             spacing: 6
             NagaButton {
+                keepFocus: true
                 text: qsTr("Up")
                 implicitHeight: 26
                 onClicked: dialog.goUp()
@@ -90,6 +92,7 @@ Dialog {
                 onAccepted: dialog.navigateTo(text)
             }
             NagaButton {
+                keepFocus: true
                 text: qsTr("Go")
                 implicitHeight: 26
                 onClicked: dialog.navigateTo(pathField.text)
@@ -121,7 +124,7 @@ Dialog {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: entryHover.hovered ? "#1a2233" : "transparent"
+                        color: entryHover.hovered ? NagaTheme.hoverFill : "transparent"
                     }
                     HoverHandler { id: entryHover }
                     TapHandler {
@@ -169,6 +172,7 @@ Dialog {
                     elide: Text.ElideMiddle
                 }
                 NagaButton {
+                    keepFocus: true
                     text: qsTr("Open Repository")
                     enabled: dialog.currentIsRepository
                     implicitHeight: 26
@@ -178,6 +182,7 @@ Dialog {
                     }
                 }
                 NagaButton {
+                    keepFocus: true
                     text: qsTr("Cancel")
                     implicitHeight: 26
                     onClicked: dialog.close()

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GitNaga
 
 Rectangle {
     id: pane
@@ -112,30 +113,57 @@ Rectangle {
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         ScrollBar.vertical: ScrollBar {}
-                        delegate: ItemDelegate {
+                        // Custom row rather than ItemDelegate: the control
+                        // default painted its own highlight, which was the one
+                        // surface whose hover and selection did not follow the
+                        // shared interaction language.
+                        delegate: Item {
+                            id: fileRow
                             required property int index
                             required property string status
                             required property string fileName
                             required property string directory
                             width: files.width
-                            highlighted: index === files.currentIndex
-                            onClicked: {
-                                files.currentIndex = index
-                                repository.selectFile(index)
+                            height: 34
+                            readonly property bool selected: index === files.currentIndex
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: fileRow.selected ? NagaTheme.accentTint(0.16)
+                                     : fileHover.hovered ? NagaTheme.hoverFill
+                                     : "transparent"
                             }
-                            contentItem: RowLayout {
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 2
+                                color: NagaTheme.accent
+                                visible: fileRow.selected
+                            }
+                            HoverHandler { id: fileHover }
+                            TapHandler {
+                                onTapped: {
+                                    files.currentIndex = fileRow.index
+                                    repository.selectFile(fileRow.index)
+                                }
+                            }
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
                                 spacing: 8
                                 Text {
-                                    text: status
-                                    color: status === "A" ? "#4ade80" : status === "D" ? "#ff7d8b" : "#fbbf24"
+                                    text: fileRow.status
+                                    color: fileRow.status === "A" ? "#4ade80" : fileRow.status === "D" ? "#ff7d8b" : "#fbbf24"
                                     font.bold: true
                                     font.pixelSize: 12
                                 }
                                 ColumnLayout {
                                     spacing: 1
                                     Layout.fillWidth: true
-                                    Text { text: fileName; color: colors.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
-                                    Text { visible: directory.length > 0; text: directory; color: colors.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
+                                    Text { text: fileRow.fileName; color: colors.text; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 12 }
+                                    Text { visible: fileRow.directory.length > 0; text: fileRow.directory; color: colors.muted; elide: Text.ElideMiddle; Layout.fillWidth: true; font.pixelSize: 9 }
                                 }
                             }
                         }

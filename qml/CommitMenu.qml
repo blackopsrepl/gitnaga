@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import GitNaga
 
 Popup {
     id: menu
@@ -45,7 +46,7 @@ Popup {
                 Rectangle {
                     visible: actionRow.modelData.separator !== true
                     anchors.fill: parent
-                    color: actionHover.hovered && actionRow.modelData.enabled !== false ? "#1e2634" : "transparent"
+                    color: actionHover.hovered && actionRow.modelData.enabled !== false ? NagaTheme.hoverFill : "transparent"
                 }
                 Text {
                     visible: actionRow.modelData.separator !== true

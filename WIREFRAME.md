@@ -530,6 +530,11 @@ property:
 | `text` | `#e8ebf2` | Primary text |
 | `muted` | `#8590a3` | Secondary text |
 | `accent` | `#34d399` | Branch label, focus, success |
+| `hoverFill` | `#1f2836` | Hover background on every interactive surface |
+| `pressedFill` | `#2b3446` | Pressed background |
+| `hoverContent` | `#ffffff` | Text, icons, checks while hovered |
+| `focusStroke` | `#34d399` | Keyboard focus outline |
+| `accentContent` / `accentContentHover` | `#7cf0bd` / `#a7f8d3` | Text on accent-tinted (active) surfaces, and while hovered |
 | selection text | `#eafff6` | Selection rings |
 | destructive | `#ff8f9c` | Dangerous menu entries |
 | error fill/border | `#5c1f28` / `#a84a55` | Error bar |
@@ -567,6 +572,33 @@ colours, so a merge draws the gradient between the two lines it joins.
 
 Helper derivations: `lighten` mixes toward `#ffffff`, `darken` mixes toward
 `#05070c`, and `withAlpha` only changes the alpha channel.
+
+### 10.1 Interaction states
+
+One language for pointer and keyboard state, defined once in
+`qml/NagaTheme.qml` and read by every surface, so a token cannot drift:
+
+| State | Treatment |
+|-------|-----------|
+| Hover | Neutral lift: `hoverFill` `#1f2836` behind the element and `hoverContent` `#ffffff` on its text, icon, or check mark. Hover never introduces a hue |
+| Pressed | `pressedFill` `#2b3446`, the same lift taken one step further |
+| Active / selected | Hue is allowed: the accent for toggled panes and selected rows (`accentTint(0.16)` plus a 2px accent bar in the changed-file list), the branch colour for graph lines, nodes, and badges |
+| Keyboard focus | `focusStroke` `#34d399`; chrome controls set `focusPolicy: Qt.NoFocus` so a mouse click leaves no ring behind, while dialog buttons keep focus through `keepFocus: true` |
+
+Applies to: toolbar and dialog buttons (`NagaButton`), icon buttons
+(`NagaIconButton`), menu items and popup rows (`NagaMenuItem`, `CommitMenu`),
+reference rows and repository-dialog rows, changed-file rows, and graph badges.
+Hover is always layered *on top of* active and selected states rather than
+replacing them, so a toggled pane still answers the pointer.
+
+Graph surfaces cannot use a fill token directly; they follow the same rule in
+paint: the pointer's row takes `pointerColor()` at alpha 38 and the hovered
+node ring widens in the same neutral, while branch hue stays on the line, the
+node, and the badge.
+
+Semantic colours stay local to their components and are not part of the
+interaction language: diff add/delete/hunk fills, the error bar, and the
+`A`/`M`/`D` status letters.
 
 ## 11. Keyboard map
 

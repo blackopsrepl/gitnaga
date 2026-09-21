@@ -223,7 +223,7 @@ Rectangle {
                                             id: chipText
                                             anchors.centerIn: parent
                                             text: parent.modelData
-                                            color: chipMouse.containsMouse ? "#ffffff" : "#f2f4fa"
+                                            color: chipMouse.containsMouse ? NagaTheme.hoverContent : "#f2f4fa"
                                             font.pixelSize: 9
                                         }
                                     }

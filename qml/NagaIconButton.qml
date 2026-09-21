@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import GitNaga
 
 Button {
     id: control
@@ -19,7 +20,7 @@ Button {
         id: textItem
         Text {
             text: control.text
-            color: !control.enabled ? "#4c5566" : control.hovered ? "#f2f6ff" : "#c3cad8"
+            color: !control.enabled ? "#4c5566" : control.hovered ? NagaTheme.hoverContent : "#c3cad8"
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             font.pixelSize: 13
@@ -32,13 +33,13 @@ Button {
             NagaIcon {
                 anchors.centerIn: parent
                 name: control.iconName
-                color: !control.enabled ? "#4c5566" : control.down ? "#f2f6ff" : control.hovered ? "#eef2fb" : "#b9c2d2"
+                color: !control.enabled ? "#4c5566" : control.hovered ? NagaTheme.hoverContent : "#b9c2d2"
             }
         }
     }
     background: Rectangle {
-        color: control.down ? "#2b3446" : control.hovered ? "#212a38" : "transparent"
-        border.color: control.activeFocus ? "#34d399" : "transparent"
+        color: control.down ? NagaTheme.pressedFill : control.hovered ? NagaTheme.hoverFill : "transparent"
+        border.color: "transparent"
     }
     ToolTip.visible: hovered && tooltip.length > 0
     ToolTip.text: tooltip

@@ -50,6 +50,8 @@ qt_add_executable(gitnaga
     src/main.cpp
 )
 
+set_source_files_properties(qml/NagaTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(gitnaga
     URI GitNaga
     VERSION 1.0
@@ -69,6 +71,7 @@ qt_add_qml_module(gitnaga
         qml/OpenRepositoryDialog.qml
         qml/NagaIconButton.qml
         qml/NagaIcon.qml
+        qml/NagaTheme.qml
         qml/PromptDialog.qml
         qml/ReferencesPane.qml
 )

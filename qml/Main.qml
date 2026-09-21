@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GitNaga
 
 ApplicationWindow {
     id: root
@@ -19,26 +20,20 @@ ApplicationWindow {
     property bool reviewVisible: true
     property bool lastOperationOk: true
 
-    readonly property color backgroundColor: "#080b12"
-    readonly property color panel: "#0e1420"
-    readonly property color raised: "#141b2a"
-    readonly property color alternate: "#1a2233"
-    readonly property color border: "#222c40"
-    readonly property color text: "#e8ebf2"
-    readonly property color muted: "#8590a3"
-    readonly property color accent: "#34d399"
-    color: backgroundColor
+    // Every colour comes from the theme, including the interaction tokens, so
+    // hover and selection cannot drift apart between surfaces.
+    color: NagaTheme.background
 
-    palette.window: backgroundColor
-    palette.windowText: text
-    palette.base: panel
-    palette.alternateBase: alternate
-    palette.text: text
-    palette.button: raised
-    palette.buttonText: text
-    palette.highlight: accent
+    palette.window: NagaTheme.background
+    palette.windowText: NagaTheme.text
+    palette.base: NagaTheme.panel
+    palette.alternateBase: NagaTheme.alternate
+    palette.text: NagaTheme.text
+    palette.button: NagaTheme.raised
+    palette.buttonText: NagaTheme.text
+    palette.highlight: NagaTheme.accent
     palette.highlightedText: "#04160f"
-    palette.placeholderText: muted
+    palette.placeholderText: NagaTheme.muted
 
     onReferencesVisibleChanged: toggleReferencesAction.checked = referencesVisible
     onReviewVisibleChanged: toggleReviewAction.checked = reviewVisible
@@ -72,7 +67,7 @@ ApplicationWindow {
 
     header: ToolBar {
         height: 40
-        background: Rectangle { color: root.raised; border.color: root.border }
+        background: Rectangle { color: NagaTheme.raised; border.color: NagaTheme.border }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 6
@@ -95,7 +90,7 @@ ApplicationWindow {
             Label {
                 visible: repository.currentBranch.length > 0
                 text: "⎇ " + repository.currentBranch
-                color: root.accent
+                color: NagaTheme.accent
                 font.pixelSize: 12
             }
             Label {
@@ -151,7 +146,7 @@ ApplicationWindow {
             SplitView.preferredWidth: root.width * 0.24
             SplitView.minimumWidth: 200
             repository: root.repository
-            colors: root
+            colors: NagaTheme
             onCloseRequested: root.referencesVisible = false
         }
         GraphPane {
@@ -159,7 +154,7 @@ ApplicationWindow {
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
             repository: root.repository
-            colors: root
+            colors: NagaTheme
         }
         InspectorPane {
             id: reviewPane
@@ -167,15 +162,15 @@ ApplicationWindow {
             SplitView.preferredWidth: root.width * 0.38
             SplitView.minimumWidth: 320
             repository: root.repository
-            colors: root
+            colors: NagaTheme
             onCloseRequested: root.reviewVisible = false
         }
     }
 
     footer: Rectangle {
         height: 26
-        color: root.raised
-        border.color: root.border
+        color: NagaTheme.raised
+        border.color: NagaTheme.border
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 8
@@ -183,7 +178,7 @@ ApplicationWindow {
             spacing: 10
             Label {
                 text: repository.repositoryPath
-                color: root.muted
+                color: NagaTheme.muted
                 font.pixelSize: 11
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
@@ -198,7 +193,7 @@ ApplicationWindow {
             Label {
                 text: repository.commitCount + qsTr(" commits")
                       + (repository.workInProgressOid.length > 0 ? qsTr(" · work in progress") : "")
-                color: root.muted
+                color: NagaTheme.muted
                 font.pixelSize: 11
             }
         }

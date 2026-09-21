@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GitNaga
 
 Rectangle {
     id: pane
@@ -133,7 +134,7 @@ Rectangle {
                                                                    && modelData.name === pane.repository.currentBranch
                                 width: sectionColumn.width
                                 height: 26
-                                color: refHover.hovered ? colors.alternate : "transparent"
+                                color: refHover.hovered ? NagaTheme.hoverFill : "transparent"
 
                                 HoverHandler { id: refHover }
                                 TapHandler {

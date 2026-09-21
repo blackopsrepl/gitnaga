@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GitNaga
 
 MenuItem {
     id: control
@@ -30,7 +31,9 @@ MenuItem {
         Text {
             id: labelText
             text: control.text.replace(/&/g, "")
-            color: control.enabled ? "#dde3ee" : "#5b6478"
+            color: !control.enabled ? "#5b6478"
+                 : control.highlighted ? NagaTheme.hoverContent
+                 : "#dde3ee"
             font.pixelSize: 12
         }
         Item { Layout.fillWidth: true }
@@ -44,6 +47,6 @@ MenuItem {
     }
 
     background: Rectangle {
-        color: control.highlighted ? "#1e2634" : "transparent"
+        color: control.highlighted ? NagaTheme.hoverFill : "transparent"
     }
 }
