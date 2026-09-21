@@ -57,6 +57,7 @@ qt_add_qml_module(gitnaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
         qml/EmptyState.qml

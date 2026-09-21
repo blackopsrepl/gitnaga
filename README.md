@@ -108,11 +108,12 @@ bindings.
 | `src/graph_geometry.*` | Lane layout, node, and edge-curve geometry |
 | `src/commit_graph_item.*` | Graph input, metrics, and model binding |
 | `src/commit_graph_paint.cpp` | Anti-aliased vector painting of the graph |
-| `qml/GraphPane.qml` | Centre graph surface with commit labels and zoom controls |
+| `qml/GraphPane.qml` | Centre graph surface with zoom controls |
+| `qml/CommitLabels.qml` | Commit label overlay riding the graph, with reference badges |
 | `qml/ReferencesPane.qml` | Closable references sidebar |
 | `qml/InspectorPane.qml` | Closable review sidebar |
 | `qml/CommitMenu.qml` | Right-click Git operations popup |
-| `tests/` | Real-Git integration test, graph geometry test, smoke test |
+| `tests/` | Real-Git integration test, graph geometry test, palette test, smoke test |
 
 ## License
 

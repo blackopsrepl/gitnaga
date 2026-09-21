@@ -11,6 +11,7 @@ this document disagree, the source wins and this document is a bug.
 - Graph item: `src/commit_graph_item.*`, `src/commit_graph_paint.cpp`
 - Graph geometry: `src/graph_geometry.*`
 - Lane palette: `src/graph_palette.hpp`
+- Commit labels: `qml/CommitLabels.qml` (extracted so `GraphPane.qml` stays inside the source-size cap)
 - Operations menu: `qml/CommitMenu.qml`
 - Dialogs: `qml/PromptDialog.qml`, `qml/ConfirmDialog.qml`
 - Controls: `qml/NagaButton.qml`, `qml/NagaIconButton.qml`, `qml/NagaIcon.qml`
@@ -278,9 +279,10 @@ opacity with the rest of the node.
 
 ### 5.6 Label overlay
 
-A `ListView` with `interactive: false`, `enabled: false`, `contentY` bound to
-`graph.contentY`, so it never steals pointer events. `x = min(width - 150,
-laneWidth + 16)`.
+`CommitLabels` (`qml/CommitLabels.qml`), a `ListView` with `interactive: false`,
+`contentY` bound to `graph.contentY`, taking `repository` and `graph` so it can
+follow the graph's row height. It never steals wheel or drag, but stays enabled
+so the reference badges can take clicks. `x = min(width - 150, laneWidth + 16)`.
 
 Delegate (`height = graph.effectiveRowHeight`). The layout is density
 adaptive so rows never collide:
