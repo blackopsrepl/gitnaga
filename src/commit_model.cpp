@@ -47,6 +47,8 @@ QVariant CommitModel::data(const QModelIndex &index, int role) const
     case RefsRole: return commit.refs;
     case LaneRole: return commit.lane;
     case LaneCountRole: return commit.laneCount;
+    case WorkInProgressRole: return commit.workInProgress;
+    case WorkSummaryRole: return commit.workSummary;
     default: return {};
     }
 }
@@ -64,6 +66,8 @@ QHash<int, QByteArray> CommitModel::roleNames() const
         { RefsRole, "refs" },
         { LaneRole, "lane" },
         { LaneCountRole, "laneCount" },
+        { WorkInProgressRole, "workInProgress" },
+        { WorkSummaryRole, "workSummary" },
     };
 }
 
@@ -98,6 +102,8 @@ QVariantMap CommitModel::at(int row) const
     map.insert(QStringLiteral("refs"), commit->refs);
     map.insert(QStringLiteral("parents"), commit->parents);
     map.insert(QStringLiteral("lane"), commit->lane);
+    map.insert(QStringLiteral("workInProgress"), commit->workInProgress);
+    map.insert(QStringLiteral("workSummary"), commit->workSummary);
     return map;
 }
 

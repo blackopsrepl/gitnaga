@@ -98,6 +98,18 @@ ApplicationWindow {
                 color: root.accent
                 font.pixelSize: 12
             }
+            Label {
+                id: wipBadge
+                visible: repository.workInProgress
+                text: qsTr("● %1 uncommitted").arg(repository.uncommittedCount)
+                color: "#e6b45a"
+                font.pixelSize: 12
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: repository.selectCommit(0)
+                }
+            }
             Item { Layout.fillWidth: true }
             NagaButton {
                 text: qsTr("References")
@@ -184,7 +196,7 @@ ApplicationWindow {
                 elide: Text.ElideRight
             }
             Label {
-                text: repository.commits.count + qsTr(" commits")
+                text: repository.commitCount + qsTr(" commits") + (repository.workInProgress ? qsTr(" · work in progress") : "")
                 color: root.muted
                 font.pixelSize: 11
             }

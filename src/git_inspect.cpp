@@ -72,4 +72,79 @@ GitResult<QVector<DiffLine>> GitClient::loadDiff(const QString &worktree, const 
     return detail::parseDiff(*diff);
 }
 
+GitResult<CommitInspection> GitClient::inspectWorktree(const QString &worktree)
+{
+    auto state = readStatus(worktree);
+    if (!state)
+        return std::unexpected(state.error());
+
+    CommitInspection inspection;
+    inspection.details.subject = QStringLiteral("Work in progress");
+
+    auto output = run(worktree,
+                      { QStringLiteral("status"), QStringLiteral("--porcelain=v1"), QStringLiteral("-z"),
+                        QStringLiteral("--untracked-files=all") },
+                      QStringLiteral("list worktree changes"));
+    if (!output)
+        return std::unexpected(output.error());
+
+    const auto fields = output->split('\0');
+    for (qsizetype index = 0; index < fields.size(); ++index) {
+        const auto entry = decode(fields.at(index));
+        if (entry.size() < 3)
+            continue;
+        const QChar stagedCode = entry.at(0);
+        const QChar unstagedCode = entry.at(1);
+        FileChange file;
+        if (stagedCode == QLatin1Char('?') && unstagedCode == QLatin1Char('?')) {
+            file.status = QStringLiteral("A");
+            file.path = entry.mid(3);
+            inspection.files.append(std::move(file));
+            continue;
+        }
+        file.path = entry.mid(3);
+        if (stagedCode == QLatin1Char('R') || stagedCode == QLatin1Char('C')) {
+            file.status = stagedCode == QLatin1Char('R') ? QStringLiteral("R") : QStringLiteral("C");
+            if (index + 1 < fields.size())
+                file.oldPath = decode(fields.at(++index));
+        } else if (stagedCode == QLatin1Char('A') || stagedCode == QLatin1Char('D')) {
+            file.status = stagedCode;
+        } else if (unstagedCode == QLatin1Char('D')) {
+            file.status = QStringLiteral("D");
+        } else {
+            file.status = QStringLiteral("M");
+        }
+        inspection.files.append(std::move(file));
+    }
+    return inspection;
+}
+
+GitResult<QVector<DiffLine>> GitClient::loadWorktreeDiff(const QString &worktree, const QString &path, const QString &oldPath)
+{
+    // Working tree versus HEAD covers staged and unstaged edits in one view.
+    // A staged rename only diffs correctly when both paths are named.
+    QStringList arguments = { QStringLiteral("diff"), QStringLiteral("--no-color"),
+                              QStringLiteral("--no-ext-diff"), QStringLiteral("HEAD"), QStringLiteral("--") };
+    if (!oldPath.isEmpty())
+        arguments.append(oldPath);
+    arguments.append(path);
+    auto tracked = run(worktree, arguments, QStringLiteral("load worktree diff"));
+    if (!tracked)
+        return std::unexpected(tracked.error());
+    if (!tracked->isEmpty())
+        return detail::parseDiff(*tracked);
+
+    // Untracked files are invisible to `git diff`, so fall back to the
+    // no-index form against the empty device; git exits 1 to signal that a
+    // difference exists, which runAllowingDiffExit accepts.
+    auto untracked = runAllowingDiffExit(worktree,
+                                         { QStringLiteral("diff"), QStringLiteral("--no-color"),
+                                           QStringLiteral("--no-ext-diff"), QStringLiteral("--no-index"),
+                                           QStringLiteral("--"), QStringLiteral("/dev/null"), path },
+                                         QStringLiteral("load untracked diff"));
+    if (!untracked)
+        return std::unexpected(untracked.error());
+    return detail::parseDiff(*untracked);
+}
+
 } // namespace GitNaga

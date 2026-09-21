@@ -76,6 +76,72 @@ private slots:
         }));
     }
 
+    void readsWorkInProgress()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto root = directory.path();
+        runGit(root, { QStringLiteral("init"), QStringLiteral("-b"), QStringLiteral("main") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("GitNaga Test") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("test@gitnaga.invalid") });
+
+        writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("one\n"));
+        runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial") });
+
+        // A clean tree yields no synthetic row and no change counts.
+        auto clean = GitClient::loadRepository(root);
+        QVERIFY(clean.has_value());
+        QVERIFY(!clean->changes.dirty());
+        QCOMPARE(clean->commits.size(), 1);
+        QVERIFY(!clean->commits.first().workInProgress);
+
+        // Stage an edit, leave another unstaged, and drop an untracked file.
+        writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("two\n"));
+        runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
+        writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("three\n"));
+        writeFile(root + QStringLiteral("/staged.txt"), QByteArrayLiteral("staged\n"));
+        runGit(root, { QStringLiteral("add"), QStringLiteral("staged.txt") });
+        writeFile(root + QStringLiteral("/scratch.txt"), QByteArrayLiteral("scratch\n"));
+
+        auto dirty = GitClient::loadRepository(root);
+        QVERIFY(dirty.has_value());
+        QCOMPARE(dirty->changes.staged, 2);
+        QCOMPARE(dirty->changes.unstaged, 1);
+        QCOMPARE(dirty->changes.untracked, 1);
+        QCOMPARE(dirty->commits.size(), 2);
+
+        const auto &wip = dirty->commits.first();
+        QVERIFY(wip.workInProgress);
+        QCOMPARE(wip.oid, QString());
+        QCOMPARE(wip.parents.size(), 1);
+        QCOMPARE(wip.parents.first(), dirty->commits.at(1).oid);
+        QVERIFY(wip.workSummary.contains(QStringLiteral("2 staged")));
+        QVERIFY(wip.workSummary.contains(QStringLiteral("1 unstaged")));
+        QVERIFY(wip.workSummary.contains(QStringLiteral("1 untracked")));
+
+        const auto inspection = GitClient::inspectWorktree(root);
+        QVERIFY(inspection.has_value());
+        QCOMPARE(inspection->details.subject, QStringLiteral("Work in progress"));
+        // tracked.txt (staged + unstaged), staged.txt, scratch.txt.
+        QCOMPARE(inspection->files.size(), 3);
+        QVERIFY(std::ranges::any_of(inspection->files, [](const FileChange &file) {
+            return file.path == QStringLiteral("scratch.txt") && file.status == QStringLiteral("A");
+        }));
+
+        const auto trackedDiff = GitClient::loadWorktreeDiff(root, QStringLiteral("tracked.txt"));
+        QVERIFY(trackedDiff.has_value());
+        QVERIFY(std::ranges::any_of(*trackedDiff, [](const DiffLine &line) {
+            return line.kind == DiffLine::Kind::Addition && line.text.contains(QStringLiteral("three"));
+        }));
+
+        const auto untrackedDiff = GitClient::loadWorktreeDiff(root, QStringLiteral("scratch.txt"));
+        QVERIFY(untrackedDiff.has_value());
+        QVERIFY(std::ranges::any_of(*untrackedDiff, [](const DiffLine &line) {
+            return line.kind == DiffLine::Kind::Addition && line.text.contains(QStringLiteral("scratch"));
+        }));
+    }
+
     void performsBranchTagAndResetOperations()
     {
         QTemporaryDir directory;

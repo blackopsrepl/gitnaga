@@ -8,6 +8,9 @@ Rectangle {
     required property var colors
     signal closeRequested()
 
+    readonly property bool hasSelection: repository.selectedOid.length > 0
+                                         || repository.selectedWorkInProgress
+
     color: colors.panel
 
     ColumnLayout {
@@ -41,24 +44,26 @@ Rectangle {
 
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: repository.selectedOid.length > 0 ? Math.min(150, details.implicitHeight + 20) : 62
+            Layout.preferredHeight: hasSelection ? Math.min(150, details.implicitHeight + 20) : 62
             ColumnLayout {
                 id: details
                 anchors.fill: parent
                 anchors.margins: 10
                 spacing: 5
                 Text {
-                    text: repository.selectedOid.length > 0 ? repository.selectedSubject : qsTr("Select a commit to review")
-                    color: repository.selectedOid.length > 0 ? colors.text : colors.muted
+                    text: hasSelection ? repository.selectedSubject : qsTr("Select a commit to review")
+                    color: hasSelection ? colors.text : colors.muted
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                 }
                 Text {
-                    visible: repository.selectedOid.length > 0
-                    text: repository.selectedAuthor + "  ·  " + repository.selectedDate
-                    color: colors.muted
+                    visible: hasSelection
+                    text: repository.selectedWorkInProgress
+                          ? repository.uncommittedSummary
+                          : repository.selectedAuthor + "  ·  " + repository.selectedDate
+                    color: "#e6b45a"
                     font.pixelSize: 12
                 }
                 Text {

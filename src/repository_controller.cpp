@@ -31,6 +31,29 @@ DiffLineModel *RepositoryController::diffLines() { return &m_diffLines; }
 QString RepositoryController::repositoryPath() const { return m_repository.worktree; }
 QString RepositoryController::repositoryName() const { return QFileInfo(m_repository.worktree).fileName(); }
 QString RepositoryController::currentBranch() const { return m_repository.currentBranch; }
+
+int RepositoryController::commitCount() const
+{
+    return m_commits.count() - (m_repository.changes.dirty() ? 1 : 0);
+}
+
+bool RepositoryController::workInProgress() const { return m_repository.changes.dirty(); }
+
+int RepositoryController::uncommittedCount() const { return m_repository.changes.total(); }
+
+QString RepositoryController::uncommittedSummary() const
+{
+    QStringList parts;
+    if (m_repository.changes.staged > 0)
+        parts << tr("%1 staged").arg(m_repository.changes.staged);
+    if (m_repository.changes.unstaged > 0)
+        parts << tr("%1 unstaged").arg(m_repository.changes.unstaged);
+    if (m_repository.changes.untracked > 0)
+        parts << tr("%1 untracked").arg(m_repository.changes.untracked);
+    return parts.join(tr(" · "));
+}
+
+bool RepositoryController::selectedWorkInProgress() const { return m_selectedWorkInProgress; }
 bool RepositoryController::loading() const { return m_loading; }
 bool RepositoryController::busy() const { return m_loading || m_operationActive; }
 QString RepositoryController::errorMessage() const { return m_error; }
@@ -99,6 +122,7 @@ void RepositoryController::selectCommit(int row)
         return;
 
     m_selectedRow = row;
+    m_selectedWorkInProgress = commit->workInProgress;
     emit selectionChanged();
 
     const auto generation = ++m_selectionGeneration;
@@ -123,18 +147,22 @@ void RepositoryController::selectCommit(int row)
         if (!result->files.isEmpty())
             selectFile(0);
     });
-    watcher->setFuture(QtConcurrent::run([worktree, oid] { return GitClient::inspectCommit(worktree, oid); }));
+    watcher->setFuture(QtConcurrent::run([worktree, oid, wip = commit->workInProgress] {
+        return wip ? GitClient::inspectWorktree(worktree) : GitClient::inspectCommit(worktree, oid);
+    }));
 }
 
 void RepositoryController::selectFile(int row)
 {
     const auto *file = m_changedFiles.fileAt(row);
-    if (!file || m_selected.oid.isEmpty())
+    if (!file || (m_selected.oid.isEmpty() && !m_selectedWorkInProgress))
         return;
     const auto generation = ++m_diffGeneration;
     const auto worktree = m_repository.worktree;
     const auto oid = m_selected.oid;
     const auto path = file->path;
+    const auto oldPath = file->oldPath;
+    const bool wip = m_selectedWorkInProgress;
 
     auto *watcher = new QFutureWatcher<GitResult<QVector<DiffLine>>>(this);
     connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
@@ -148,7 +176,10 @@ void RepositoryController::selectFile(int row)
         }
         m_diffLines.replace(*result);
     });
-    watcher->setFuture(QtConcurrent::run([worktree, oid, path] { return GitClient::loadDiff(worktree, oid, path); }));
+    watcher->setFuture(QtConcurrent::run([worktree, oid, path, oldPath, wip] {
+        return wip ? GitClient::loadWorktreeDiff(worktree, path, oldPath)
+                   : GitClient::loadDiff(worktree, oid, path);
+    }));
 }
 
 void RepositoryController::runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage)
@@ -242,6 +273,7 @@ void RepositoryController::clearSelection()
     ++m_diffGeneration;
     m_selected = {};
     m_selectedRow = -1;
+    m_selectedWorkInProgress = false;
     m_changedFiles.replace({});
     m_diffLines.clear();
     emit selectionChanged();

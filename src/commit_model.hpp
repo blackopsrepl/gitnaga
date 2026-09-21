@@ -24,6 +24,8 @@ public:
         RefsRole,
         LaneRole,
         LaneCountRole,
+        WorkInProgressRole,
+        WorkSummaryRole,
     };
     Q_ENUM(Role)
 

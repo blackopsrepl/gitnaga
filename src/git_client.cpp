@@ -20,7 +20,25 @@ GitError processError(const QString &operation, QProcess &process)
 
 } // namespace
 
+GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList &arguments, const QString &operation)
+{
+    auto output = run(worktree, arguments, operation);
+    if (!output)
+        return std::unexpected(output.error());
+    return decode(*output).trimmed();
+}
+
 GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments, const QString &operation)
+{
+    return runImpl(workingDirectory, arguments, operation, false);
+}
+
+GitResult<QByteArray> GitClient::runAllowingDiffExit(const QString &workingDirectory, const QStringList &arguments, const QString &operation)
+{
+    return runImpl(workingDirectory, arguments, operation, true);
+}
+
+GitResult<QByteArray> GitClient::runImpl(const QString &workingDirectory, const QStringList &arguments, const QString &operation, bool acceptExitOne)
 {
     QProcess process;
     process.setWorkingDirectory(workingDirectory);
@@ -43,17 +61,62 @@ GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStr
         process.waitForFinished();
         return std::unexpected(GitError{ operation, QStringLiteral("Git command timed out") });
     }
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    const auto output = process.readAllStandardOutput();
+    // `git diff --no-index` exits 1 whenever the compared content differs;
+    // for the untracked-file viewer that is the success path and the diff
+    // itself still arrives on stdout.
+    const bool acceptable = process.exitCode() == 0 || (acceptExitOne && process.exitCode() == 1);
+    if (process.exitStatus() != QProcess::NormalExit || !acceptable)
         return std::unexpected(processError(operation, process));
-    return process.readAllStandardOutput();
+    return output;
 }
 
-GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList &arguments, const QString &operation)
+GitResult<WorktreeState> GitClient::readStatus(const QString &worktree)
 {
-    auto output = run(worktree, arguments, operation);
+    auto output = run(worktree,
+                      { QStringLiteral("status"), QStringLiteral("--porcelain=v1"), QStringLiteral("-z"),
+                        QStringLiteral("--untracked-files=all") },
+                      QStringLiteral("read worktree status"));
     if (!output)
         return std::unexpected(output.error());
-    return decode(*output).trimmed();
+
+    WorktreeState state;
+    // With -z every entry is "XY path" followed by NUL, and rename entries
+    // carry a second NUL-separated field with the original path.
+    const auto fields = output->split('\0');
+    for (qsizetype index = 0; index < fields.size(); ++index) {
+        const auto entry = decode(fields.at(index));
+        if (entry.size() < 3)
+            continue;
+        const QChar stagedCode = entry.at(0);
+        const QChar unstagedCode = entry.at(1);
+        if (stagedCode == QLatin1Char('?') && unstagedCode == QLatin1Char('?')) {
+            ++state.untracked;
+            continue;
+        }
+        if (stagedCode != QLatin1Char(' '))
+            ++state.staged;
+        if (unstagedCode != QLatin1Char(' '))
+            ++state.unstaged;
+        if (stagedCode == QLatin1Char('R') || stagedCode == QLatin1Char('C')) {
+            // Skip the stored original path so it is not read as an entry.
+            if (index + 1 < fields.size())
+                ++index;
+        }
+    }
+    return state;
+}
+
+QString workSummaryText(const WorktreeState &state)
+{
+    QStringList parts;
+    if (state.staged > 0)
+        parts << QStringLiteral("%1 staged").arg(state.staged);
+    if (state.unstaged > 0)
+        parts << QStringLiteral("%1 unstaged").arg(state.unstaged);
+    if (state.untracked > 0)
+        parts << QStringLiteral("%1 untracked").arg(state.untracked);
+    return parts.join(QStringLiteral(" · "));
 }
 
 GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int maximumCommits)
@@ -140,6 +203,23 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
         snapshot.commits.append(std::move(commit));
     }
     detail::assignGraphLayout(snapshot.commits);
+
+    // Surface uncommitted work as a synthetic row above HEAD so the graph and
+    // the review pane can treat work in progress like a first-class entry.
+    auto status = readStatus(snapshot.worktree);
+    if (!status)
+        return std::unexpected(status.error());
+    snapshot.changes = *status;
+    if (status->dirty()) {
+        Commit wip;
+        wip.workInProgress = true;
+        wip.subject = QStringLiteral("Work in progress");
+        wip.workSummary = workSummaryText(*status);
+        if (!snapshot.commits.isEmpty())
+            wip.parents.append(snapshot.commits.first().oid);
+        snapshot.commits.prepend(wip);
+        detail::assignGraphLayout(snapshot.commits);
+    }
     return snapshot;
 }
 

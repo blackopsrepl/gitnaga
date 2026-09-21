@@ -71,6 +71,7 @@ repository is open.
 | `ToolSeparator` | 1 px | Static |
 | Repository name label | `Layout.maximumWidth: 240`, elide middle | `repositoryName` or `No repository open` |
 | Branch label | implicit | Visible only when `currentBranch` is non-empty, text `⎇ <branch>`, color `#34d399` |
+| WIP badge | implicit | Visible only when the worktree is dirty, text `● <n> uncommitted`, color `#e6b45a`; clicking selects the WIP row (row 0) |
 | Spacer | `Layout.fillWidth: true` | Pushes the rest right |
 | `References` toggle | `implicitHeight: 26` | `active` when the pane is visible |
 | `Review` toggle | `implicitHeight: 26` | `active` when the pane is visible |
@@ -303,7 +304,42 @@ thumb on the click; dragging scrolls by writing `graph.contentY`, which the
 label overlay follows through its existing binding. Wheel events over the
 strip still reach the graph.
 
-### 5.7 Pointer model
+### 5.7 Work in progress (synthetic WIP row)
+
+When `git status --porcelain=v1 -z --untracked-files=all` reports any staged,
+unstaged, or untracked entry, `GitClient::loadRepository` prepends one
+synthetic `Commit` with `workInProgress = true`, an empty oid, subject
+`Work in progress`, `workSummary` like `1 staged · 2 untracked`, and HEAD's
+commit as its single parent (no parent in an empty repository). Graph layout
+runs after the prepend, so the WIP row continues HEAD's lane and the edge
+into it draws normally.
+
+Rendering and behaviour differences:
+
+- Node: hollow dashed disc in `#97a1b4` with a small centre dot; no avatar,
+  no branch colour, no head ring.
+- Label overlay: subject in `#e6b45a`; the meta row shows `workSummary`
+  instead of oid/author/date; refs list is empty so no badges.
+- Toolbar: the `● <n> uncommitted` badge appears and clicking it selects the
+  WIP row.
+- Counts: `repository.commitCount` excludes the WIP row; the footer appends
+  `· work in progress` when dirty.
+- Right-click on the WIP row opens the blank-space menu (refresh), not the
+  commit operations menu.
+- Selection: `selectCommit` routes to `inspectWorktree`, which lists the
+  status entries (untracked mapped to status `A`); per-file diffs use
+  `git diff HEAD -- <path>` (both paths for staged renames) so staged and
+  unstaged edits appear combined, and untracked files fall back to
+  `git diff --no-index -- /dev/null <path>`, whose exit code 1 is accepted as
+  success. The review header shows `Work in progress` with the summary line
+  in place of author/date.
+
+The WIP row refreshes with the repository snapshot. The `.git` watcher fires
+on index and HEAD changes, so staging, committing, and resetting update it
+immediately; plain edits to tracked files in the worktree show up on the next
+refresh (Refresh button, Ctrl+R, or any git operation) rather than on save.
+
+### 5.8 Pointer model
 
 | Gesture | Effect |
 |---------|--------|
@@ -322,7 +358,7 @@ Scroll range is `0 .. max(0, rowCount * effectiveRowHeight - height)`.
 `ensureVisible(row)` scrolls the minimum amount so the row is inside the
 viewport; the shell calls it whenever the selection changes.
 
-### 5.8 Menus and the repository dialog
+### 5.9 Menus and the repository dialog
 
 There is no classic menu bar. Every command is reachable from the toolbar,
 the right-click menus, or its keyboard shortcut; the shortcut-carrying

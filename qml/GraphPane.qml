@@ -53,7 +53,7 @@ Rectangle {
                     font.letterSpacing: 0.4
                 }
                 Text {
-                    text: repository.commits.count + qsTr(" commits")
+                    text: repository.commitCount + qsTr(" commits")
                     color: colors.muted
                     font.pixelSize: 11
                 }
@@ -99,7 +99,8 @@ Rectangle {
                 onCommitClicked: (row) => repository.selectCommit(row)
                 onContextRequested: (row, oid, pos) => {
                     var local = pane.mapFromItem(null, pos)
-                    if (row < 0)
+                    var info = row >= 0 ? repository.commits.at(row) : null
+                    if (row < 0 || (info && info.workInProgress))
                         commitMenu.showBlank(local)
                     else
                         commitMenu.show(row, oid, local)
@@ -130,6 +131,8 @@ Rectangle {
                     required property string author
                     required property string shortOid
                     required property string relativeDate
+                    required property string workSummary
+                    required property bool workInProgress
                     required property var refs
                     width: labels.width
                     height: graph.effectiveRowHeight
@@ -145,7 +148,7 @@ Rectangle {
                         anchors.rightMargin: 16
                         anchors.verticalCenter: parent.verticalCenter
                         text: rowItem.subject
-                        color: rowItem.current ? "#ffffff" : "#b9c2d2"
+                        color: rowItem.workInProgress ? "#e6b45a" : rowItem.current ? "#ffffff" : "#b9c2d2"
                         elide: Text.ElideRight
                         font.pixelSize: 10
                         font.weight: rowItem.current ? Font.DemiBold : Font.Normal
@@ -165,7 +168,7 @@ Rectangle {
                             Text {
                                 width: Math.max(60, parent.width - chipRow.width - 8)
                                 text: rowItem.subject
-                                color: rowItem.current ? "#ffffff" : "#dbe1ec"
+                                color: rowItem.workInProgress ? "#e6b45a" : rowItem.current ? "#ffffff" : "#dbe1ec"
                                 elide: Text.ElideRight
                                 font.pixelSize: 11
                                 font.weight: rowItem.current ? Font.DemiBold : Font.Normal
@@ -221,10 +224,16 @@ Rectangle {
                         }
                         Row {
                             spacing: 8
-                            Text { text: rowItem.shortOid; color: "#a78bfa"; font.family: "monospace"; font.pixelSize: 9 }
-                            Text { text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
-                            Text { text: "·"; color: "#78839a" }
-                            Text { text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
+                            Text {
+                                text: rowItem.workInProgress ? rowItem.workSummary : rowItem.shortOid
+                                color: rowItem.workInProgress ? "#e6b45a" : "#a78bfa"
+                                font.family: rowItem.workInProgress ? "sans-serif" : "monospace"
+                                font.pixelSize: 9
+                                font.italic: rowItem.workInProgress
+                            }
+                            Text { visible: !rowItem.workInProgress; text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
+                            Text { visible: !rowItem.workInProgress; text: "·"; color: "#78839a" }
+                            Text { visible: !rowItem.workInProgress; text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
                         }
                     }
                 }

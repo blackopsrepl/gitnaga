@@ -67,6 +67,28 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
     const int alpha = dimmed ? dimmedAlpha : 255;
     const qreal nodeRadius = isMerge ? radius * 1.2 : radius;
 
+    if (commit.workInProgress) {
+        // Uncommitted work: a hollow dashed disc instead of an author avatar,
+        // so it reads as pending rather than as a recorded commit.
+        if (selected && !dimmed) {
+            QRadialGradient glow(node.center, nodeRadius * 3.0);
+            glow.setColorAt(0.0, withAlpha(headColor, 60));
+            glow.setColorAt(1.0, withAlpha(headColor, 0));
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(glow);
+            painter->drawEllipse(node.center, nodeRadius * 3.0, nodeRadius * 3.0);
+        }
+        const QColor pending(151, 161, 180);
+        painter->setBrush(withAlpha(QColor(11, 17, 32), dimmed ? qMin(alpha, 90) : 200));
+        painter->setPen(QPen(withAlpha(pending, alpha), 1.4 * scale, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        painter->drawEllipse(node.center, nodeRadius, nodeRadius);
+        painter->setBrush(withAlpha(pending, alpha));
+        painter->setPen(Qt::NoPen);
+        const qreal dotRadius = std::max(1.2, nodeRadius * 0.22);
+        painter->drawEllipse(node.center, dotRadius, dotRadius);
+        return;
+    }
+
     if (selected && !dimmed) {
         QRadialGradient glow(node.center, nodeRadius * 3.0);
         glow.setColorAt(0.0, withAlpha(base, 70));

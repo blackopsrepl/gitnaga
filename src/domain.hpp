@@ -23,6 +23,19 @@ struct Commit {
     int lane = 0;
     int laneCount = 1;
     QVector<GraphSegment> segments;
+    // Synthetic row representing uncommitted changes rather than a real
+    // commit; oid stays empty and painting/inspection branch on this flag.
+    bool workInProgress = false;
+    QString workSummary;
+};
+
+struct WorktreeState {
+    int staged = 0;
+    int unstaged = 0;
+    int untracked = 0;
+
+    int total() const { return staged + unstaged + untracked; }
+    bool dirty() const { return total() > 0; }
 };
 
 struct RepositorySnapshot {
@@ -30,6 +43,7 @@ struct RepositorySnapshot {
     QString gitDirectory;
     QString commonDirectory;
     QString currentBranch;
+    WorktreeState changes;
     QVector<Commit> commits;
 };
 
