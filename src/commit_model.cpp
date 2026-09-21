@@ -1,5 +1,7 @@
 #include "commit_model.hpp"
 
+#include "graph_palette.hpp"
+
 #include <QLocale>
 
 namespace GitNaga {
@@ -47,6 +49,7 @@ QVariant CommitModel::data(const QModelIndex &index, int role) const
     case RefsRole: return commit.refs;
     case LaneRole: return commit.lane;
     case LaneCountRole: return commit.laneCount;
+    case ColorRole: return graph::laneColor(commit.colorIndex).name();
     default: return {};
     }
 }
@@ -64,6 +67,7 @@ QHash<int, QByteArray> CommitModel::roleNames() const
         { RefsRole, "refs" },
         { LaneRole, "lane" },
         { LaneCountRole, "laneCount" },
+        { ColorRole, "color" },
     };
 }
 
@@ -98,6 +102,7 @@ QVariantMap CommitModel::at(int row) const
     map.insert(QStringLiteral("refs"), commit->refs);
     map.insert(QStringLiteral("parents"), commit->parents);
     map.insert(QStringLiteral("lane"), commit->lane);
+    map.insert(QStringLiteral("color"), graph::laneColor(commit->colorIndex).name());
     return map;
 }
 

@@ -24,6 +24,7 @@ public:
         RefsRole,
         LaneRole,
         LaneCountRole,
+        ColorRole,
     };
     Q_ENUM(Role)
 

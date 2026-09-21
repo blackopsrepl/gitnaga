@@ -10,6 +10,8 @@ namespace GitNaga {
 struct GraphSegment {
     int fromLane = 0;
     int toLane = 0;
+    int fromColor = 0;
+    int toColor = 0;
 };
 
 struct Commit {
@@ -22,6 +24,10 @@ struct Commit {
     QStringList refs;
     int lane = 0;
     int laneCount = 1;
+    // Colour of the branch line this commit sits on. Unlike the lane, the
+    // colour travels with the line as lanes shift, so a branch keeps one
+    // colour for its whole visible run.
+    int colorIndex = 0;
     QVector<GraphSegment> segments;
 };
 

@@ -44,7 +44,7 @@ void RepositoryController::rebuildReferences()
             entry.insert(QStringLiteral("oid"), commit.oid);
             entry.insert(QStringLiteral("shortOid"), commit.oid.left(8));
             entry.insert(QStringLiteral("subject"), commit.subject);
-            entry.insert(QStringLiteral("color"), graph::laneColor(commit.lane).name());
+            entry.insert(QStringLiteral("color"), graph::laneColor(commit.colorIndex).name());
             references.append(entry);
         }
     }

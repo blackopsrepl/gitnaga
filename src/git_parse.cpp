@@ -13,26 +13,42 @@ QString decode(const QByteArray &value)
 
 void assignGraphLayout(QVector<Commit> &commits)
 {
+    // Each lane entry is one line of history waiting for its commit. Colours
+    // ride alongside the entries so a line keeps its colour as lanes shift:
+    // only a genuinely new line gets a fresh colour index.
     QStringList lanes;
+    QVector<int> laneColors;
+    int nextColor = 0;
+
     for (auto &commit : commits) {
         int lane = static_cast<int>(lanes.indexOf(commit.oid));
         if (lane < 0) {
             lane = static_cast<int>(lanes.size());
             lanes.append(commit.oid);
+            laneColors.append(nextColor++);
         }
 
         const auto before = lanes;
+        const auto beforeColors = laneColors;
+        const int color = laneColors.at(lane);
         lanes.removeAt(lane);
+        laneColors.removeAt(lane);
 
         int insertion = lane;
-        for (const auto &parent : commit.parents) {
-            if (!lanes.contains(parent)) {
-                lanes.insert(std::min(insertion, static_cast<int>(lanes.size())), parent);
-                ++insertion;
-            }
+        for (qsizetype parent = 0; parent < commit.parents.size(); ++parent) {
+            const auto &oid = commit.parents.at(parent);
+            if (lanes.contains(oid))
+                continue;
+            // The first parent continues this line and its colour; additional
+            // parents open new lines with colours of their own.
+            const int parentColor = parent == 0 ? color : nextColor++;
+            lanes.insert(std::min(insertion, static_cast<int>(lanes.size())), oid);
+            laneColors.insert(std::min(insertion, static_cast<int>(laneColors.size())), parentColor);
+            ++insertion;
         }
 
         commit.lane = lane;
+        commit.colorIndex = color;
         commit.laneCount = static_cast<int>(std::max(before.size(), lanes.size()));
 
         for (int from = 0; from < before.size(); ++from) {
@@ -41,12 +57,12 @@ void assignGraphLayout(QVector<Commit> &commits)
                 continue;
             const int to = static_cast<int>(lanes.indexOf(oid));
             if (to >= 0)
-                commit.segments.append({ from, to });
+                commit.segments.append({ from, to, beforeColors.at(from), laneColors.at(to) });
         }
         for (const auto &parent : commit.parents) {
             const int to = static_cast<int>(lanes.indexOf(parent));
             if (to >= 0)
-                commit.segments.append({ lane, to });
+                commit.segments.append({ lane, to, color, laneColors.at(to) });
         }
     }
 }

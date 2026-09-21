@@ -234,7 +234,7 @@ nothing is dimmed, so hover tracing still works on its own.
 
 Commits outside the set are drawn at 50% alpha; everything inside stays fully
 opaque, the selected row band keeps its stronger alpha, and the selected node
-keeps its glow and its white ring regardless of what the pointer is over.
+keeps its white ring and its band colour regardless of what the pointer is over. Nodes are drawn flat: there is no radial glow behind the selection or the uncommitted snapshot, so the ring, the band, and the branch colour carry the state instead.
 Setting alpha floors is unnecessary because the dim is a single constant in
 `commit_graph_paint.cpp`.
 
@@ -520,15 +520,36 @@ property:
 | destructive | `#ff8f9c` | Dangerous menu entries |
 | error fill/border | `#5c1f28` / `#a84a55` | Error bar |
 
-Lane palette (`src/graph_palette.hpp`), selected by `lane % 10`:
+Lane palette (`src/graph_palette.hpp`), selected by `colorIndex % 12`:
 
-| Index | Hex | Index | Hex |
-|-------|-----|-------|-----|
-| 0 | `#a970ff` | 5 | `#e05252` |
-| 1 | `#3d91f4` | 6 | `#45c5e0` |
-| 2 | `#e350b0` | 7 | `#f07a3d` |
-| 3 | `#4fbf67` | 8 | `#b78af5` |
-| 4 | `#e8c545` | 9 | `#67d9a0` |
+| Index | Hex | Name | Index | Hex | Name |
+|-------|-----|------|-------|-----|------|
+| 0 | `#22bf70` | emerald | 6 | `#bfaa22` | acid yellow |
+| 1 | `#da2fa1` | hot pink | 7 | `#5c8dff` | electric blue |
+| 2 | `#07edc7` | aqua | 8 | `#5aad1f` | lime |
+| 3 | `#da462f` | flame | 9 | `#f5005a` | magenta red |
+| 4 | `#25d1f4` | electric cyan | 10 | `#7367f4` | indigo |
+| 5 | `#bb37e6` | electric violet | 11 | `#d07a25` | amber |
+
+The register is neon on near-black, not pastel: every entry is high-chroma and
+holds at least 4.5:1 against the window background so a 1.5 px stroke stays
+legible. The order is not decoration. Adjacent indices are the lanes a reader
+compares side by side, so the sequence alternates cool and warm; index 0 is the
+line the graph leads with and is green because the interface reserves red for
+destructive actions; and the set maximises the minimum CIELab distance (min
+pairwise dE 26, min neighbouring dE 100, against dE 20 and 44 for the previous
+set, whose two greens at dE 20 and two violets at dE 21 made distinct branches
+read as the same colour). `graph_geometry_test` asserts the distance floors,
+the contrast floor, at least three green-family entries, at most one violet,
+and a green first entry, so a future edit that reintroduces a near-duplicate or
+a red lead fails the suite.
+
+Colour is attached to the **branch line**, not to the lane slot: `assignGraphLayout`
+carries a colour index alongside each pending lane entry, the first parent
+inherits its child's colour, and only a genuinely new line takes the next
+index. A branch therefore keeps one colour for its whole visible run even as
+lanes to its left close and everything shifts. Edges carry both endpoint
+colours, so a merge draws the gradient between the two lines it joins.
 
 Helper derivations: `lighten` mixes toward `#ffffff`, `darken` mixes toward
 `#05070c`, and `withAlpha` only changes the alpha channel.

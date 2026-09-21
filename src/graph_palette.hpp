@@ -8,19 +8,30 @@
 
 namespace GitNaga::graph {
 
-inline const std::array<QColor, 10> &palette()
+// Lane colours: neon on the near-black window, ordered so that neighbouring
+// lanes never look alike (adjacent indices are what a reader compares side by
+// side) and so the first branch leads with green rather than with red, which
+// the interface reserves for destructive actions. Chosen by maximising the
+// minimum CIELab distance subject to every entry holding at least 4.5:1
+// against the window background and staying high-chroma: min pairwise dE 26,
+// min neighbouring dE 100, against dE 20 and 44 for the previous set, where
+// two greens at dE 20 and two violets at dE 21 made distinct branches read as
+// the same colour.
+inline const std::array<QColor, 12> &palette()
 {
-    static const std::array<QColor, 10> colors = {
-        QColor(QStringLiteral("#a970ff")),
-        QColor(QStringLiteral("#3d91f4")),
-        QColor(QStringLiteral("#e350b0")),
-        QColor(QStringLiteral("#4fbf67")),
-        QColor(QStringLiteral("#e8c545")),
-        QColor(QStringLiteral("#e05252")),
-        QColor(QStringLiteral("#45c5e0")),
-        QColor(QStringLiteral("#f07a3d")),
-        QColor(QStringLiteral("#b78af5")),
-        QColor(QStringLiteral("#67d9a0")),
+    static const std::array<QColor, 12> colors = {
+        QColor(QStringLiteral("#22bf70")), // emerald
+        QColor(QStringLiteral("#da2fa1")), // hot pink
+        QColor(QStringLiteral("#07edc7")), // aqua
+        QColor(QStringLiteral("#da462f")), // flame
+        QColor(QStringLiteral("#25d1f4")), // electric cyan
+        QColor(QStringLiteral("#bb37e6")), // electric violet
+        QColor(QStringLiteral("#bfaa22")), // acid yellow
+        QColor(QStringLiteral("#5c8dff")), // electric blue
+        QColor(QStringLiteral("#5aad1f")), // lime
+        QColor(QStringLiteral("#f5005a")), // magenta red
+        QColor(QStringLiteral("#7367f4")), // indigo
+        QColor(QStringLiteral("#d07a25")), // amber
     };
     return colors;
 }

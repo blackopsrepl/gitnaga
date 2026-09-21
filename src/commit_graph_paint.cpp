@@ -8,7 +8,6 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QQuickWindow>
-#include <QRadialGradient>
 
 #include <algorithm>
 #include <cmath>
@@ -41,8 +40,8 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
             for (qsizetype index = 1; index < edge.path.size(); ++index)
                 path.lineTo(edge.path.at(index));
 
-            const QColor from = withAlpha(laneColor(edge.fromLane), alpha);
-            const QColor to = withAlpha(laneColor(edge.toLane), alpha);
+            const QColor from = withAlpha(laneColor(edge.fromColor), alpha);
+            const QColor to = withAlpha(laneColor(edge.toColor), alpha);
 
             painter->setPen(QPen(withAlpha(QColor(4, 6, 11), dimmed ? 40 : 110),
                                  3.2 * scale, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -60,7 +59,7 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
 void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const graph::Node &node, qreal radius,
                                 bool isHead, bool selected, bool hovered) const
 {
-    const QColor base = laneColor(commit.lane);
+    const QColor base = laneColor(commit.colorIndex);
     const qreal scale = style().laneSpacing / 22.0;
     const bool isMerge = commit.parents.size() > 1;
     const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(commit.oid);
@@ -69,16 +68,9 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
 
     if (!m_workInProgressOid.isEmpty() && commit.oid == m_workInProgressOid) {
         // Uncommitted work: a hollow dashed disc instead of an author avatar,
-        // so it reads as pending rather than as a recorded commit.
-        if (selected && !dimmed) {
-            QRadialGradient glow(node.center, nodeRadius * 3.0);
-            glow.setColorAt(0.0, withAlpha(headColor, 60));
-            glow.setColorAt(1.0, withAlpha(headColor, 0));
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(glow);
-            painter->drawEllipse(node.center, nodeRadius * 3.0, nodeRadius * 3.0);
-        }
-        const QColor pending(151, 161, 180);
+        // so it reads as pending rather than as a recorded commit. Selection
+        // reads from the dashed ring's colour, not from a glow.
+        const QColor pending = selected && !dimmed ? selectionColor : QColor(151, 161, 180);
         painter->setBrush(withAlpha(QColor(11, 17, 32), dimmed ? qMin(alpha, 90) : 200));
         painter->setPen(QPen(withAlpha(pending, alpha), 1.4 * scale, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
         painter->drawEllipse(node.center, nodeRadius, nodeRadius);
@@ -87,15 +79,6 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
         const qreal dotRadius = std::max(1.2, nodeRadius * 0.22);
         painter->drawEllipse(node.center, dotRadius, dotRadius);
         return;
-    }
-
-    if (selected && !dimmed) {
-        QRadialGradient glow(node.center, nodeRadius * 3.0);
-        glow.setColorAt(0.0, withAlpha(base, 70));
-        glow.setColorAt(1.0, withAlpha(base, 0));
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(glow);
-        painter->drawEllipse(node.center, nodeRadius * 3.0, nodeRadius * 3.0);
     }
 
     const qreal ratio = window() ? window()->devicePixelRatio() : 1.0;
@@ -148,7 +131,7 @@ void CommitGraphItem::paint(QPainter *painter)
 
     for (int row = first; row <= last; ++row) {
         const qreal y = graph::rowCenterY(row, m_contentY, st) - st.rowHeight / 2.0;
-        const QColor band = laneColor(m_rows.at(row).lane);
+        const QColor band = laneColor(m_rows.at(row).colorIndex);
         const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(m_rows.at(row).oid);
         int alpha = 26;
         if (row == m_selectedRow)
