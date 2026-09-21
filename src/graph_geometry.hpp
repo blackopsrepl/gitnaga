@@ -25,6 +25,8 @@ struct Edge {
     QVector<QPointF> path;
     int fromLane = 0;
     int toLane = 0;
+    int fromColor = 0;
+    int toColor = 0;
 };
 
 // Object ids that stay at full strength for the current selection and hover:

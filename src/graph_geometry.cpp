@@ -128,6 +128,8 @@ QVector<Edge> edgesFor(const Commit &commit, int row, qreal contentY, const Grap
         Edge edge;
         edge.fromLane = segment.fromLane;
         edge.toLane = segment.toLane;
+        edge.fromColor = segment.fromColor;
+        edge.toColor = segment.toColor;
 
         QVector<Sample> polyline;
         polyline.append({ QPointF(x0, y0), 0.0 });
