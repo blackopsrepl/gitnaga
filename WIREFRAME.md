@@ -39,8 +39,6 @@ repository is open.
 
 ```
 +--------------------------------------------------------------------------+
-| File  Repository  View                                  (native menu bar) |
-+--------------------------------------------------------------------------+
 | [Open Repository…] | gitnaga  ⎇ main        [References][Review](o)[Refresh]|  A
 +--------------------------------------------------------------------------+
 |            |                                   |                          |
@@ -294,9 +292,14 @@ viewport; the shell calls it whenever the selection changes.
 
 ### 5.8 Menus and the repository dialog
 
-The menu bar uses the application's own menu components rather than the
-default control sizing, which was too narrow and let labels run under their
-shortcut column.
+There is no classic menu bar. Every command is reachable from the toolbar,
+the right-click menus, or its keyboard shortcut; the shortcut-carrying
+`Action` objects are declared at window scope in `Main.qml` so the key
+sequences fire without any menu placement.
+
+The application's own menu components style the remaining popup menus (the
+commit operations menu and the reference menu), where the default control
+sizing was too narrow and let labels run under their shortcut column.
 
 | Component | Role |
 |-----------|------|
@@ -506,7 +509,7 @@ each property.
 
 ## 14. Accessibility surface
 
-Qt publishes the window as `GitNaga` with roles for the menu bar, toolbar
+Qt publishes the window as `GitNaga` with roles for the toolbar
 push buttons (`Open Repository…`, `References`, `Review`, `Refresh`), the pane
 close buttons (`✕`), and the zoom buttons (`−`, `+`, `⟲`). This is the surface
 agents drive with `lumen accessibility` and `lumen click`, and the surface the

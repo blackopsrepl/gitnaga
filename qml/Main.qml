@@ -60,33 +60,9 @@ ApplicationWindow {
     Action { id: previousAction; text: qsTr("Previous commit"); shortcut: "Alt+Up"; enabled: repository.selectedRow > 0; onTriggered: root.step(-1) }
     Action { id: nextAction; text: qsTr("Next commit"); shortcut: "Alt+Down"; enabled: repository.selectedRow + 1 < repository.commits.count; onTriggered: root.step(1) }
 
-    menuBar: MenuBar {
-        font.pixelSize: 12
-        spacing: 2
-
-        NagaMenu {
-            title: qsTr("&File")
-            NagaMenuItem { action: openAction }
-            NagaMenuSeparator {}
-            NagaMenuItem { action: quitAction }
-        }
-        NagaMenu {
-            title: qsTr("&Repository")
-            NagaMenuItem { action: refreshAction }
-        }
-        NagaMenu {
-            title: qsTr("&View")
-            NagaMenuItem { action: toggleReferencesAction }
-            NagaMenuItem { action: toggleReviewAction }
-            NagaMenuSeparator {}
-            NagaMenuItem { action: zoomInAction }
-            NagaMenuItem { action: zoomOutAction }
-            NagaMenuItem { action: resetZoomAction }
-            NagaMenuSeparator {}
-            NagaMenuItem { action: previousAction }
-            NagaMenuItem { action: nextAction }
-        }
-    }
+    // The classic menu bar is gone on purpose: every command lives in the
+    // toolbar, the context menus, or its keyboard shortcut. The actions below
+    // stay declared at window scope so the shortcuts keep working.
 
     OpenRepositoryDialog {
         id: repositoryDialog

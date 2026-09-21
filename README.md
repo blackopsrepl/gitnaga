@@ -23,8 +23,8 @@ no account, and no telemetry.
   Qt's anti-aliased vector painter, so curves and gradients stay crisp at any
   zoom.
 - **Mouse first.** Hover to trace a row, click to select, drag to pan, wheel to
-  scroll, and Ctrl+wheel to zoom around the cursor. Toolbar and menu controls
-  mirror the same actions for the keyboard.
+  scroll, and Ctrl+wheel to zoom around the cursor. Toolbar controls and
+  keyboard shortcuts mirror the same actions.
 - **Right-click Git operations.** Right-click any commit for checkout, branch
   and tag creation, cherry-pick, merge, revert, reset (soft, mixed, hard),
   rebase, branch deletion, and copy hash. Right-click empty graph space for a
@@ -33,9 +33,9 @@ no account, and no telemetry.
   remotes, and tags from the refs Git actually stores, with a filter box and a
   context menu. The right sidebar is the review: metadata, changed files, and
   the coloured diff.
-- **Closable, resizable panes.** Toggle the references and review sidebars from
-  the toolbar or View menu and the graph takes the full window. Every pane is a
-  splitter you can drag.
+- **Closable, resizable panes.** Toggle the references and review sidebars
+  from the toolbar (or Ctrl+1 / Ctrl+2) and the graph takes the full window.
+  Every pane is a splitter you can drag.
 - **Responsive by construction.** Every Git command runs off the GUI thread.
   Stale results are dropped by generation counter, and `.git` metadata is
   watched so the view refreshes when the repository changes underneath it.
@@ -70,7 +70,7 @@ cmake --build --preset dev
 ```
 
 Passing a repository path is optional. With no argument, GitNaga opens on an
-empty state and waits for **File > Open Repository**.
+empty state and waits for the **Open Repository** button (or Ctrl+O).
 
 ## Verify
 
