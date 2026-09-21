@@ -56,8 +56,14 @@ void RepositoryController::openRepositoryPath(const QString &path)
 
 void RepositoryController::refresh()
 {
-    const QString path = m_repository.worktree.isEmpty() ? m_requestedPath : m_repository.worktree;
-    if (path.isEmpty() || m_loading)
+    // The requested path is the user's latest intent, so it wins over the
+    // worktree left over from the previously open repository; otherwise
+    // opening a second repository would simply reload the first one. The
+    // generation counter already discards stale snapshots, so a request
+    // issued while a load is in flight supersedes it instead of being
+    // silently dropped by a loading guard.
+    const QString path = m_requestedPath.isEmpty() ? m_repository.worktree : m_requestedPath;
+    if (path.isEmpty())
         return;
 
     const auto generation = ++m_repositoryGeneration;
