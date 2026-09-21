@@ -128,6 +128,12 @@ void CommitGraphItem::recomputeHighlight()
     m_highlightSelectedRow = m_selectedRow;
     m_highlightHoveredRow = m_hoveredRow;
     m_highlight = graph::emphasisOids(m_rows, m_rowByOid, m_selectedRow, m_hoveredRow);
+    rebuildEmphasisSpans();
+}
+
+void CommitGraphItem::rebuildEmphasisSpans()
+{
+    m_emphasisSpans = graph::emphasisSpans(m_rows, m_highlight);
 }
 
 int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
@@ -148,6 +154,7 @@ void CommitGraphItem::invalidateHighlight()
     m_highlightSelectedRow = -2;
     m_highlightHoveredRow = -2;
     m_highlight.clear();
+    m_emphasisSpans.clear();
 }
 
 QString CommitGraphItem::workInProgressOid() const { return m_workInProgressOid; }

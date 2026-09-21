@@ -92,6 +92,7 @@ private:
     void recomputeHeadRow();
     void recomputeHighlight();
     void invalidateHighlight();
+    void rebuildEmphasisSpans();
     void clampContent();
     void synchronizeRows();
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
@@ -111,6 +112,7 @@ private:
     int m_highlightSelectedRow = -2;
     int m_highlightHoveredRow = -2;
     QSet<QString> m_highlight;
+    QHash<int, QPair<int, int>> m_emphasisSpans;
     QHash<QString, int> m_rowByOid;
     AvatarProvider m_avatars;
     QString m_headOid;

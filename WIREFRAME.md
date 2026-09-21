@@ -224,6 +224,14 @@ point count stays stable and evenly spaced.
 
 ### 5.3 Highlighting
 
+Dimming follows the **line**, not the row: each traced line keeps a row span
+(`graph::emphasisSpans`) and a passing lane belongs to its own line, so a branch
+that is not part of the trace stays uniformly dim instead of lighting up in
+patches wherever the trace crosses it. Strength ramps over six rows at each end
+of a span (`graph::spanStrength`), and the ramp is carried through the edge's
+linear gradient, so a trace fades in and out and the hand-off where a branch
+meets its fork is a crossfade rather than a step.
+
 The **emphasis set** is the union of two ancestries, computed by walking
 parents through an oid to row map: the ancestry of the **selected** commit and
 the ancestry of the **hovered** row (`graph::emphasisOids`). Selection is the

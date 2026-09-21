@@ -26,6 +26,10 @@ const QColor headColor(QStringLiteral("#ffe9a8"));
 // branch identity, never for the pointer.
 const QColor hoverColor = graph::pointerColor();
 constexpr int dimmedAlpha = 128;
+// Rows over which the trace ramps in and out. The ramp is what makes the
+// hand-off between a branch and the line it forked from a crossfade instead of
+// a step.
+constexpr int emphasisFadeRows = 6;
 } // namespace
 
 void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const
@@ -34,22 +38,35 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
     painter->setBrush(Qt::NoBrush);
     for (int row = first; row <= last; ++row) {
         const auto &commit = m_rows.at(row);
-        const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(commit.oid);
-        const int alpha = dimmed ? dimmedAlpha : 255;
         for (const auto &edge : graph::edgesFor(commit, row, m_contentY, style)) {
             if (edge.path.size() < 2)
                 continue;
+
+            // Dimming follows the *line*, not the row: a lane that merely
+            // passes an emphasised row belongs to another branch and must stay
+            // dim, otherwise foreign branches light up in patches wherever the
+            // trace crosses them. An edge leaving this commit belongs to the
+            // line this commit sits on; a passing edge to the line it carries.
+            const int line = edge.fromLane == commit.lane ? commit.colorIndex : edge.fromColor;
+            const qreal top = graph::spanStrength(m_emphasisSpans, line, row, emphasisFadeRows);
+            const qreal bottom = graph::spanStrength(m_emphasisSpans, line, row + 1, emphasisFadeRows);
+            const auto alphaAt = [](qreal strength) {
+                return static_cast<int>(std::lround(dimmedAlpha + (255 - dimmedAlpha) * strength));
+            };
+            const QColor from = withAlpha(laneColor(edge.fromColor), alphaAt(top));
+            const QColor to = withAlpha(laneColor(edge.toColor), alphaAt(bottom));
+
             QPainterPath path(edge.path.first());
             for (qsizetype index = 1; index < edge.path.size(); ++index)
                 path.lineTo(edge.path.at(index));
 
-            const QColor from = withAlpha(laneColor(edge.fromColor), alpha);
-            const QColor to = withAlpha(laneColor(edge.toColor), alpha);
-
-            painter->setPen(QPen(withAlpha(QColor(4, 6, 11), dimmed ? 40 : 110),
+            const int shadowAlpha = static_cast<int>(std::lround(40 + 70 * (top + bottom) / 2.0));
+            painter->setPen(QPen(withAlpha(QColor(4, 6, 11), shadowAlpha),
                                  3.2 * scale, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
             painter->drawPath(path);
 
+            // The gradient carries both the lane-colour transition and the
+            // trace strength, so brightness ramps continuously along the line.
             QLinearGradient gradient(edge.path.first(), edge.path.last());
             gradient.setColorAt(0.0, from);
             gradient.setColorAt(1.0, to);

@@ -91,6 +91,42 @@ QSet<QString> emphasisOids(const QVector<Commit> &commits, const QHash<QString, 
     return oids;
 }
 
+QHash<int, QPair<int, int>> emphasisSpans(const QVector<Commit> &commits, const QSet<QString> &emphasis)
+{
+    QHash<int, QPair<int, int>> spans;
+    if (emphasis.isEmpty())
+        return spans;
+    for (qsizetype row = 0; row < commits.size(); ++row) {
+        const auto &commit = commits.at(row);
+        if (!emphasis.contains(commit.oid))
+            continue;
+        const int index = static_cast<int>(row);
+        const auto found = spans.find(commit.colorIndex);
+        if (found == spans.end())
+            spans.insert(commit.colorIndex, { index, index });
+        else
+            found->second = index;
+    }
+    return spans;
+}
+
+qreal spanStrength(const QHash<int, QPair<int, int>> &spans, int colorIndex, int row, int fade)
+{
+    if (spans.isEmpty())
+        return 1.0;
+    const auto found = spans.constFind(colorIndex);
+    if (found == spans.constEnd())
+        return 0.0;
+    const int first = found->first;
+    const int last = found->second;
+    if (row >= first && row <= last)
+        return 1.0;
+    const qreal distance = row < first ? first - row : row - last;
+    if (distance >= fade)
+        return 0.0;
+    return 1.0 - distance / fade;
+}
+
 qreal laneX(int lane, const GraphStyle &style)
 {
     return style.leftPadding + static_cast<qreal>(lane) * style.laneSpacing;

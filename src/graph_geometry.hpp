@@ -36,6 +36,17 @@ struct Edge {
 QSet<QString> emphasisOids(const QVector<Commit> &commits, const QHash<QString, int> &rowByOid,
                            int selectedRow, int hoveredRow);
 
+// Rows each traced branch line occupies: colour index -> [firstRow, lastRow].
+// A line is traced only where its own commits are in the emphasis, so a lane
+// that merely passes through emphasised rows stays dim.
+QHash<int, QPair<int, int>> emphasisSpans(const QVector<Commit> &commits, const QSet<QString> &emphasis);
+
+// Trace strength for a line at a row: 1 inside its span, ramping to 0 over
+// `fade` rows beyond either end. The ramp is what turns the hard cut between
+// traced and dimmed into a gradient, including the hand-off where a branch
+// meets the line it forked from.
+qreal spanStrength(const QHash<int, QPair<int, int>> &spans, int colorIndex, int row, int fade);
+
 qreal laneX(int lane, const GraphStyle &style);
 qreal rowCenterY(int row, qreal contentY, const GraphStyle &style);
 qreal laneAreaWidth(int maximumLane, const GraphStyle &style);

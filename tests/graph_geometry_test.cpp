@@ -135,6 +135,50 @@ private slots:
         QCOMPARE(hoverOnly, QSet<QString>({ QStringLiteral("feature-tip"), QStringLiteral("base") }));
     }
 
+    void passingLanesDimWithTheirOwnLine()
+    {
+        // Regression: dimming was decided per row, so a foreign branch whose
+        // lane crossed an emphasised row was painted at full strength there,
+        // lighting it up in patches wherever the trace crossed it.
+        QVector<Commit> commits;
+        commits.append(makeCommit(QStringLiteral("a"), 0, { QStringLiteral("m") }));
+        commits.append(makeCommit(QStringLiteral("f"), 0, { QStringLiteral("b") }));
+        commits.append(makeCommit(QStringLiteral("m"), 0, { QStringLiteral("x") }));
+        commits.append(makeCommit(QStringLiteral("b"), 0, { QStringLiteral("x") }));
+        commits.append(makeCommit(QStringLiteral("x"), 0));
+        GitNaga::detail::assignGraphLayout(commits);
+
+        const auto colorOf = [&commits](const QString &oid) {
+            for (const auto &commit : commits)
+                if (commit.oid == oid)
+                    return commit.colorIndex;
+            return -1;
+        };
+        const QSet<QString> emphasis{ QStringLiteral("a"), QStringLiteral("m"), QStringLiteral("x") };
+        const auto spans = emphasisSpans(commits, emphasis);
+
+        // The traced line covers rows 0..4; the foreign branch keeps its own
+        // colour and is absent from the spans entirely.
+        QVERIFY(spans.contains(colorOf(QStringLiteral("a"))));
+        QCOMPARE(spans.value(colorOf(QStringLiteral("a"))).first, 0);
+        QCOMPARE(spans.value(colorOf(QStringLiteral("a"))).second, 4);
+        QVERIFY(!spans.contains(colorOf(QStringLiteral("f"))));
+
+        const int traced = colorOf(QStringLiteral("a"));
+        const int foreign = colorOf(QStringLiteral("f"));
+        QCOMPARE(spanStrength(spans, traced, 2, 6), 1.0);
+        QCOMPARE(spanStrength(spans, foreign, 2, 6), 0.0);
+
+        // The ends ramp instead of snapping, so the trace fades in and out.
+        QVERIFY(spanStrength(spans, traced, -1, 6) > 0.0);
+        QVERIFY(spanStrength(spans, traced, -1, 6) < 1.0);
+        QCOMPARE(spanStrength(spans, traced, -6, 6), 0.0);
+        QCOMPARE(spanStrength(spans, traced, 10, 6), 0.0);
+
+        // With nothing emphasised nothing is dimmed.
+        QCOMPARE(spanStrength(QHash<int, QPair<int, int>>{}, traced, 2, 6), 1.0);
+    }
+
     void branchLinesKeepTheirColour()
     {
         // main-tip and feature-tip diverge from base; the colour must follow
