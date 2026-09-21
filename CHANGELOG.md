@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.8](https://github.com/blackopsrepl/gitnaga/compare/v0.1.7...v0.1.8) (2026-09-21)
+
+### Features
+
+* **graph:** show work in progress as a synthetic pending row ([e3a71b0](https://github.com/blackopsrepl/gitnaga/commit/e3a71b09855a357e0efe6565abccce4cc4cb5fac))
+
 ## [0.1.7](https://github.com/blackopsrepl/gitnaga/compare/v0.1.6...v0.1.7) (2026-09-21)
 
 ### Features
