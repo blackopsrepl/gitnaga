@@ -4,6 +4,8 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.12](https://github.com/blackopsrepl/gitnaga/compare/v0.1.11...v0.1.12) (2026-09-21)
+
 ## [0.1.11](https://github.com/blackopsrepl/gitnaga/compare/v0.1.10...v0.1.11) (2026-09-21)
 
 ### Features
