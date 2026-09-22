@@ -99,8 +99,10 @@ Popup {
     }
 
     function showBlank(localPoint) {
-        actions = []
-        add(qsTr("Refresh"), function() { repository.refresh() })
+        // Assign a whole new array: the Repeater bound to `actions` does not
+        // observe in-place pushes, and an in-place mutation used to open an
+        // empty sliver of a popup on the uncommitted-work row.
+        actions = [{ label: qsTr("Refresh"), run: function() { repository.refresh() } }]
         place(localPoint)
     }
 

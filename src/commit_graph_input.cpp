@@ -40,7 +40,9 @@ void CommitGraphItem::mousePressEvent(QMouseEvent *event)
     m_dragging = false;
     if (event->button() == Qt::RightButton) {
         const int row = rowAt(event->position().y());
-        emit contextRequested(row, oidAt(row), event->globalPosition());
+        // Scene coordinates: GraphPane maps them into its own space, and unlike
+        // globalPosition this is well defined regardless of where the window sits.
+        emit contextRequested(row, oidAt(row), event->scenePosition());
         event->accept();
         return;
     }
