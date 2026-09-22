@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.16](https://github.com/blackopsrepl/gitnaga/compare/v0.1.15...v0.1.16) (2026-09-22)
+
+### Features
+
+* **wip): commit ticked files; feat(ui:** remembered projects and fuzzy switcher ([ec3e1fb](https://github.com/blackopsrepl/gitnaga/commit/ec3e1fb24e7f76bdeadd14d512996dd0b7bbf69b))
+
+### Bug Fixes
+
+* **graph:** let the uncommitted row continue its line's colour ([199de28](https://github.com/blackopsrepl/gitnaga/commit/199de28d862a1d2d2f20ef58d7f673d48aac84c7))
+* **menu:** open a real popup on the uncommitted row and at the pointer ([732214c](https://github.com/blackopsrepl/gitnaga/commit/732214c0503c90b0ffba61739a7e56abc24d91a2))
+
 ## [0.1.15](https://github.com/blackopsrepl/gitnaga/compare/v0.1.14...v0.1.15) (2026-09-21)
 
 ### Bug Fixes
