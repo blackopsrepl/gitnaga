@@ -66,9 +66,12 @@ public:
     Q_INVOKABLE void selectOid(const QString &oid);
     Q_INVOKABLE void selectFile(int row);
     Q_INVOKABLE void copyToClipboard(const QString &text) const;
+    Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description);
     Q_INVOKABLE QVariantList directories(const QString &path) const;
     Q_INVOKABLE QString homeDirectory() const;
     Q_INVOKABLE bool looksLikeRepository(const QString &path) const;
+    Q_INVOKABLE QStringList recentProjects() const;
+    Q_INVOKABLE QVariantList fuzzyMatchProjects(const QString &needle) const;
 
     Q_INVOKABLE void checkoutCommit(const QString &oid);
     Q_INVOKABLE void checkoutBranch(const QString &name);
@@ -109,6 +112,7 @@ private:
     RepositorySnapshot m_repository;
     CommitDetails m_selected;
     QString m_requestedPath;
+    QString m_recordedWorktree;
     QString m_error;
     QString m_operationMessage;
     QVariantList m_references;

@@ -24,6 +24,10 @@ class GitClient final
 public:
     static GitResult<RepositorySnapshot> loadRepository(const QString &path, int maximumCommits = 5000);
     static GitResult<CommitInspection> inspectCommit(const QString &worktree, const QString &oid);
+    static GitResult<CommitInspection> inspectWorktree(const QString &worktree);
+    static GitResult<QString> commitWorktree(const QString &worktree, const QStringList &include,
+                                             const QStringList &unstage, const QString &summary,
+                                             const QString &description);
     static GitResult<QVector<DiffLine>> loadDiff(const QString &worktree, const QString &oid, const QString &path,
                                                  const QString &oldPath = {});
     static GitResult<QString> mutate(const QString &worktree, const QStringList &arguments, const QString &operation);

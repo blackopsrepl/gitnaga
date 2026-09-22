@@ -1,5 +1,10 @@
 #include "repository_controller.hpp"
 
+#include "git_client.hpp"
+
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrent>
+
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -46,6 +51,42 @@ void RepositoryController::createBranch(const QString &name, const QString &oid)
     runOperation(QStringLiteral("create branch"),
                  { QStringLiteral("branch"), name, oid },
                  tr("Created branch %1 at %2").arg(name, shortOid(oid)));
+}
+
+void RepositoryController::commitWorktree(const QString &summary, const QString &description)
+{
+    if (m_repository.worktree.isEmpty() || m_operationActive)
+        return;
+    const auto worktree = m_repository.worktree;
+    const auto include = m_changedFiles.selectedPaths();
+    const auto unstage = m_changedFiles.stagedUnselectedPaths();
+    if (include.isEmpty()) {
+        setOperationMessage(tr("Select at least one file to commit"));
+        emit operationFinished(false, tr("Select at least one file to commit"));
+        return;
+    }
+    m_operationActive = true;
+    emit busyChanged();
+
+    auto *watcher = new QFutureWatcher<GitResult<QString>>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher] {
+        const auto result = watcher->result();
+        watcher->deleteLater();
+        m_operationActive = false;
+        emit busyChanged();
+        if (!result) {
+            const auto message = result.error().message.isEmpty() ? result.error().operation : result.error().message;
+            setOperationMessage(message);
+            emit operationFinished(false, message);
+            return;
+        }
+        setOperationMessage(tr("Committed %1").arg(result->left(8)));
+        emit operationFinished(true, tr("Committed %1").arg(result->left(8)));
+        refresh();
+    });
+    watcher->setFuture(QtConcurrent::run([worktree, include, unstage, summary, description] {
+        return GitClient::commitWorktree(worktree, include, unstage, summary, description);
+    }));
 }
 
 void RepositoryController::deleteBranch(const QString &name)

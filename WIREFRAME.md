@@ -424,14 +424,25 @@ because the default indicator overlaps the label when the content is custom.
 
 `OpenRepositoryDialog` replaces the platform folder dialog, which ignored the
 application palette and rendered a light toolbar with unreadable text against
-the dark window. It is a modal `Dialog` with:
+the dark window. It is a modal `Dialog` and doubles as the project switcher:
 
 - a title row with a close button;
+- a **search field** at the top, pre-filled with the current path. Typing
+  filters the remembered projects through a fuzzy subsequence match
+  (`RecentProjects::fuzzyMatch`, best first), and the text doubles as the
+  navigation target, so typing a new location drives the browser below;
+- a list of matching remembered projects (accent diamond marker, hover fill,
+  one click opens), hidden when nothing matches;
 - an `Up` button, an editable path field, and a `Go` button;
 - a directory list built from `repository.directories(path)`, sorted, hidden
   entries excluded, with a marker for entries that are repositories;
 - a footer showing whether the current directory is a repository, an
   `Open Repository` button enabled only for a repository, and `Cancel`.
+
+Remembered projects are stored with `RecentProjects` in the user's settings
+(newest first, cleaned, deduplicated, capped at 12) and recorded when a
+repository switch completes, so the list never contains a path that failed to
+open.
 
 Escape closes it. `repository.looksLikeRepository(path)` accepts both a `.git`
 directory and a bare repository layout.

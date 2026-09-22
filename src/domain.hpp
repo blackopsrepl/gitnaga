@@ -57,6 +57,9 @@ struct FileChange {
     QString status;
     QString path;
     QString oldPath;
+    // Meaningful only for the uncommitted-work listing: whether the index
+    // already holds this change, which is what a commit would pick up.
+    bool staged = false;
 };
 
 struct DiffLine {

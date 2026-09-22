@@ -256,4 +256,39 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
     return snapshot;
 }
 
+GitResult<QString> GitClient::commitWorktree(const QString &worktree, const QStringList &include,
+                                             const QStringList &unstage, const QString &summary,
+                                             const QString &description)
+{
+    if (summary.trimmed().isEmpty())
+        return std::unexpected(GitError{ QStringLiteral("commit"), QStringLiteral("Empty commit message") });
+
+    // Included files are staged from the worktree; excluded files that the
+    // user had staged are unstaged, so the commit is exactly the selection.
+    if (!include.isEmpty()) {
+        QStringList add{ QStringLiteral("add"), QStringLiteral("--") };
+        add.append(include);
+        if (auto staged = run(worktree, add, QStringLiteral("stage files")); !staged)
+            return std::unexpected(staged.error());
+    }
+    if (!unstage.isEmpty()) {
+        QStringList restore{ QStringLiteral("restore"), QStringLiteral("--staged"), QStringLiteral("--") };
+        restore.append(unstage);
+        if (auto unstaged = run(worktree, restore, QStringLiteral("unstage files")); !unstaged)
+            return std::unexpected(unstaged.error());
+    }
+
+    QStringList arguments{ QStringLiteral("commit"), QStringLiteral("-m"), summary };
+    if (!description.trimmed().isEmpty())
+        arguments << QStringLiteral("-m") << description;
+    auto commit = run(worktree, arguments, QStringLiteral("commit"));
+    if (!commit)
+        return std::unexpected(commit.error());
+    auto head = run(worktree, { QStringLiteral("rev-parse"), QStringLiteral("--verify"), QStringLiteral("HEAD") },
+                    QStringLiteral("read committed HEAD"));
+    if (!head)
+        return std::unexpected(head.error());
+    return decode(*head).trimmed();
+}
+
 } // namespace GitNaga

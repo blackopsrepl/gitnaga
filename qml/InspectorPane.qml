@@ -8,6 +8,12 @@ Rectangle {
     required property var repository
     signal closeRequested()
 
+    // True while the reviewed row is the uncommitted-work snapshot: that is
+    // when the commit composer is shown. Declared on the component root, so
+    // unqualified lookups from nested items resolve to it.
+    readonly property bool viewingWorktree: repository.selectedOid === repository.workInProgressOid
+                                            && repository.workInProgressOid.length > 0
+
     color: NagaTheme.panel
 
     ColumnLayout {
@@ -81,6 +87,78 @@ Rectangle {
         }
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: NagaTheme.border }
 
+        // Commit composer for the uncommitted-work row: the selection defaults
+        // to the index, and the commit is exactly the ticked files.
+        ColumnLayout {
+            id: composer
+            visible: viewingWorktree
+            Layout.fillWidth: true
+            spacing: 6
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.margins: 8
+                spacing: 6
+                TextField {
+                    id: summaryField
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Summary")
+                    font.pixelSize: 12
+                    selectByMouse: true
+                    onTextChanged: if (text.length > 72) text = text.substring(0, 72)
+                }
+                NagaButton {
+                    text: qsTr("Commit")
+                    implicitHeight: 30
+                    enabled: summaryField.text.length > 0
+                             && repository.changedFiles.selectedCount > 0 && !repository.busy
+                    onClicked: {
+                        repository.commitWorktree(summaryField.text.replace(/^\s+/, "").replace(/\s+$/, ""),
+                                    descriptionField.text.replace(/^\s+/, "").replace(/\s+$/, ""))
+                        summaryField.text = ""
+                        descriptionField.text = ""
+                    }
+                }
+            }
+            TextArea {
+                id: descriptionField
+                visible: text.length > 0 || descriptionToggle.checked
+                Layout.fillWidth: true
+                Layout.margins: 8
+                Layout.topMargin: -2
+                leftPadding: 8
+                rightPadding: 8
+                topPadding: 6
+                bottomPadding: 6
+                placeholderText: qsTr("Description…")
+                font.pixelSize: 12
+                wrapMode: TextArea.Wrap
+                onTextChanged: if (text.length > 600) text = text.substring(0, 600)
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 8
+                Layout.rightMargin: 8
+                Layout.bottomMargin: 4
+                spacing: 6
+                NagaButton {
+                    text: qsTr("Description")
+                    checkable: true
+                    checked: descriptionToggle.checked
+                    onToggled: descriptionToggle.checked = checked
+                }
+                Item { Layout.fillWidth: true }
+                NagaButton {
+                    text: qsTr("Stage all")
+                    onClicked: repository.changedFiles.setAllSelected(true)
+                }
+                NagaButton {
+                    text: qsTr("Unstage all")
+                    onClicked: repository.changedFiles.setAllSelected(false)
+                }
+            }
+            Item { id: descriptionToggle; property bool checked: false; visible: false }
+        }
+
         SplitView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -124,11 +202,14 @@ Rectangle {
                             required property string directory
                             width: files.width
                             height: 34
-                            readonly property bool selected: index === files.currentIndex
+                            // `selected` is the model's commit-selection role;
+                            // `current` is the row highlight.
+                            required property bool selected
+                            readonly property bool current: index === files.currentIndex
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: fileRow.selected ? NagaTheme.accentTint(0.16)
+                                color: fileRow.current ? NagaTheme.accentTint(0.16)
                                      : fileHover.hovered ? NagaTheme.hoverFill
                                      : "transparent"
                             }
@@ -138,7 +219,7 @@ Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: 2
                                 color: NagaTheme.accent
-                                visible: fileRow.selected
+                                visible: fileRow.current
                             }
                             HoverHandler { id: fileHover }
                             TapHandler {
@@ -152,6 +233,14 @@ Rectangle {
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
                                 spacing: 8
+                                CheckBox {
+                                    visible: viewingWorktree
+                                    checked: fileRow.selected
+                                    onToggled: repository.changedFiles.setSelected(fileRow.index, checked)
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: fileRow.selected ? qsTr("Included in the commit")
+                                                                   : qsTr("Not included in the commit")
+                                }
                                 Text {
                                     text: fileRow.status
                                     color: fileRow.status === "A" ? "#4ade80" : fileRow.status === "D" ? "#ff7d8b" : "#fbbf24"

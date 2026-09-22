@@ -1,5 +1,7 @@
 #include "repository_controller.hpp"
 
+#include "recent_projects.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QVariantMap>
@@ -29,6 +31,16 @@ QVariantList RepositoryController::directories(const QString &path) const
 QString RepositoryController::homeDirectory() const
 {
     return QDir::homePath();
+}
+
+QStringList RepositoryController::recentProjects() const
+{
+    return RecentProjects::load();
+}
+
+QVariantList RepositoryController::fuzzyMatchProjects(const QString &needle) const
+{
+    return RecentProjects::fuzzyMatch(needle);
 }
 
 bool RepositoryController::looksLikeRepository(const QString &path) const

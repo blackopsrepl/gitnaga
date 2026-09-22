@@ -1,5 +1,7 @@
 #include "repository_controller.hpp"
 
+#include "recent_projects.hpp"
+
 #include "git_client.hpp"
 
 #include <QDir>
@@ -90,6 +92,10 @@ void RepositoryController::refresh()
         }
         m_repository = *result;
         m_requestedPath = m_repository.worktree;
+        if (m_repository.worktree != m_recordedWorktree) {
+            m_recordedWorktree = m_repository.worktree;
+            RecentProjects::record(m_repository.worktree);
+        }
         m_commits.replace(m_repository.commits);
         clearSelection();
         configureWatcher();
@@ -130,8 +136,11 @@ void RepositoryController::selectCommit(int row)
         if (!result->files.isEmpty())
             selectFile(0);
     });
-    watcher->setFuture(QtConcurrent::run([worktree, oid] {
-        return GitClient::inspectCommit(worktree, oid);
+    // The uncommitted row is inspected from the status output so each file
+    // carries its staged state, which drives the commit selection.
+    const bool snapshot = !m_repository.workInProgressOid.isEmpty() && oid == m_repository.workInProgressOid;
+    watcher->setFuture(QtConcurrent::run([worktree, oid, snapshot] {
+        return snapshot ? GitClient::inspectWorktree(worktree) : GitClient::inspectCommit(worktree, oid);
     }));
 }
 

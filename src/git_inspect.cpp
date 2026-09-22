@@ -60,6 +60,50 @@ GitResult<CommitInspection> GitClient::inspectCommit(const QString &worktree, co
     return inspection;
 }
 
+GitResult<CommitInspection> GitClient::inspectWorktree(const QString &worktree)
+{
+    auto output = run(worktree,
+                      { QStringLiteral("status"), QStringLiteral("--porcelain=v1"), QStringLiteral("-z"),
+                        QStringLiteral("--untracked-files=all") },
+                      QStringLiteral("list worktree changes"));
+    if (!output)
+        return std::unexpected(output.error());
+
+    CommitInspection inspection;
+    inspection.details.subject = QStringLiteral("Work in progress");
+    inspection.details.oid = QStringLiteral("HEAD");
+
+    const auto fields = output->split('\0');
+    for (qsizetype index = 0; index < fields.size(); ++index) {
+        const auto entry = decode(fields.at(index));
+        if (entry.size() < 3)
+            continue;
+        const QChar stagedCode = entry.at(0);
+        const QChar unstagedCode = entry.at(1);
+        FileChange file;
+        file.path = entry.mid(3);
+        if (stagedCode == QLatin1Char('?') && unstagedCode == QLatin1Char('?')) {
+            file.status = QStringLiteral("A");
+            inspection.files.append(std::move(file));
+            continue;
+        }
+        file.staged = stagedCode != QLatin1Char(' ');
+        if (stagedCode == QLatin1Char('R') || stagedCode == QLatin1Char('C')) {
+            file.status = stagedCode;
+            if (index + 1 < fields.size())
+                file.oldPath = decode(fields.at(++index));
+        } else if (stagedCode == QLatin1Char('A') || stagedCode == QLatin1Char('D')) {
+            file.status = stagedCode;
+        } else if (unstagedCode == QLatin1Char('D')) {
+            file.status = QStringLiteral("D");
+        } else {
+            file.status = QStringLiteral("M");
+        }
+        inspection.files.append(std::move(file));
+    }
+    return inspection;
+}
+
 GitResult<QVector<DiffLine>> GitClient::loadDiff(const QString &worktree, const QString &oid, const QString &path,
                                                  const QString &oldPath)
 {
