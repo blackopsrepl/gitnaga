@@ -206,6 +206,11 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
         commit.refs = refsByOid.value(commit.oid);
         snapshot.commits.append(std::move(commit));
     }
+    // Layout runs on the real commits; the uncommitted snapshot (if any) is
+    // prepended afterwards and inherits its parent's lane and colour, so
+    // editing a file cannot recolour the line the user is working on.
+    detail::assignGraphLayout(snapshot.commits);
+
     if (!isBare) {
         auto head = run(snapshot.worktree, { QStringLiteral("rev-parse"), QStringLiteral("--verify"), QStringLiteral("HEAD") },
                         QStringLiteral("read HEAD"));
@@ -239,10 +244,15 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
             entry.authorEmail = authorEmail.toLower();
             entry.authoredAt = QDateTime::currentDateTime();
             entry.subject = QStringLiteral("Work in progress");
+            if (!snapshot.commits.isEmpty()) {
+                const auto &parent = snapshot.commits.first();
+                entry.lane = parent.lane;
+                entry.colorIndex = parent.colorIndex;
+                entry.laneCount = parent.laneCount;
+            }
             snapshot.commits.prepend(std::move(entry));
         }
     }
-    detail::assignGraphLayout(snapshot.commits);
     return snapshot;
 }
 

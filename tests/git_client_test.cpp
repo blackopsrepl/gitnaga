@@ -115,6 +115,10 @@ private slots:
         QCOMPARE(snapshotCommit.oid, dirty->workInProgressOid);
         QCOMPARE(snapshotCommit.parents.size(), 1);
         QCOMPARE(snapshotCommit.parents.first(), head->trimmed());
+        // The snapshot continues the line it sits on: same lane and colour as
+        // its parent, so dirtying the worktree cannot recolour the branch.
+        QCOMPARE(snapshotCommit.lane, dirty->commits.at(1).lane);
+        QCOMPARE(snapshotCommit.colorIndex, dirty->commits.at(1).colorIndex);
         QCOMPARE(snapshotCommit.author, QStringLiteral("GitNaga Test"));
         QVERIFY(GitClient::mutate(root, { QStringLiteral("cat-file"), QStringLiteral("-e"),
                                           snapshotCommit.oid }, QStringLiteral("verify snapshot")).has_value());
