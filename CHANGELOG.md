@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.17](https://github.com/blackopsrepl/gitnaga/compare/v0.1.16...v0.1.17) (2026-09-22)
+
+### Tests
+
+* **wip:** split the work-in-progress tests into their own binary ([8c0026f](https://github.com/blackopsrepl/gitnaga/commit/8c0026f98999633d07fe727be4b2c075f48a3059))
+
 ## [0.1.16](https://github.com/blackopsrepl/gitnaga/compare/v0.1.15...v0.1.16) (2026-09-22)
 
 ### Features
