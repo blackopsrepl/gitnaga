@@ -21,3 +21,9 @@ qt_add_executable(gitnaga_palette_test
 )
 target_link_libraries(gitnaga_palette_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_palette_test COMMAND gitnaga_palette_test)
+
+qt_add_executable(gitnaga_wip_test
+    wip_test.cpp
+)
+target_link_libraries(gitnaga_wip_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_wip_test COMMAND gitnaga_wip_test)

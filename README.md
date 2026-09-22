@@ -113,7 +113,7 @@ bindings.
 | `qml/ReferencesPane.qml` | Closable references sidebar |
 | `qml/InspectorPane.qml` | Closable review sidebar |
 | `qml/CommitMenu.qml` | Right-click Git operations popup |
-| `tests/` | Real-Git integration test, graph geometry test, palette test, smoke test |
+| `tests/` | Real-Git integration test, graph geometry test, palette test, work-in-progress test, smoke test |
 
 ## License
 
