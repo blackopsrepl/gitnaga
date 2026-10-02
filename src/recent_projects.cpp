@@ -23,7 +23,7 @@ int RecentProjects::fuzzyScore(const QString &needle, const QString &candidate)
     if (nick.isEmpty())
         return 1;
     int score = 0;
-    int cursor = 0;
+    qsizetype cursor = 0;
     int streak = 0;
     for (qsizetype i = 0; i < nick.size(); ++i) {
         const qsizetype at = hay.indexOf(nick.at(i), cursor);
