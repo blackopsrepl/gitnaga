@@ -4,6 +4,20 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.21](https://github.com/blackopsrepl/gitnaga/compare/v0.1.20...v0.1.21) (2026-10-02)
+
+### Features
+
+* **remote:** delete a remote branch over the remote's own transport ([626d190](https://github.com/blackopsrepl/gitnaga/commit/626d190e32706491954ddbb4a66676ce2f660a25))
+
+### Documentation
+
+* **remote:** the delete works against any git server ([1b8cb48](https://github.com/blackopsrepl/gitnaga/commit/1b8cb4821b503a84231bea1b9f50997344aaa858))
+
+### Tests
+
+* **remote:** prove the delete against real git servers ([b3034c4](https://github.com/blackopsrepl/gitnaga/commit/b3034c4265f57a9a06f674202ee055f37fbaf898))
+
 ## [0.1.20](https://github.com/blackopsrepl/gitnaga/compare/v0.1.19...v0.1.20) (2026-10-02)
 
 ### Features
