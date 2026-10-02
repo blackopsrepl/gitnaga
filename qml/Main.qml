@@ -45,6 +45,7 @@ ApplicationWindow {
     }
 
     Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: "Ctrl+O"; onTriggered: repositoryDialog.openAt(root.repository.repositoryPath) }
+    Action { id: worktreesAction; text: qsTr("&Worktrees…"); shortcut: "Ctrl+3"; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: worktreeDialog.openManager() }
     Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: "Ctrl+R"; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: repository.refresh() }
     Action { id: quitAction; text: qsTr("&Quit"); shortcut: "Ctrl+Q"; onTriggered: Qt.quit() }
     Action { id: toggleReferencesAction; text: qsTr("References sidebar"); checkable: true; checked: true; shortcut: "Ctrl+1"; onTriggered: referencesVisible = checked }
@@ -63,6 +64,11 @@ ApplicationWindow {
         id: repositoryDialog
         repository: root.repository
         onAcceptedPath: (path) => root.repository.openRepositoryPath(path)
+    }
+
+    WorktreeDialog {
+        id: worktreeDialog
+        repository: root.repository
     }
 
     header: ToolBar {
@@ -86,6 +92,12 @@ ApplicationWindow {
                 font.weight: Font.DemiBold
                 elide: Text.ElideMiddle
                 Layout.maximumWidth: 240
+            }
+            NagaButton {
+                text: qsTr("Worktrees")
+                enabled: repository.repositoryPath.length > 0 && !repository.busy
+                implicitHeight: 26
+                onClicked: worktreeDialog.openManager()
             }
             Label {
                 visible: repository.currentBranch.length > 0

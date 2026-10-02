@@ -74,6 +74,8 @@ qt_add_qml_module(gitnaga
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
         qml/OpenRepositoryDialog.qml
+        qml/AddWorktreeDialog.qml
+        qml/WorktreeDialog.qml
         qml/NagaIconButton.qml
         qml/NagaIcon.qml
         qml/NagaTheme.qml
