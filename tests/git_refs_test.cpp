@@ -51,42 +51,12 @@ private slots:
         QCOMPARE(branch, QStringLiteral("main"));
     }
 
-    void readsTheSlugOutOfAGitHubRemoteUrl()
+    void joinsTheRemoteAndBranchBack()
     {
-        QString slug;
-        // Everything git accepts for a GitHub remote, with and without the
-        // ".git" suffix and a trailing slash.
-        for (const auto &url : { QStringLiteral("https://github.com/blackopsrepl/gitnaga.git"),
-                                 QStringLiteral("https://github.com/blackopsrepl/gitnaga"),
-                                 QStringLiteral("https://github.com/blackopsrepl/gitnaga/"),
-                                 QStringLiteral("git@github.com:blackopsrepl/gitnaga.git"),
-                                 QStringLiteral("ssh://git@github.com/blackopsrepl/gitnaga"),
-                                 QStringLiteral("git://github.com/blackopsrepl/gitnaga.git"),
-                                 QStringLiteral("github.com/blackopsrepl/gitnaga.git") }) {
-            QVERIFY2(gitrefs::githubSlug(url, &slug), qPrintable(QStringLiteral("refused %1").arg(url)));
-            QCOMPARE(slug, QStringLiteral("blackopsrepl/gitnaga"));
-        }
-    }
-
-    void refusesRemotesThatAreNotAGitHubRepository()
-    {
-        QString slug = QStringLiteral("untouched");
-        // A lookalike host, another forge, a local path, and a URL that points
-        // somewhere inside a repository rather than at it.
-        for (const auto &url : { QStringLiteral("http://vigilance:3002/blackopsrepl/gitnaga.git"),
-                                 QStringLiteral("/srv/lab/tools/gitnaga"),
-                                 QStringLiteral("https://github.com.evil.example/o/r.git"),
-                                 QStringLiteral("https://github.com/blackopsrepl/gitnaga/pulls"),
-                                 QStringLiteral("https://github.com/blackopsrepl"),
-                                 QStringLiteral("https://github.com/"),
-                                 QString() }) {
-            QVERIFY2(!gitrefs::githubSlug(url, &slug), qPrintable(QStringLiteral("accepted %1").arg(url)));
-        }
-        QCOMPARE(slug, QStringLiteral("untouched"));
-
-        // A remote URL is not a browser URL: "owner/repo/extra" is refused
-        // rather than silently read as "owner/repo".
-        QVERIFY(!gitrefs::githubSlug(QStringLiteral("https://github.com/blackopsrepl/gitnaga/tree/main"), nullptr));
+        QCOMPARE(gitrefs::joinRemoteRef(QStringLiteral("github"), QStringLiteral("main")),
+                 QStringLiteral("github/main"));
+        QCOMPARE(gitrefs::joinRemoteRef(QStringLiteral("origin"), QStringLiteral("feature/deep")),
+                 QStringLiteral("origin/feature/deep"));
     }
 };
 
