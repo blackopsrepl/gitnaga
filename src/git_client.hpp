@@ -46,6 +46,10 @@ public:
     // branch behind it.
     static GitResult<QString> deleteRemoteBranch(const QString &worktree, const QString &remote,
                                                  const QString &branch);
+    // Drop the local remote-tracking ref once the branch is gone upstream.
+    // Bookkeeping on a local cache, not a local branch.
+    static GitResult<QString> forgetRemoteBranch(const QString &worktree, const QString &remote,
+                                                 const QString &branch);
     static GitResult<QString> commitWorktree(const QString &worktree, const QStringList &include,
                                              const QStringList &unstage, const QString &summary,
                                              const QString &description);

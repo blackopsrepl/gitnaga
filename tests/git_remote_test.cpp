@@ -7,8 +7,6 @@
 #include <QStandardPaths>
 #include <QTest>
 
-#include <optional>
-
 // Deleting a remote branch is the one operation that leaves git for the
 // configured gh CLI. These tests drive the real process path with a stub gh on
 // PATH, so the exact command, the exit code, and the failure modes are proven
@@ -151,6 +149,34 @@ private slots:
         QVERIFY2(result.error().message.contains(QStringLiteral("Reference does not exist")),
                  qPrintable(result.error().message));
         QVERIFY(result.error().exitCode != 0);
+    }
+
+    void forgetsTheStaleRemoteTrackingRef()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto root = scratchRepository(directory);
+        runGit(root, { QStringLiteral("remote"), QStringLiteral("add"), QStringLiteral("github"),
+                       QStringLiteral("https://github.com/blackopsrepl/gitnaga.git") });
+        // A remote-tracking ref as a real fetch would leave it, created without
+        // a network round trip.
+        runGit(root, { QStringLiteral("update-ref"), QStringLiteral("refs/remotes/github/feature"),
+                       QStringLiteral("HEAD") });
+
+        const auto listing = [&root] {
+            const auto refs = GitClient::mutate(root, { QStringLiteral("for-each-ref"),
+                                                        QStringLiteral("refs/remotes") },
+                                                QStringLiteral("list remote-tracking refs"));
+            return refs.has_value() ? refs->trimmed() : QStringLiteral("<failed>");
+        };
+        QVERIFY(listing().contains(QStringLiteral("refs/remotes/github/feature")));
+
+        QVERIFY(GitClient::forgetRemoteBranch(root, QStringLiteral("github"), QStringLiteral("feature")).has_value());
+        QVERIFY(!listing().contains(QStringLiteral("feature")));
+
+        // Forgetting a ref that is already gone is not a failure: the caller
+        // treats this as cache bookkeeping after the remote delete succeeded.
+        QVERIFY(GitClient::forgetRemoteBranch(root, QStringLiteral("github"), QStringLiteral("feature")).has_value());
     }
 
     void reportsAMissingGh()

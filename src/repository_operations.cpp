@@ -1,6 +1,7 @@
 #include "repository_controller.hpp"
 
 #include "git_client.hpp"
+#include "git_refs.hpp"
 
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrent>
@@ -96,6 +97,31 @@ void RepositoryController::deleteBranch(const QString &name)
     runOperation(QStringLiteral("delete branch"),
                  { QStringLiteral("branch"), QStringLiteral("-D"), name },
                  tr("Deleted branch %1").arg(name));
+}
+
+void RepositoryController::deleteRemoteBranch(const QString &reference)
+{
+    QString remote;
+    QString branch;
+    if (!gitrefs::splitRemoteRef(reference, &remote, &branch))
+        return;
+    const auto worktree = m_repository.worktree;
+    runAsyncOperation(tr("Deleted %1 on %2").arg(branch, remote),
+                      [remote, branch, worktree](const QString &repository) {
+                          const auto deleted = GitClient::deleteRemoteBranch(repository, remote, branch);
+                          if (!deleted)
+                              return deleted;
+                          // The branch is gone upstream; clear the stale local
+                          // remote-tracking ref so the sidebar stops showing
+                          // it. The delete already succeeded, so failing to
+                          // drop the cache is reported, not fatal.
+                          const auto forgotten = GitClient::forgetRemoteBranch(repository, remote, branch);
+                          if (!forgotten)
+                              qWarning() << "gitnaga: cannot forget" << gitrefs::joinRemoteRef(remote, branch)
+                                         << "in" << worktree
+                                         << forgotten.error().operation << forgotten.error().message;
+                          return deleted;
+                      });
 }
 
 void RepositoryController::createTag(const QString &name, const QString &oid)

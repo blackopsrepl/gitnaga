@@ -91,6 +91,10 @@ public:
     Q_INVOKABLE void checkoutBranch(const QString &name);
     Q_INVOKABLE void createBranch(const QString &name, const QString &oid);
     Q_INVOKABLE void deleteBranch(const QString &name);
+    // Delete a branch on one remote, addressed by its remote-tracking ref short
+    // name ("<remote>/<branch>"). The ref is named, not the remote URL, because
+    // GitHub redirects a renamed repository and the stale URL would fail.
+    Q_INVOKABLE void deleteRemoteBranch(const QString &reference);
     Q_INVOKABLE void createTag(const QString &name, const QString &oid);
     Q_INVOKABLE void cherryPick(const QString &oid);
     Q_INVOKABLE void revertCommit(const QString &oid);

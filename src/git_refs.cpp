@@ -14,6 +14,11 @@ bool splitRemoteRef(const QString &name, QString *remote, QString *branch)
     return true;
 }
 
+QString joinRemoteRef(const QString &remote, const QString &branch)
+{
+    return remote + QLatin1Char('/') + branch;
+}
+
 bool githubSlug(const QString &url, QString *slug)
 {
     const auto at = url.indexOf(QLatin1String("github.com"));

@@ -14,6 +14,10 @@ namespace GitNaga::gitrefs {
 // remote and branch at all.
 bool splitRemoteRef(const QString &name, QString *remote, QString *branch);
 
+// The short name of a remote-tracking ref, "<remote>/<branch>", in the form
+// the graph and the references sidebar show it.
+QString joinRemoteRef(const QString &remote, const QString &branch);
+
 // The "owner/repository" slug inside a GitHub remote URL, in the form the gh
 // CLI takes for `gh api repos/<slug>/...`. Accepts the https, git, ssh, and
 // scp-style forms of a remote URL, with or without a ".git" suffix or a

@@ -92,6 +92,21 @@ Popup {
         return out
     }
 
+    // The graph's ref chips carry the same prefixes as the references sidebar:
+    // "⇄ " for a remote, "# " for a tag, nothing for a local branch. Strip the
+    // remote prefix so the result is the remote-tracking ref's short name, the
+    // form the controller's remote delete takes.
+    function remoteReferences(refs) {
+        var out = []
+        if (!refs)
+            return out
+        for (var i = 0; i < refs.length; ++i) {
+            if (refs[i].indexOf("⇄ ") === 0)
+                out.push(refs[i].substring(2))
+        }
+        return out
+    }
+
     function place(localPoint) {
         x = Math.max(4, Math.min(localPoint.x, parent.width - width - 4))
         y = Math.max(4, Math.min(localPoint.y, parent.height - height - 4))
@@ -118,6 +133,7 @@ Popup {
         var shortOid = info.shortOid || String(oid).substring(0, 8)
         var branch = repository.currentBranch
         var branches = localBranches(refs)
+        var remotes = remoteReferences(refs)
         var entries = []
 
         entries.push({ label: qsTr("Checkout ") + shortOid, run: function() { repository.checkoutCommit(target) } })
@@ -165,6 +181,19 @@ Popup {
                                          function() { repository.deleteBranch(name) })
                     } })
                 })(branches[j])
+            }
+        }
+
+        if (remotes.length > 0) {
+            entries.push({ separator: true })
+            for (var k = 0; k < remotes.length; ++k) {
+                (function(name) {
+                    entries.push({ label: qsTr("Delete remote branch ") + name + qsTr("…"), destructive: true, run: function() {
+                        menu.confirm.ask(qsTr("Delete branch ") + name
+                                         + qsTr(" on its remote? This cannot be undone from here."),
+                                         function() { repository.deleteRemoteBranch(name) })
+                    } })
+                })(remotes[k])
             }
         }
 

@@ -140,7 +140,7 @@ Rectangle {
                                     acceptedButtons: Qt.LeftButton
                                     onTapped: pane.repository.selectOid(refRow.modelData.oid)
                                     onDoubleTapped: {
-                                        if (refRow.checkedOut)
+                                        if (refRow.modelData.kind !== "local" || refRow.checkedOut)
                                             return
                                         pane.repository.checkoutBranch(refRow.modelData.name)
                                     }
@@ -203,6 +203,17 @@ Rectangle {
                                      function() { pane.repository.deleteBranch(pane.target.name) })
         }
         NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
+        NagaMenuItem {
+            visible: pane.target !== null && pane.target.kind === "remote"
+            // The remote branch is not this repository's to lose, but it is not
+            // recoverable from here either, so it is confirmed like any other
+            // destructive action.
+            text: qsTr("Delete remote branch ") + (pane.target ? pane.target.name : "") + qsTr("…")
+            onTriggered: confirm.ask(qsTr("Delete branch ") + pane.target.name
+                                     + qsTr(" on its remote? This cannot be undone from here."),
+                                     function() { pane.repository.deleteRemoteBranch(pane.target.name) })
+        }
+        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "remote" }
         NagaMenuItem {
             text: qsTr("Show commit ") + (pane.target ? pane.target.shortOid : "")
             onTriggered: pane.repository.selectOid(pane.target.oid)

@@ -76,4 +76,20 @@ GitResult<QString> GitClient::deleteRemoteBranch(const QString &worktree, const 
     return std::unexpected(result.error());
 }
 
+// After the branch is gone on the remote, the local remote-tracking ref still
+// points at a commit that no longer has a branch upstream, and the references
+// sidebar would keep showing a branch that is deleted. Removing that ref is
+// bookkeeping on a local cache, so it never turns a successful delete into a
+// reported failure, and it never touches a local branch.
+GitResult<QString> GitClient::forgetRemoteBranch(const QString &worktree, const QString &remote,
+                                                 const QString &branch)
+{
+    const auto ref = QStringLiteral("refs/remotes/%1/%2").arg(remote, branch);
+    QStringList arguments{ QStringLiteral("update-ref"), QStringLiteral("-d"), ref };
+    // The refname is optional and is used only in git's own error, which is
+    // never read: pass an empty message so a missing ref stays silent.
+    arguments << QString();
+    return mutate(worktree, arguments, QStringLiteral("forget remote branch"));
+}
+
 } // namespace GitNaga
