@@ -105,22 +105,11 @@ void RepositoryController::deleteRemoteBranch(const QString &reference)
     QString branch;
     if (!gitrefs::splitRemoteRef(reference, &remote, &branch))
         return;
-    const auto worktree = m_repository.worktree;
+    // The push runs against the remote's own transport and prunes the local
+    // remote-tracking ref itself, so there is nothing to reconcile afterwards.
     runAsyncOperation(tr("Deleted %1 on %2").arg(branch, remote),
-                      [remote, branch, worktree](const QString &repository) {
-                          const auto deleted = GitClient::deleteRemoteBranch(repository, remote, branch);
-                          if (!deleted)
-                              return deleted;
-                          // The branch is gone upstream; clear the stale local
-                          // remote-tracking ref so the sidebar stops showing
-                          // it. The delete already succeeded, so failing to
-                          // drop the cache is reported, not fatal.
-                          const auto forgotten = GitClient::forgetRemoteBranch(repository, remote, branch);
-                          if (!forgotten)
-                              qWarning() << "gitnaga: cannot forget" << gitrefs::joinRemoteRef(remote, branch)
-                                         << "in" << worktree
-                                         << forgotten.error().operation << forgotten.error().message;
-                          return deleted;
+                      [remote, branch](const QString &repository) {
+                          return GitClient::deleteRemoteBranch(repository, remote, branch);
                       });
 }
 

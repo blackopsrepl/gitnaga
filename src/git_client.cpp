@@ -35,13 +35,6 @@ GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList 
 GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments,
                                      const QString &operation, const QHash<QString, QString> &extraEnvironment)
 {
-    return runCommand(workingDirectory, QStringLiteral("git"), arguments, operation, extraEnvironment);
-}
-
-GitResult<QByteArray> GitClient::runCommand(const QString &workingDirectory, const QString &program,
-                                            const QStringList &arguments, const QString &operation,
-                                            const QHash<QString, QString> &extraEnvironment)
-{
     QProcess process;
     process.setWorkingDirectory(workingDirectory);
     auto environment = QProcessEnvironment::systemEnvironment();
@@ -53,7 +46,7 @@ GitResult<QByteArray> GitClient::runCommand(const QString &workingDirectory, con
     for (auto it = extraEnvironment.constBegin(); it != extraEnvironment.constEnd(); ++it)
         environment.insert(it.key(), it.value());
     process.setProcessEnvironment(environment);
-    process.setProgram(program);
+    process.setProgram(QStringLiteral("git"));
     process.setArguments(arguments);
     process.setProcessChannelMode(QProcess::SeparateChannels);
     process.start();
