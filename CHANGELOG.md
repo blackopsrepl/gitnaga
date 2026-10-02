@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.19](https://github.com/blackopsrepl/gitnaga/compare/v0.1.18...v0.1.19) (2026-10-02)
+
+### Bug Fixes
+
+* **build:** count source lines consistently ([08c8826](https://github.com/blackopsrepl/gitnaga/commit/08c882617e6a899175bc952cfc3ebefc98afca32))
+
 ## [0.1.18](https://github.com/blackopsrepl/gitnaga/compare/v0.1.17...v0.1.18) (2026-10-02)
 
 ### Features
