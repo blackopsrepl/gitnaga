@@ -23,6 +23,8 @@ add_library(gitnaga_core STATIC
     src/file_change_model.hpp
     src/git_client.cpp
     src/git_client.hpp
+    src/git_refs.cpp
+    src/git_refs.hpp
     src/git_worktrees.cpp
     src/git_inspect.cpp
     src/git_parse.cpp

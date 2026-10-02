@@ -10,6 +10,12 @@ qt_add_executable(gitnaga_git_test
 target_link_libraries(gitnaga_git_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
 add_test(NAME gitnaga_git_test COMMAND gitnaga_git_test)
 
+qt_add_executable(gitnaga_refs_test
+    git_refs_test.cpp
+)
+target_link_libraries(gitnaga_refs_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_refs_test COMMAND gitnaga_refs_test)
+
 qt_add_executable(gitnaga_graph_test
     graph_geometry_test.cpp
 )
