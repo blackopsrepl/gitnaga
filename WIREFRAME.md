@@ -163,10 +163,13 @@ Right-click a row opens a static `Menu`:
 
 The remote row carries the remote-tracking ref's short name (`<remote>/<branch>`),
 which the controller splits into the remote and the branch. Deleting it runs
-`gh api --method DELETE repos/<slug>/git/refs/heads/<branch>` — the configured
-`gh`, addressed by the remote's own URL, and refused before `gh` starts when that
-remote is not a GitHub repository. The stale local remote-tracking ref is dropped
-afterwards in the same operation, so this sidebar stops showing the branch.
+`git push <remote> --delete refs/heads/<branch>` — the remote's own transport,
+so any git server works with the credentials that remote already has, over
+https, ssh, git, or a local path. The full refname is deliberate: git resolves a
+short branch name locally, and a ref that exists only as a remote-tracking ref
+would fail; a full refname is expanded by the server. git prunes the local
+remote-tracking ref itself once the server accepts the deletion, so this sidebar
+stops showing the branch.
 
 Left-click selects the referenced commit through `repository.selectOid(oid)`.
 Double-clicking a local branch row (that is not already checked out) runs
@@ -507,7 +510,7 @@ Hover fill `#1e2634`. Destructive labels use `#ff8f9c`; disabled labels use
 | Rebase main onto a7908a89…           |  red
 |--------------------------------------|
 | Delete branch feature…               |  red, one per local ref
-| Delete remote branch github/feature… |  red, one per remote ref
+| Delete remote branch origin/feature… |  red, one per remote ref
 |--------------------------------------|
 | Copy commit hash                     |
 | Refresh                              |
@@ -520,9 +523,10 @@ route through `ConfirmDialog`.
 
 The `Delete remote branch` group repeats once per remote ref attached to the
 clicked commit, labelled with the remote-tracking ref's short name
-(`github/feature`) and confirmed the same way. It runs the remote delete
-described in §4 against the configured `gh`, then drops the local
-remote-tracking ref so the chip and the sidebar stop showing the branch.
+(`origin/feature`) and confirmed the same way. It runs the remote delete
+described in §4 over the remote's own transport, so it works against any git
+server, and git prunes the local remote-tracking ref so the chip and the sidebar
+stop showing the branch.
 
 ## 7. Review pane (right)
 
@@ -737,7 +741,6 @@ verification loop uses to confirm state changes after an action.
 ## 15. Not implemented (explicit)
 
 - Remote avatars (Gravatar, GitHub). Avatars are local or generated; the application makes no network calls of its own.
-- Deleting a remote branch on a forge other than GitHub. The backend is the configured `gh`, so a remote that is not a GitHub repository is refused rather than guessed at.
 - Staging, committing, and a working-copy view. GitNaga is a history and review
   tool.
 - Merge conflict resolution, interactive rebase editing, and stash management.

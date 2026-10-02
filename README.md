@@ -31,10 +31,11 @@ no account, and no telemetry.
   refresh. Destructive actions ask for confirmation.
 - **Remote branches are branches.** A remote branch deletes from the same
   right-click as a local one, in the references sidebar or on the commit's
-  remote chip, with the same confirmation. The backend is the `gh` CLI already
-  configured on the machine — deleting a branch on GitHub is the one operation
-  `git` cannot do alone, and GitNaga adds no API client and no credentials of
-  its own. A remote on another forge is refused rather than guessed at.
+  remote chip, with the same confirmation. It runs over the remote's own
+  transport — git itself, over https, ssh, git, or a local path, with the
+  credentials that remote already uses — so it works against any git server,
+  GitHub or not, with no forge API and no account of GitNaga's own. Deleting a
+  branch on the server is the one thing a local repository cannot do by itself.
 - **Uncommitted work in view.** A pending row sits above HEAD whenever the
   worktree differs from it, holding the real diff of staged, unstaged, and
   untracked changes. It is an ephemeral commit object, so reviewing it uses the
@@ -96,8 +97,8 @@ make ci-local   # configure, build, test, and lint in one pass
 ```
 
 The integration tests run against real scratch repositories and cover discovery,
-merge topology, commit inspection, diffs, branch/tag/reset operations, remote URL
-resolution and remote branch deletion through a stub `gh`, linked
+merge topology, commit inspection, diffs, branch/tag/reset operations, remote
+branch deletion over a real git transport, linked
 worktree creation and management, bare repositories, and per-worktree uncommitted
 snapshots. A graph test covers lane geometry and palette; the source-size contract
 rejects any source, QML, or test file at or above 300 lines.
@@ -112,8 +113,8 @@ bindings.
 |------|----------|
 | `src/git_client.*` | The process runner every Git command goes through |
 | `src/git_repository.cpp` | Repository discovery, history, refs, and worktree commits |
-| `src/git_remote.cpp` | Remote URL resolution and remote branch deletion through `gh` |
-| `src/git_refs.*` | Remote-tracking ref naming and GitHub URL parsing |
+| `src/git_remote.cpp` | Remote branch deletion over the remote's own transport |
+| `src/git_refs.*` | Remote-tracking ref naming |
 | `src/git_worktrees.cpp` | Porcelain worktree discovery and add, remove, lock, move, prune, and repair operations |
 | `src/git_inspect.cpp` | Commit inspection and per-file diff loading |
 | `src/git_parse.*` | Lane assignment and unified-diff parsing |
