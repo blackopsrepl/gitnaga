@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.18](https://github.com/blackopsrepl/gitnaga/compare/v0.1.17...v0.1.18) (2026-10-02)
+
+### Features
+
+* **ui:** add a linked worktree manager ([c93de46](https://github.com/blackopsrepl/gitnaga/commit/c93de46d513c181cb7755c6238a3b70138d3a9d9))
+* **worktrees:** expose linked worktree lifecycle ([369a219](https://github.com/blackopsrepl/gitnaga/commit/369a2193906efa26fc4b7ea70b661b0abd55e1d2))
+
+### Documentation
+
+* **worktrees:** describe worktree management ([374d3bd](https://github.com/blackopsrepl/gitnaga/commit/374d3bd669c9532ee2cc6e34627e4e29e0504c96))
+
 ## [0.1.17](https://github.com/blackopsrepl/gitnaga/compare/v0.1.16...v0.1.17) (2026-09-22)
 
 ### Tests
