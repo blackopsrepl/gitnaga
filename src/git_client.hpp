@@ -23,6 +23,16 @@ class GitClient final
 {
 public:
     static GitResult<RepositorySnapshot> loadRepository(const QString &path, int maximumCommits = 5000);
+    static GitResult<QVector<Worktree>> listWorktrees(const QString &worktree);
+    static GitResult<QString> addWorktree(const QString &repository, const QString &path,
+                                          const QString &branch = {}, bool createBranch = false,
+                                          bool detached = false, const QString &startPoint = {});
+    static GitResult<QString> removeWorktree(const QString &repository, const QString &path, bool force = false);
+    static GitResult<QString> lockWorktree(const QString &repository, const QString &path, const QString &reason = {});
+    static GitResult<QString> unlockWorktree(const QString &repository, const QString &path);
+    static GitResult<QString> moveWorktree(const QString &repository, const QString &path, const QString &newPath);
+    static GitResult<QString> pruneWorktrees(const QString &repository);
+    static GitResult<QString> repairWorktrees(const QString &repository);
     static GitResult<CommitInspection> inspectCommit(const QString &worktree, const QString &oid);
     static GitResult<CommitInspection> inspectWorktree(const QString &worktree);
     static GitResult<QString> commitWorktree(const QString &worktree, const QStringList &include,

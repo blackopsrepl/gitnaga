@@ -23,6 +23,7 @@ add_library(gitnaga_core STATIC
     src/file_change_model.hpp
     src/git_client.cpp
     src/git_client.hpp
+    src/git_worktrees.cpp
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
@@ -33,6 +34,7 @@ add_library(gitnaga_core STATIC
     src/recent_projects.hpp
     src/repository_controller.cpp
     src/repository_controller.hpp
+    src/repository_worktrees.cpp
     src/repository_operations.cpp
     src/repository_references.cpp
 )

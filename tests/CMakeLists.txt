@@ -27,3 +27,9 @@ qt_add_executable(gitnaga_wip_test
 )
 target_link_libraries(gitnaga_wip_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_wip_test COMMAND gitnaga_wip_test)
+
+qt_add_executable(gitnaga_worktree_test
+    worktree_test.cpp
+)
+target_link_libraries(gitnaga_worktree_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_worktree_test COMMAND gitnaga_worktree_test)

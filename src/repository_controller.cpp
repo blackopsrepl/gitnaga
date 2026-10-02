@@ -246,6 +246,17 @@ void RepositoryController::configureWatcher()
             paths.append(file);
     }
 
+    const auto common = m_repository.commonDirectory;
+    if (QFileInfo::exists(common))
+        paths.append(common);
+    const auto worktrees = QDir(common).filePath(QStringLiteral("worktrees"));
+    if (QFileInfo::exists(worktrees)) {
+        paths.append(worktrees);
+        QDirIterator iterator(worktrees, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+        while (iterator.hasNext())
+            paths.append(iterator.next());
+    }
+
     const auto refs = QDir(m_repository.commonDirectory).filePath(QStringLiteral("refs"));
     if (QFileInfo::exists(refs)) {
         paths.append(refs);

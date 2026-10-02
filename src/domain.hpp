@@ -31,12 +31,26 @@ struct Commit {
     QVector<GraphSegment> segments;
 };
 
+struct Worktree {
+    QString path;
+    QString head;
+    QString branch;
+    QString lockReason;
+    QString pruneReason;
+    bool isMain = false;
+    bool isBare = false;
+    bool isDetached = false;
+    bool isLocked = false;
+    bool isPrunable = false;
+};
+
 struct RepositorySnapshot {
     QString worktree;
     QString gitDirectory;
     QString commonDirectory;
     QString currentBranch;
     QVector<Commit> commits;
+    QVector<Worktree> worktrees;
     // Oid of the ephemeral commit describing uncommitted work, empty when the
     // worktree matches HEAD. The commit is a throwaway object: it is never
     // referenced, and git's own auto-gc reclaims it.

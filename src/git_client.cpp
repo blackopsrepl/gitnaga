@@ -152,6 +152,10 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, int
             return std::unexpected(toplevel.error());
         snapshot.worktree = QDir::cleanPath(decode(*toplevel).trimmed());
     }
+    auto worktrees = listWorktrees(snapshot.worktree);
+    if (!worktrees)
+        return std::unexpected(worktrees.error());
+    snapshot.worktrees = *worktrees;
 
     auto branch = run(snapshot.worktree,
                       { QStringLiteral("symbolic-ref"), QStringLiteral("--quiet"), QStringLiteral("--short"), QStringLiteral("HEAD") },

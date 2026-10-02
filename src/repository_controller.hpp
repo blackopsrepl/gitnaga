@@ -30,6 +30,7 @@ class RepositoryController final : public QObject
     Q_PROPERTY(QString operationMessage READ operationMessage NOTIFY operationMessageChanged)
     Q_PROPERTY(int selectedRow READ selectedRow NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList references READ references NOTIFY referencesChanged)
+    Q_PROPERTY(QVariantList worktrees READ worktrees NOTIFY repositoryChanged)
     Q_PROPERTY(QString selectedOid READ selectedOid NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedSubject READ selectedSubject NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedAuthor READ selectedAuthor NOTIFY selectionChanged)
@@ -53,6 +54,7 @@ public:
     QString operationMessage() const;
     int selectedRow() const;
     QVariantList references() const;
+    QVariantList worktrees() const;
     QString selectedOid() const;
     QString selectedSubject() const;
     QString selectedAuthor() const;
@@ -72,6 +74,15 @@ public:
     Q_INVOKABLE bool looksLikeRepository(const QString &path) const;
     Q_INVOKABLE QStringList recentProjects() const;
     Q_INVOKABLE QVariantList fuzzyMatchProjects(const QString &needle) const;
+    Q_INVOKABLE void openWorktree(const QString &path);
+    Q_INVOKABLE void addWorktree(const QString &path, const QString &branch, const QString &mode,
+                                 const QString &startPoint);
+    Q_INVOKABLE void removeWorktree(const QString &path, bool force);
+    Q_INVOKABLE void lockWorktree(const QString &path, const QString &reason);
+    Q_INVOKABLE void unlockWorktree(const QString &path);
+    Q_INVOKABLE void moveWorktree(const QString &path, const QString &newPath);
+    Q_INVOKABLE void pruneWorktrees();
+    Q_INVOKABLE void repairWorktrees();
 
     Q_INVOKABLE void checkoutCommit(const QString &oid);
     Q_INVOKABLE void checkoutBranch(const QString &name);
