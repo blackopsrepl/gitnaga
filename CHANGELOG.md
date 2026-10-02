@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.20](https://github.com/blackopsrepl/gitnaga/compare/v0.1.19...v0.1.20) (2026-10-02)
+
+### Features
+
+* **refs:** name the remote and branch inside a remote-tracking ref ([2ecd029](https://github.com/blackopsrepl/gitnaga/commit/2ecd029a55c1a9754880855ffb141eb3edcb7df9))
+* **remote:** delete a branch on a GitHub remote through gh ([0a4bb8e](https://github.com/blackopsrepl/gitnaga/commit/0a4bb8e54994b33044c9ab335f7d2ba406a98e7a))
+* **ui:** delete a remote branch from the references and the graph ([ce639cf](https://github.com/blackopsrepl/gitnaga/commit/ce639cf98ea1b186215065d5f30b9a1f77e6d4dd))
+
+### Code Refactoring
+
+* **controller:** share one off-thread operation runner ([b1f14e9](https://github.com/blackopsrepl/gitnaga/commit/b1f14e9c3f2cd2c87a21be5bc1bcbb757f056916))
+
+### Documentation
+
+* **branches:** describe deleting a remote branch ([2c8f508](https://github.com/blackopsrepl/gitnaga/commit/2c8f5087360938646782048eccdbfe17d7f2ab59))
+
+### Tests
+
+* **remote:** prove the remote delete against a stub gh ([9bd0fb7](https://github.com/blackopsrepl/gitnaga/commit/9bd0fb7cf875ab18da7075aa74e99554d836f1a2))
+
 ## [0.1.19](https://github.com/blackopsrepl/gitnaga/compare/v0.1.18...v0.1.19) (2026-10-02)
 
 ### Bug Fixes
