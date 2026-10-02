@@ -174,6 +174,14 @@ void RepositoryController::selectFile(int row)
 
 void RepositoryController::runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage)
 {
+    runAsyncOperation(successMessage,
+                      [arguments, operation](const QString &worktree) {
+                          return GitClient::mutate(worktree, arguments, operation);
+                      });
+}
+
+void RepositoryController::runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result)
+{
     if (m_repository.worktree.isEmpty() || m_operationActive)
         return;
     m_operationActive = true;
@@ -181,13 +189,16 @@ void RepositoryController::runOperation(const QString &operation, const QStringL
 
     const auto worktree = m_repository.worktree;
     auto *watcher = new QFutureWatcher<GitResult<QString>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, successMessage] {
-        const auto result = watcher->result();
+    connect(watcher, &QFutureWatcherBase::finished, this,
+            [this, watcher, worktree, successMessage, result] {
+        const auto outcome = watcher->result();
         watcher->deleteLater();
         m_operationActive = false;
         emit busyChanged();
-        if (!result) {
-            const auto message = result.error().message.isEmpty() ? result.error().operation : result.error().message;
+        if (result)
+            result(worktree, outcome);
+        if (!outcome) {
+            const auto message = outcome.error().message.isEmpty() ? outcome.error().operation : outcome.error().message;
             setOperationMessage(message);
             emit operationFinished(false, message);
             return;
@@ -196,8 +207,8 @@ void RepositoryController::runOperation(const QString &operation, const QStringL
         emit operationFinished(true, successMessage);
         refresh();
     });
-    watcher->setFuture(QtConcurrent::run([worktree, arguments, operation] {
-        return GitClient::mutate(worktree, arguments, operation);
+    watcher->setFuture(QtConcurrent::run([worktree, work = std::move(work)] {
+        return work(worktree);
     }));
 }
 

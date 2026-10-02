@@ -3,6 +3,7 @@
 #include "commit_model.hpp"
 #include "diff_line_model.hpp"
 #include "file_change_model.hpp"
+#include "git_client.hpp"
 
 #include <QFileSystemWatcher>
 #include <QObject>
@@ -10,6 +11,8 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVariantList>
+
+#include <functional>
 
 namespace GitNaga {
 
@@ -106,7 +109,15 @@ signals:
     void referencesChanged();
 
 private:
+    // What to run once the work of an operation is over: the worktree it ran
+    // in, and the result as a message or an error.
+    using OperationWork = std::function<GitResult<QString>(const QString &worktree)>;
+    using OperationResult = std::function<void(const QString &worktree, const GitResult<QString> &result)>;
+
     void runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage);
+    // Run any off-thread work with a success message, the usual busy state,
+    // error reporting, and a refresh once it lands.
+    void runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result = {});
     void setLoading(bool loading);
     void setError(QString message);
     void setOperationMessage(QString message);
