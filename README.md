@@ -38,6 +38,10 @@ no account, and no telemetry.
   remotes, and tags from the refs Git actually stores, with a filter box and a
   context menu. The right sidebar is the review: metadata, changed files, and
   the coloured diff.
+- **Linked worktrees.** The Worktrees manager lists each checkout, including
+  bare repositories and detached heads. Add a new or existing branch checkout,
+  open or move a linked worktree, lock or unlock it, remove it safely (or confirm
+  a forced removal), and repair or prune Git's worktree metadata.
 - **Closable, resizable panes.** Toggle the references and review sidebars
   from the toolbar (or Ctrl+1 / Ctrl+2) and the graph takes the full window.
   Every pane is a splitter you can drag.
@@ -85,11 +89,11 @@ make lint       # lint every QML file with qmllint
 make ci-local   # configure, build, test, and lint in one pass
 ```
 
-The integration test runs against a real scratch repository and covers
-discovery, merge topology, commit inspection, diff output, and the branch, tag,
-and reset operations. A graph test covers the lane geometry and palette, and a
-source-size contract rejects any source, QML, or test file at or above 300
-lines.
+The integration tests run against real scratch repositories and cover discovery,
+merge topology, commit inspection, diffs, branch/tag/reset operations, linked
+worktree creation and management, bare repositories, and per-worktree uncommitted
+snapshots. A graph test covers lane geometry and palette; the source-size contract
+rejects any source, QML, or test file at or above 300 lines.
 
 ## Layout
 
@@ -100,9 +104,11 @@ bindings.
 | Path | Contents |
 |------|----------|
 | `src/git_client.*` | Git discovery, history, refs, and mutation execution |
+| `src/git_worktrees.cpp` | Porcelain worktree discovery and add, remove, lock, move, prune, and repair operations |
 | `src/git_inspect.cpp` | Commit inspection and per-file diff loading |
 | `src/git_parse.*` | Lane assignment and unified-diff parsing |
 | `src/repository_controller.*` | Asynchronous repository, selection, and operation state |
+| `src/repository_worktrees.cpp` | Worktree list binding and guarded lifecycle actions exposed to QML |
 | `src/repository_operations.cpp` | Typed Git operations exposed to QML |
 | `src/repository_references.cpp` | Branch, remote, and tag references for the sidebar |
 | `src/graph_geometry.*` | Lane layout, node, and edge-curve geometry |
@@ -112,8 +118,10 @@ bindings.
 | `qml/CommitLabels.qml` | Commit label overlay riding the graph, with reference badges |
 | `qml/ReferencesPane.qml` | Closable references sidebar |
 | `qml/InspectorPane.qml` | Closable review sidebar |
+| `qml/WorktreeDialog.qml` | Worktree discovery and lifecycle manager |
+| `qml/AddWorktreeDialog.qml` | New, existing-branch, and detached worktree creation |
 | `qml/CommitMenu.qml` | Right-click Git operations popup |
-| `tests/` | Real-Git integration test, graph geometry test, palette test, work-in-progress test, smoke test |
+| `tests/` | Real-Git integration tests for history, worktrees, refs, and work-in-progress; graph geometry and palette tests; smoke test |
 
 ## License
 

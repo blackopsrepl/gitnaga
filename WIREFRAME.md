@@ -14,6 +14,7 @@ this document disagree, the source wins and this document is a bug.
 - Commit labels: `qml/CommitLabels.qml` (extracted so `GraphPane.qml` stays inside the source-size cap)
 - Operations menu: `qml/CommitMenu.qml`
 - Dialogs: `qml/PromptDialog.qml`, `qml/ConfirmDialog.qml`
+- Worktree manager: `qml/WorktreeDialog.qml`, `qml/AddWorktreeDialog.qml`, `src/repository_worktrees.cpp`, `src/git_worktrees.cpp`
 - Controls: `qml/NagaButton.qml`, `qml/NagaIconButton.qml`, `qml/NagaIcon.qml`
 - Empty state: `qml/EmptyState.qml`
 
@@ -40,7 +41,7 @@ repository is open.
 
 ```
 +--------------------------------------------------------------------------+
-| [Open Repository…] | gitnaga  ⎇ main        [References][Review](o)[Refresh]|  A
+| [Open Repository…] | gitnaga  ⎇ main [Worktrees] [References][Review](o)[Refresh]|  A
 +--------------------------------------------------------------------------+
 |            |                                   |                          |
 | References |           Commit graph            |          Review          |  B
@@ -71,6 +72,7 @@ repository is open.
 | `Open Repository…` icon button | `NagaIconButton` with `iconName: "folder-open"`, `implicitHeight: 26` | Always enabled, tooltip `Open repository… (Ctrl+O)` |
 | `ToolSeparator` | 1 px | Static |
 | Repository name label | `Layout.maximumWidth: 240`, elide middle | `repositoryName` or `No repository open` |
+| `Worktrees` button | `NagaButton`, `implicitHeight: 26` | Enabled when a repository is open and not busy; opens the linked-worktree manager; Ctrl+3 |
 | Branch label | implicit | Visible only when `currentBranch` is non-empty, text `⎇ <branch>`, color `#34d399` |
 | WIP badge | implicit | Visible only when `workInProgressOid` is non-empty, text `● Work in progress`, color `#e6b45a`; clicking selects the snapshot row (row 0) |
 | Spacer | `Layout.fillWidth: true` | Pushes the rest right |
@@ -447,6 +449,31 @@ open.
 Escape closes it. `repository.looksLikeRepository(path)` accepts both a `.git`
 directory and a bare repository layout.
 
+### 5.10 Worktree manager
+
+The toolbar button and `Ctrl+3` open `WorktreeDialog`, which refreshes the current
+repository before showing Git's `worktree list --porcelain -z` records. Each row
+shows its absolute path, branch or detached HEAD, and main/bare/current/locked/
+prunable state. The main repository and the selected active worktree cannot be
+moved or removed. Prunable records remain visible for diagnosis but offer no
+path-based actions.
+
+The manager's top actions are:
+
+| Action | Behavior |
+|--------|----------|
+| `Add` | Opens `AddWorktreeDialog`: destination path, new branch / existing local branch / detached HEAD, and optional start point. New and detached checkouts default to HEAD |
+| `Prune` | Confirms, then runs ordinary `git worktree prune`; stale metadata only, Git's configured expiry is respected |
+| `Repair` | Confirms, then runs `git worktree repair` for registered administrative links |
+
+Linked worktree rows can be opened, locked/unlocked (with an optional lock
+reason), moved to a new path, or removed. Removal is non-forced by default; Git
+refuses dirty worktrees. The force checkbox resets off each time the manager
+opens, and a second confirmation spells out that forced removal discards local
+changes. Worktree commands run asynchronously and refresh the repository after
+completion. The `.git/worktrees` metadata tree is watched so external adds,
+removes, moves, and lock changes refresh the list.
+
 ## 6. Operations menu (right click on a commit)
 
 A `Popup`, not a `Menu`, so the item count can vary. Width `320`. Normal rows
@@ -626,6 +653,7 @@ interaction language: diff add/delete/hunk fills, the error bar, and the
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+O` | Open repository |
+| `Ctrl+3` | Open Worktrees manager |
 | `Ctrl+R` / `StandardKey.Refresh` | Refresh |
 | `Ctrl+Q` | Quit |
 | `Ctrl+1` | Toggle References sidebar |
@@ -663,12 +691,14 @@ Controller properties consumed by QML:
 | `repository.selectedRow` | `int` | Selected commit index |
 | `repository.selectedOid` / `selectedSubject` / `selectedAuthor` / `selectedDate` / `selectedBody` | `QString` | Selected commit details |
 | `repository.references` | `QVariantList` | maps with `name`, `kind`, `oid`, `shortOid`, `subject`, `color` |
+| `repository.worktrees` | `QVariantList` | maps with `path`, `head`, `branch`, main/bare/detached/locked/prunable flags, and current-worktree state |
 
 Controller invokables called by QML: `openRepository`, `openRepositoryPath`,
 `refresh`, `selectCommit`, `selectOid`, `selectFile`, `copyToClipboard`,
-`checkoutCommit`, `checkoutBranch`, `createBranch`, `deleteBranch`,
-`createTag`, `cherryPick`, `revertCommit`, `mergeCommit`, `resetTo`,
-`rebaseOnto`.
+`openWorktree`, `addWorktree`, `removeWorktree`, `lockWorktree`, `unlockWorktree`,
+`moveWorktree`, `pruneWorktrees`, `repairWorktrees`, `checkoutCommit`, `checkoutBranch`,
+`createBranch`, `deleteBranch`, `createTag`, `cherryPick`, `revertCommit`,
+`mergeCommit`, `resetTo`, `rebaseOnto`.
 
 Controller signals observed by QML: `repositoryChanged`, `loadingChanged`,
 `busyChanged`, `errorChanged`, `operationMessageChanged`,
@@ -684,7 +714,7 @@ each property.
 ## 14. Accessibility surface
 
 Qt publishes the window as `GitNaga` with roles for the toolbar
-push buttons (`Open Repository…`, `References`, `Review`, `Refresh`), the pane
+push buttons (`Open Repository…`, `Worktrees`, `References`, `Review`, `Refresh`), the pane
 close buttons (`✕`), and the zoom buttons (`−`, `+`, `⟲`). This is the surface
 agents drive with `lumen accessibility` and `lumen click`, and the surface the
 verification loop uses to confirm state changes after an action.
