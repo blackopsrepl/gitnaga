@@ -58,8 +58,12 @@ GitResult<QByteArray> GitClient::runCommand(const QString &workingDirectory, con
     process.setProcessChannelMode(QProcess::SeparateChannels);
     process.start();
 
-    if (!process.waitForStarted(5000))
-        return std::unexpected(GitError{ operation, process.errorString() });
+    if (!process.waitForStarted(5000)) {
+        // A program that cannot be started is not a command that failed: the
+        // caller has to be able to tell them apart, so carry QProcess's own
+        // FailedToStart code instead of the generic exit code.
+        return std::unexpected(GitError{ operation, process.errorString(), QProcess::FailedToStart });
+    }
     if (!process.waitForFinished(30000)) {
         process.kill();
         process.waitForFinished();
