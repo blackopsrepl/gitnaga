@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Entries are
 generated from conventional commits by commit-and-tag-version; do not edit
 this file by hand.
 
+## [0.1.22](https://github.com/blackopsrepl/gitnaga/compare/v0.1.21...v0.1.22) (2026-10-02)
+
+### Bug Fixes
+
+* **recents:** widen the fuzzy-match cursor to qsizetype ([fe103e5](https://github.com/blackopsrepl/gitnaga/commit/fe103e5321b73d9ddc110e211efaf9c28ae115c7))
+
 ## [0.1.21](https://github.com/blackopsrepl/gitnaga/compare/v0.1.20...v0.1.21) (2026-10-02)
 
 ### Features
