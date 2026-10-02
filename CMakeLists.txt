@@ -25,10 +25,13 @@ add_library(gitnaga_core STATIC
     src/git_client.hpp
     src/git_refs.cpp
     src/git_refs.hpp
+    src/git_remote.cpp
     src/git_worktrees.cpp
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
+    src/git_remote.cpp
+    src/git_repository.cpp
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
