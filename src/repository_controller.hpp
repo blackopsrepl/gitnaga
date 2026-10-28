@@ -17,10 +17,14 @@
 
 namespace GitNaga {
 
+class RemoteSync;
+
 class RepositoryController final : public QObject
 {
     Q_OBJECT
+    Q_MOC_INCLUDE("remote_sync.hpp")
     Q_PROPERTY(CommitModel *commits READ commits CONSTANT)
+    Q_PROPERTY(GitNaga::RemoteSync *sync READ sync CONSTANT)
     Q_PROPERTY(FileChangeModel *changedFiles READ changedFiles CONSTANT)
     Q_PROPERTY(DiffLineModel *diffLines READ diffLines CONSTANT)
     Q_PROPERTY(QString repositoryPath READ repositoryPath NOTIFY repositoryChanged)
@@ -65,6 +69,7 @@ public:
     CommitModel *commits();
     FileChangeModel *changedFiles();
     DiffLineModel *diffLines();
+    RemoteSync *sync() const { return m_sync; }
     QString repositoryPath() const;
     QString repositoryName() const;
     QString currentBranch() const;
@@ -224,6 +229,7 @@ private:
     QVariantList m_references;
     HistoryRequest m_view;
     QQueue<PendingOperation> m_operations;
+    RemoteSync *m_sync = nullptr;
     CancelToken m_operationCancel;
     CancelToken m_historyCancel;
     int m_selectedRow = -1;

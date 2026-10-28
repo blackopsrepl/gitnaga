@@ -47,6 +47,9 @@ add_library(gitnaga_core STATIC
     src/repository_operations.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
+    src/remote_sync.cpp
+    src/remote_sync.hpp
+    src/remote_sync_refs.cpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
