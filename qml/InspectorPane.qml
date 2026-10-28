@@ -6,6 +6,8 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
+    // The diff is shown in the window's middle instead of beside the files.
+    property bool diffInCenter: false
     signal closeRequested()
     signal fileMenuRequested(string path, point scenePosition)
     function focusFiles() { files.forceActiveFocus() }
@@ -104,6 +106,7 @@ Rectangle {
             Rectangle {
                 SplitView.preferredWidth: pane.viewingWorktree ? 250 : 200
                 SplitView.minimumWidth: 150
+                SplitView.fillWidth: pane.diffInCenter
                 color: NagaTheme.panel
                 WipFiles {
                     anchors.fill: parent
@@ -197,7 +200,8 @@ Rectangle {
             }
 
             StageableDiff {
-                SplitView.fillWidth: true
+                visible: !pane.diffInCenter
+                SplitView.fillWidth: !pane.diffInCenter
                 SplitView.minimumWidth: 240
                 repository: pane.repository
                 side: pane.viewingWorktree ? pane.repository.wipSide : ""

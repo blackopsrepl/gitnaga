@@ -151,6 +151,26 @@ ApplicationWindow {
         onOpenRequested: repositoryDialog.open()
     }
 
+    // Choosing a file opens its diff in the middle; choosing another commit
+    // (which clears the file) or Back returns to the graph.
+    property bool diffOpen: false
+    Connections {
+        target: root.repository
+        function onFileSelectionChanged() {
+            if (root.repository.selectedFile >= 0)
+                root.diffOpen = true
+        }
+        function onSelectionChanged() {
+            if (root.repository.selectedFile < 0)
+                root.diffOpen = false
+        }
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: root.diffOpen
+        onActivated: root.diffOpen = false
+    }
+
     SplitView {
         anchors.fill: parent
         visible: repository.repositoryPath.length > 0
@@ -164,19 +184,32 @@ ApplicationWindow {
             repository: root.repository
             onCloseRequested: root.referencesVisible = false
         }
-        GraphPane {
-            id: graphPane
+        // The middle shows the graph, or a selected file's diff in its place.
+        Item {
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
-            repository: root.repository
-            navigation: root.navigation
-            onFocusReviewRequested: if (root.reviewVisible) reviewPane.focusFiles()
+            GraphPane {
+                id: graphPane
+                anchors.fill: parent
+                visible: !root.diffOpen
+                repository: root.repository
+                navigation: root.navigation
+                onFocusReviewRequested: if (root.reviewVisible) reviewPane.focusFiles()
+            }
+            CenterDiff {
+                anchors.fill: parent
+                visible: root.diffOpen
+                repository: root.repository
+                side: reviewPane.viewingWorktree ? root.repository.wipSide : ""
+                onCloseRequested: root.diffOpen = false
+            }
         }
         InspectorPane {
             id: reviewPane
             visible: root.reviewVisible
             SplitView.preferredWidth: root.width * 0.38
             SplitView.minimumWidth: 320
+            diffInCenter: root.diffOpen
             repository: root.repository
             onCloseRequested: root.reviewVisible = false
             onFileMenuRequested: (path, position) => navigationLayer.showFileMenu(path, position)
