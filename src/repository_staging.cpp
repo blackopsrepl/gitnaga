@@ -158,7 +158,7 @@ void RepositoryController::discardAll()
 
 void RepositoryController::applyHunk(int hunkRow, const QString &action)
 {
-    applyPatchRows(patch::hunkChanges(m_diffLines.lines(), hunkRow), action);
+    applyPatchRows(patch::hunkChanges(m_diffLines.lines(), hunkRow), action, tr("a hunk"));
 }
 
 void RepositoryController::applyLines(const QVariantList &rows, const QString &action)
@@ -166,10 +166,10 @@ void RepositoryController::applyLines(const QVariantList &rows, const QString &a
     QSet<int> selected;
     for (const auto &row : rows)
         selected.insert(row.toInt());
-    applyPatchRows(selected, action);
+    applyPatchRows(selected, action, selected.size() == 1 ? tr("a line") : tr("%1 lines").arg(selected.size()));
 }
 
-void RepositoryController::applyPatchRows(const QSet<int> &rows, const QString &action)
+void RepositoryController::applyPatchRows(const QSet<int> &rows, const QString &action, const QString &what)
 {
     const auto expectedKey = QString::number(static_cast<int>(m_selectedSide)) + QLatin1Char(':') + m_selectedPath;
     const bool unstagedSide = m_selectedSide == DiffSide::Unstaged;
@@ -189,7 +189,7 @@ void RepositoryController::applyPatchRows(const QSet<int> &rows, const QString &
     }
     const auto verb = action == QStringLiteral("stage") ? tr("Staged") : action == QStringLiteral("unstage")
                     ? tr("Unstaged") : tr("Discarded");
-    runStaging(tr("%1 lines of %2").arg(verb, m_selectedPath),
+    runStaging(tr("%1 %2 of %3").arg(verb, what, m_selectedPath),
                [patch = *built, cached, reverse](const QString &worktree, const RunOptions &options) {
                    return staging::applyPatch(worktree, patch, cached, reverse, options);
                });

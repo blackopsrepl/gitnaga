@@ -139,6 +139,22 @@ private slots:
         QCOMPARE(indexed(QStringLiteral("file.txt")), QStringLiteral("1\n") + numbered().mid(4).trimmed());
     }
 
+    void stagesLinesOfAnUntrackedFile()
+    {
+        writeFile(m_root + QStringLiteral("/new.txt"), QByteArrayLiteral("a\nb\n"));
+        RepositoryController controller;
+        QSignalSpy finished(&controller, &RepositoryController::operationFinished);
+        open(controller);
+        QTRY_VERIFY_WITH_TIMEOUT(!rowsOfKind(controller, DiffLine::Kind::Addition, QStringLiteral("+a")).isEmpty(), 5000);
+        controller.applyLines({ rowsOfKind(controller, DiffLine::Kind::Addition, QStringLiteral("+a")).front() },
+                              QStringLiteral("stage"));
+        QVERIFY(waitFor(finished, 1));
+        QCOMPARE(indexed(QStringLiteral("new.txt")), QStringLiteral("a"));
+        // The rest of the file is now an ordinary unstaged change.
+        QTRY_COMPARE_WITH_TIMEOUT(controller.stagedFiles()->count(), 1, 5000);
+        QCOMPARE(controller.unstagedFiles()->count(), 1);
+    }
+
     void commitsAndAmends()
     {
         writeFile(m_root + QStringLiteral("/file.txt"), numbered(5).toUtf8());

@@ -99,6 +99,15 @@ qt_add_qml_module(gitnaga
         qml/ReferencesPane.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
+        qml/DiffSelection.qml
+        qml/HunkActions.qml
+        qml/LineActionBar.qml
+        qml/StageableDiff.qml
+        qml/StashDialog.qml
+        qml/WipComposer.qml
+        qml/WipFileRow.qml
+        qml/WipFileSection.qml
+        qml/WipFiles.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

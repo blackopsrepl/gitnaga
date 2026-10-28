@@ -231,7 +231,7 @@ private:
     void saveViewSettings() const;
     void showWorktree();
     void runStaging(const QString &successMessage, OperationWork work);
-    void applyPatchRows(const QSet<int> &rows, const QString &action);
+    void applyPatchRows(const QSet<int> &rows, const QString &action, const QString &what);
     bool isStash(const QString &oid) const;
 
     CommitModel m_commits;

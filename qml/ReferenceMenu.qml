@@ -8,6 +8,9 @@ NagaMenu {
     required property var repository
     property var confirm
     property var target: null
+    // Qt sizes the menu from the items visible when it was first laid out;
+    // a stash hides nearly all of them, which collapsed it to a sliver.
+    width: Math.max(implicitWidth, 260)
 
     readonly property string kind: target ? target.kind : ""
     readonly property string name: target ? target.name : ""
@@ -76,7 +79,27 @@ NagaMenu {
     }
     NagaMenuSeparator { visible: menu.isLocal || menu.isRemote || menu.isTag; height: visible ? implicitHeight : 0 }
     NagaMenuItem {
-        text: qsTr("Show commit ") + (menu.target ? menu.target.shortOid : "")
+        visible: menu.isStash
+        height: visible ? implicitHeight : 0
+        text: qsTr("Apply stash")
+        onTriggered: menu.repository.stashAction("apply", menu.target.selector, menu.target.oid)
+    }
+    NagaMenuItem {
+        visible: menu.isStash
+        height: visible ? implicitHeight : 0
+        text: qsTr("Pop stash")
+        onTriggered: menu.repository.stashAction("pop", menu.target.selector, menu.target.oid)
+    }
+    NagaMenuItem {
+        visible: menu.isStash
+        height: visible ? implicitHeight : 0
+        text: qsTr("Drop stash…")
+        onTriggered: menu.confirm.ask(qsTr("Drop ") + menu.target.selector + qsTr("? Its changes are lost."),
+                                      function() { menu.repository.stashAction("drop", menu.target.selector, menu.target.oid) })
+    }
+    NagaMenuSeparator { visible: menu.isStash; height: visible ? implicitHeight : 0 }
+    NagaMenuItem {
+        text: (menu.isStash ? qsTr("Show stash ") : qsTr("Show commit ")) + (menu.target ? menu.target.shortOid : "")
         onTriggered: menu.repository.selectOid(menu.target.oid)
     }
     NagaMenuItem {
