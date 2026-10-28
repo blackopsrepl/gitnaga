@@ -10,6 +10,15 @@ ListView {
 
     required property var repository
     required property var graph
+    // Where a dragged branch chip reports its position (BranchDragLayer).
+    property var dragLayer: null
+
+    // The reference chip at a point in this view's coordinates, if any.
+    function chipAt(point) {
+        var row = labels.itemAt(point.x, point.y + labels.contentY)
+        // The delegate is an inline type the linter cannot see through itemAt().
+        return row ? row.chipAt(labels.mapToItem(row, point.x, point.y)) : null // qmllint disable missing-property
+    }
 
     model: repository.commits
     // Interactive stays off so wheel and drag still reach the graph; enabling
@@ -44,6 +53,15 @@ ListView {
         // Below ~26 px per row a two-line layout cannot fit without colliding
         // with its neighbours, so collapse to one line.
         readonly property bool compact: graph.effectiveRowHeight < 26
+
+        function chipAt(point) {
+            for (var i = 0; i < chipRepeater.count; ++i) {
+                var chip = chipRepeater.itemAt(i)
+                if (chip && chip.visible && chip.contains(chip.mapFromItem(rowItem, point.x, point.y)))
+                    return chip.modelData // qmllint disable missing-property
+            }
+            return null
+        }
 
         Text {
             visible: rowItem.compact
@@ -81,6 +99,7 @@ ListView {
                     id: chipRow
                     spacing: 4
                     Repeater {
+                        id: chipRepeater
                         model: rowItem.refs.slice(0, 3)
                         delegate: Rectangle {
                             id: chip
@@ -107,8 +126,27 @@ ListView {
                                 id: chipMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
-                                cursorShape: chip.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onClicked: repository.selectCommit(rowItem.index)
+                                // A local branch chip can be dragged onto a commit
+                                // or another branch; nothing may steal that drag.
+                                preventStealing: chip.isBranch
+                                cursorShape: dragging ? Qt.ClosedHandCursor : chip.isBranch ? Qt.OpenHandCursor : Qt.ArrowCursor
+                                property bool dragging: false
+                                property point pressPoint
+                                onPressed: (mouse) => { pressPoint = Qt.point(mouse.x, mouse.y); dragging = false }
+                                onPositionChanged: (mouse) => {
+                                    if (!pressed || !chip.isBranch || !labels.dragLayer)
+                                        return
+                                    var layer = labels.dragLayer
+                                    if (!dragging && Math.abs(mouse.x - pressPoint.x) + Math.abs(mouse.y - pressPoint.y) > 6) {
+                                        dragging = true
+                                        layer.begin(chip.modelData, chip.branchColor)
+                                    }
+                                    if (dragging)
+                                        layer.update(chipMouse.mapToItem(layer, mouse.x, mouse.y))
+                                }
+                                onReleased: if (dragging) labels.dragLayer.finish()
+                                onCanceled: if (dragging) { dragging = false; labels.dragLayer.finish() }
+                                onClicked: if (!dragging) repository.selectCommit(rowItem.index)
                                 onDoubleClicked: {
                                     if (!chip.isBranch || chip.modelData.isHead)
                                         return

@@ -74,6 +74,18 @@ def scenarios(zoo: Path, out: Path):
             {"print": "commitCount"}, {"print": "operationMessage"},
             {"expect": {"commitCount": "5", "operationMessage": "Rebased 5 commits"}},
         ],
+        "branch-drag": [
+            {"open": str(zoo / "drag")}, {"idle": True},
+            {"drag": [870, 84, 640, 306], "release": False}, {"wait": 200}, shot("branch-drag"),
+            {"release": [640, 306]}, {"wait": 300}, shot("branch-drop-menu"),
+            {"key": "Escape"}, {"wait": 200},
+            {"drag": [862, 120, 884, 300], "release": False}, {"wait": 200}, shot("branch-drag-chip"),
+            {"release": [884, 300]}, {"wait": 300}, shot("branch-chip-drop-menu"),
+            {"key": "Escape"}, {"wait": 200},
+            {"drag": [870, 84, 640, 306]}, {"wait": 300}, {"click": [678, 384]}, {"wait": 300},
+            shot("branch-drop-confirm"), {"click": [703, 487]}, {"idle": True}, shot("branch-drop-result"),
+            {"print": "commitCount"}, {"expect": {"commitCount": "7"}},
+        ],
         "submodule": [
             {"open": str(zoo / "submodule")}, {"idle": True}, {"select": "WORKTREE"}, {"idle": True},
             shot("submodule"),

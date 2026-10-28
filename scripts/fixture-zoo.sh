@@ -117,6 +117,7 @@ commit linear parse.txt "parse" "feat(parser): parse expressions"
 commit linear empty.txt "empty" "fix(parser): handle empty input"
 commit linear tests.txt "tests" "test(parser): cover precedence"
 commit linear grammar.txt "grammar" "docs(parser): explain the grammar"
+cp -a linear drag
 
 # submodule: a repository with one submodule, its pointer moved.
 new_repo submodule

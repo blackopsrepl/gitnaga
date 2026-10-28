@@ -108,12 +108,24 @@ Rectangle {
             }
 
             CommitLabels {
+                id: commitLabels
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 x: Math.min(parent.width - 150, pane.laneColumn + 12)
                 width: parent.width - x
                 repository: pane.repository
                 graph: graph
+                dragLayer: branchDrag
+            }
+
+            BranchDragLayer {
+                id: branchDrag
+                anchors.fill: parent
+                repository: pane.repository
+                graph: graph
+                labels: commitLabels
+                onDropped: (reference, row, chip, position) =>
+                    dropMenu.showDrop(reference, row, chip, pane.mapFromItem(branchDrag, position.x, position.y))
             }
 
             // Drag the lane column's edge to give the graph or the labels room.
@@ -168,6 +180,13 @@ Rectangle {
         confirm: confirm
         rebaseEditor: rebaseEditor
         rewordDialog: rewordDialog
+    }
+    BranchDropMenu {
+        id: dropMenu
+        repository: pane.repository
+        branchPrompt: branchPrompt
+        tagPrompt: tagPrompt
+        confirm: confirm
     }
     RebaseEditor {
         id: rebaseEditor
