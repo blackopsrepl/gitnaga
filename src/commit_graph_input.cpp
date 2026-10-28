@@ -99,6 +99,7 @@ void CommitGraphItem::geometryChange(const QRectF &newGeometry, const QRectF &ol
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
     clampContent();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }

@@ -28,7 +28,9 @@ Rectangle {
     // Width the lanes may take before they clip behind a fade. A history with
     // a dozen parallel lines would otherwise push every subject off screen.
     property real graphColumn: 200
-    readonly property real laneColumn: Math.min(graph.laneWidth, graphColumn)
+    // Subjects follow the lanes on screen, eased so they glide rather than
+    // jump while scrolling through a busy stretch.
+    readonly property real laneColumn: Math.min(graph.visibleLaneWidth, graphColumn)
     Settings {
         category: "graph"
         property alias column: pane.graphColumn
@@ -140,6 +142,7 @@ Rectangle {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 x: Math.min(parent.width - 150, pane.laneColumn + 12)
+                Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                 width: parent.width - x
                 repository: pane.repository
                 graph: graph

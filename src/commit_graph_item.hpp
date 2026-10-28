@@ -27,6 +27,10 @@ class CommitGraphItem : public QQuickPaintedItem
     Q_PROPERTY(QString workInProgressOid READ workInProgressOid WRITE setWorkInProgressOid NOTIFY workInProgressOidChanged)
     Q_PROPERTY(qreal effectiveRowHeight READ effectiveRowHeight NOTIFY metricsChanged)
     Q_PROPERTY(qreal laneWidth READ laneWidth NOTIFY metricsChanged)
+    // The lanes the rows on screen need, every line passing through them
+    // included: what the subjects make room for, so a busy stretch far down
+    // the history does not push the text away from a quiet one.
+    Q_PROPERTY(qreal visibleLaneWidth READ visibleLaneWidth NOTIFY visibleLaneWidthChanged)
     // Lanes are drawn up to this x; wider histories are clipped behind a fade
     // so the labels keep their room. Zero means no limit.
     Q_PROPERTY(qreal laneLimit READ laneLimit WRITE setLaneLimit NOTIFY laneLimitChanged)
@@ -55,6 +59,7 @@ public:
     void setWorkInProgressOid(const QString &oid);
     qreal effectiveRowHeight() const;
     qreal laneWidth() const;
+    qreal visibleLaneWidth() const { return m_visibleLaneWidth; }
     qreal laneLimit() const { return m_laneLimit; }
     void setLaneLimit(qreal limit);
     qreal contentHeight() const;
@@ -78,6 +83,7 @@ signals:
     void headOidChanged();
     void workInProgressOidChanged();
     void metricsChanged();
+    void visibleLaneWidthChanged();
     void laneLimitChanged();
     void commitClicked(int row);
     void contextRequested(int row, const QString &oid, const QPointF &globalPosition);
@@ -112,6 +118,8 @@ private:
 
     QPointer<CommitModel> m_model;
     qreal m_contentY = 0.0;
+    qreal m_visibleLaneWidth = 0.0;
+    void updateVisibleLaneWidth();
     qreal m_baseRowHeight = 36.0;
     qreal m_zoom = 1.0;
     qreal m_laneLimit = 0.0;

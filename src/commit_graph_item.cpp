@@ -70,6 +70,7 @@ void CommitGraphItem::synchronizeRows()
     invalidateHighlight();
     recomputeHighlight();
     clampContent();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }
@@ -92,6 +93,7 @@ void CommitGraphItem::rowsAppended(int first, int last)
     // simply continue into the new rows when the viewport reaches them.
     if (m_headRow < 0)
         recomputeHeadRow();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }
@@ -107,6 +109,7 @@ void CommitGraphItem::topRowChanged()
     invalidateHighlight();
     recomputeHighlight();
     clampContent();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }
@@ -124,6 +127,7 @@ void CommitGraphItem::setContentY(qreal value)
     if (qFuzzyCompare(m_contentY + 1.0, clamped + 1.0))
         return;
     m_contentY = clamped;
+    updateVisibleLaneWidth();
     update();
     emit contentYChanged();
 }
@@ -137,6 +141,7 @@ void CommitGraphItem::setBaseRowHeight(qreal value)
     m_baseRowHeight = value;
     clampContent();
     emit baseRowHeightChanged();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }
@@ -151,6 +156,7 @@ void CommitGraphItem::setZoom(qreal value)
     m_zoom = clamped;
     clampContent();
     emit zoomChanged();
+    updateVisibleLaneWidth();
     emit metricsChanged();
     update();
 }
@@ -216,6 +222,24 @@ void CommitGraphItem::recomputeHeadRow()
 
 qreal CommitGraphItem::effectiveRowHeight() const { return m_baseRowHeight * m_zoom; }
 qreal CommitGraphItem::laneWidth() const { return graph::laneAreaWidth(m_maximumLane, style()); }
+
+void CommitGraphItem::updateVisibleLaneWidth()
+{
+    const auto &all = rows();
+    const qreal pitch = effectiveRowHeight();
+    int lanes = 1;
+    if (!all.isEmpty() && pitch > 0.0) {
+        const auto first = std::clamp(static_cast<qsizetype>(m_contentY / pitch), qsizetype{ 0 }, all.size() - 1);
+        const auto last = std::clamp(static_cast<qsizetype>((m_contentY + height()) / pitch) + 1, first, all.size() - 1);
+        for (auto row = first; row <= last; ++row)
+            lanes = std::max(lanes, all.at(row).laneCount);
+    }
+    const qreal width = graph::laneAreaWidth(lanes - 1, style());
+    if (qFuzzyCompare(width, m_visibleLaneWidth))
+        return;
+    m_visibleLaneWidth = width;
+    emit visibleLaneWidthChanged();
+}
 qreal CommitGraphItem::contentHeight() const { return static_cast<qreal>(rows().size()) * effectiveRowHeight(); }
 qreal CommitGraphItem::maxContentY() const { return std::max(0.0, contentHeight() - height()); }
 
