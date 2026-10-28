@@ -3,6 +3,7 @@
 #include <QJsonArray>
 #include <QObject>
 #include <QPointer>
+#include <QVariant>
 #include <QQuickWindow>
 
 namespace GitNaga {
@@ -16,11 +17,12 @@ class RepositoryController;
 //
 // GITNAGA_DRIVE=<script.json> gitnaga
 //
-// Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
+// Steps: {"open": path} {"idle": true} {"wait": ms} {"until": property, "equals": v}
+// {"select": row|oid}
 // {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
 // {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}
-// {"shot": path} {"print": property} {"quit": true}
+// {"shot": path} {"print": property | "object.property"} {"quit": true}
 class UiDriver final : public QObject
 {
     Q_OBJECT
@@ -36,6 +38,7 @@ private:
     void click(const QPointF &point, Qt::MouseButton button, bool twice);
     void key(const QString &sequence);
     void type(const QString &text);
+    QVariant readProperty(const QString &path) const;
 
     QJsonArray m_steps;
     qsizetype m_index = 0;

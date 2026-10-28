@@ -116,6 +116,26 @@ new_repo lfs
 printf 'version https://git-lfs.github.com/spec/v1\noid sha256:%064d\nsize 1048576\n' 0 >lfs/asset.bin
 git -C lfs add asset.bin && git -C lfs commit -qm "add asset"
 
+# history: a file written by two people over two years, renamed into a
+# directory on the way, plus a pickaxe-able word; file history and blame.
+new_repo history
+at() { GIT_AUTHOR_DATE="$1" GIT_COMMITTER_DATE="$1" "${@:2}"; }
+as_grace() { GIT_AUTHOR_NAME="Grace Hopper" GIT_AUTHOR_EMAIL="grace@zoo.invalid" "$@"; }
+printf '# Notes\n\nThe engine computes.\nIt weaves patterns.\n' >history/notes.md
+git -C history add notes.md && at "2023-03-01T10:00:00" git -C history commit -qm "docs: start the notes"
+printf 'compiler\n' >history/tools.txt
+git -C history add tools.txt && at "2023-09-12T10:00:00" as_grace git -C history commit -qm "feat: list the tools"
+printf '\nA bug is a moth in the relay.\n' >>history/notes.md
+git -C history add notes.md && at "2024-06-20T10:00:00" as_grace git -C history commit -qm "docs: record the first bug"
+mkdir -p history/docs && git -C history mv notes.md docs/notes.md
+at "2025-01-15T10:00:00" git -C history commit -qm "refactor: move the notes into docs"
+sed -i 's/It weaves patterns./It weaves algebraic patterns./' history/docs/notes.md
+printf 'Poetical science.\n' >>history/docs/notes.md
+git -C history add docs/notes.md && at "2025-08-02T10:00:00" git -C history commit -qm "docs: say what the engine weaves"
+printf 'debugger\n' >>history/tools.txt
+git -C history add tools.txt && at "2025-10-01T10:00:00" as_grace git -C history commit -qm "feat: add the debugger"
+printf 'Draft: a closing line.\n' >>history/docs/notes.md
+
 # big: N commits across several long-lived branches, through fast-import.
 if (( big > 0 )); then
     new_repo big

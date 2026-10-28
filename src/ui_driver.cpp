@@ -74,6 +74,19 @@ void UiDriver::type(const QString &text)
     }
 }
 
+QVariant UiDriver::readProperty(const QString &path) const
+{
+    // "commitCount" reads the repository; "navigation.search.count" walks the
+    // window's own properties, so any QML-facing object can be asserted on.
+    const auto parts = path.split(QLatin1Char('.'));
+    if (parts.size() == 1)
+        return m_repository->property(path.toUtf8());
+    QObject *object = m_window;
+    for (qsizetype index = 0; object && index + 1 < parts.size(); ++index)
+        object = object->property(parts.at(index).toUtf8()).value<QObject *>();
+    return object ? object->property(parts.last().toUtf8()) : QVariant();
+}
+
 void UiDriver::next()
 {
     if (!m_window || !m_repository)
@@ -92,6 +105,14 @@ void UiDriver::next()
             return;
         }
         delay = 400;
+    } else if (step.contains(QStringLiteral("until"))) {
+        // Poll a property until it reads `equals`, for work the repository's
+        // own idle state does not cover (a search, a blame).
+        if (readProperty(step.value(QStringLiteral("until")).toString()).toString()
+            != step.value(QStringLiteral("equals")).toVariant().toString()) {
+            QTimer::singleShot(50, this, &UiDriver::next);
+            return;
+        }
     } else if (step.contains(QStringLiteral("wait"))) {
         delay = step.value(QStringLiteral("wait")).toInt();
     } else if (step.contains(QStringLiteral("open"))) {
@@ -136,7 +157,7 @@ void UiDriver::next()
                                   step.value(QStringLiteral("value")).toVariant());
     } else if (step.contains(QStringLiteral("print"))) {
         const auto name = step.value(QStringLiteral("print")).toString();
-        std::printf("%s=%s\n", qPrintable(name), qPrintable(m_repository->property(name.toUtf8()).toString()));
+        std::printf("%s=%s\n", qPrintable(name), qPrintable(readProperty(name).toString()));
         std::fflush(stdout);
     } else if (step.contains(QStringLiteral("shot"))) {
         const auto path = step.value(QStringLiteral("shot")).toString();
