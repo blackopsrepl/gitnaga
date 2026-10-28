@@ -165,3 +165,9 @@ struct CommitInspection {
 };
 
 } // namespace GitNaga
+
+// Rows move by memcpy when a long history's storage grows, instead of one
+// move constructor per commit.
+Q_DECLARE_TYPEINFO(GitNaga::GraphSegment, Q_PRIMITIVE_TYPE);
+Q_DECLARE_TYPEINFO(GitNaga::Ref, Q_RELOCATABLE_TYPE);
+Q_DECLARE_TYPEINFO(GitNaga::Commit, Q_RELOCATABLE_TYPE);

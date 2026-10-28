@@ -18,7 +18,7 @@ class RepositoryController;
 //
 // Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
 // {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
-// {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
+// {"hover": [x, y]} {"wheel": [x, y, angleDelta]} {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}  (names may be "sync.<member>")
 // {"drag": [x1, y1, x2, y2], "release": false} {"release": [x, y]}
 // {"shot": path} {"print": property} {"quit": true}
@@ -37,6 +37,8 @@ private:
     void click(const QPointF &point, Qt::MouseButton button, bool twice);
     void drag(const QPointF &from, const QPointF &to, bool release);
     void send(QEvent::Type type, const QPointF &point, Qt::MouseButton button, Qt::MouseButtons buttons);
+    void hover(const QPointF &point);
+    void wheel(const QPointF &point, int delta);
     void key(const QString &sequence);
     void type(const QString &text);
 

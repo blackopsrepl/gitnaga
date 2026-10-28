@@ -3,10 +3,32 @@
 #include "git_parse.hpp"
 
 #include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
+#include <QThreadPool>
 
 namespace GitNaga {
 
 using detail::decode;
+
+void GitClient::ensureCommitGraph(const RepositoryLocation &location, qsizetype commits)
+{
+    constexpr qsizetype kWorthIt = 20000;
+    if (commits < kWorthIt || location.commonDirectory.isEmpty())
+        return;
+    const QDir info(QDir(location.commonDirectory).filePath(QStringLiteral("objects/info")));
+    if (QFileInfo::exists(info.filePath(QStringLiteral("commit-graph")))
+        || QFileInfo::exists(info.filePath(QStringLiteral("commit-graphs"))))
+        return;
+    const auto worktree = location.worktree;
+    QThreadPool::globalInstance()->start([worktree] {
+        RunOptions options;
+        // This one call has to write; it takes git's own lock like gc does.
+        options.environment.insert(QStringLiteral("GIT_OPTIONAL_LOCKS"), QStringLiteral("1"));
+        run(worktree, { QStringLiteral("commit-graph"), QStringLiteral("write"), QStringLiteral("--reachable") },
+            QStringLiteral("write commit-graph"), options);
+    });
+}
 
 QStringList GitClient::historyRevisions(const RefSnapshot &refs, const HistoryRequest &request)
 {

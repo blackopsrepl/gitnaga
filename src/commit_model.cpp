@@ -93,13 +93,24 @@ QHash<int, QByteArray> CommitModel::roleNames() const
     };
 }
 
+int CommitModel::offset() const
+{
+    return m_workInProgress ? 1 : 0;
+}
+
 void CommitModel::reindex(qsizetype from)
 {
-    if (from == 0)
+    // Positions are kept relative to the history, not to the rows, so the
+    // uncommitted-work row can come and go on top without renumbering a
+    // million entries.
+    // Reserving on every append would rehash the whole index each time, a
+    // cost that grows with the history rather than with the chunk.
+    if (from == 0) {
         m_rowByOid.clear();
-    m_rowByOid.reserve(m_commits.size());
-    for (qsizetype row = from; row < m_commits.size(); ++row)
-        m_rowByOid.insert(m_commits.at(row).oid, static_cast<int>(row));
+        m_rowByOid.reserve(m_commits.size());
+    }
+    for (qsizetype row = std::max<qsizetype>(from, offset()); row < m_commits.size(); ++row)
+        m_rowByOid.insert(m_commits.at(row).oid, static_cast<int>(row) - offset());
 }
 
 void CommitModel::replace(QVector<Commit> commits)
@@ -143,8 +154,7 @@ void CommitModel::setWorkInProgress(bool present, const QString &headOid)
         beginRemoveRows({}, 0, 0);
         m_commits.removeFirst();
         m_workInProgress = false;
-        reindex(0);
-        endRemoveRows();
+            endRemoveRows();
         emit countChanged();
         return;
     }
@@ -164,7 +174,6 @@ void CommitModel::setWorkInProgress(bool present, const QString &headOid)
     beginInsertRows({}, 0, 0);
     m_commits.prepend(std::move(entry));
     m_workInProgress = true;
-    reindex(0);
     endInsertRows();
     emit countChanged();
 }
@@ -183,12 +192,10 @@ const Commit *CommitModel::commitAt(int row) const
 
 int CommitModel::rowOf(const QString &oid) const
 {
-    return m_rowByOid.value(oid, -1);
-}
-
-const QHash<QString, int> &CommitModel::rowIndex() const
-{
-    return m_rowByOid;
+    if (m_workInProgress && oid == worktreeOid())
+        return 0;
+    const auto found = m_rowByOid.constFind(oid);
+    return found == m_rowByOid.constEnd() ? -1 : *found + offset();
 }
 
 QVariantMap CommitModel::at(int row) const

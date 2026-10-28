@@ -66,6 +66,11 @@ public:
                                               CancelToken cancel = {});
     // Everything at once; the application streams, tests use this.
     static GitResult<RepositorySnapshot> loadRepository(const QString &path, const HistoryRequest &request = {});
+    // A topological walk streams only when git has a commit-graph file; without
+    // one it reads the whole history before printing the first commit. Writes
+    // the file in the background for a large history that lacks one, the same
+    // cache `git gc` maintains, so the next open paints at once.
+    static void ensureCommitGraph(const RepositoryLocation &location, qsizetype commits);
     static GitResult<QVector<Worktree>> listWorktrees(const QString &worktree);
 
     static GitResult<CommitInspection> inspectCommit(const QString &worktree, const QString &oid);

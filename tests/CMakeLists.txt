@@ -96,6 +96,12 @@ qt_add_executable(gitnaga_branch_operations_test
 target_link_libraries(gitnaga_branch_operations_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_branch_operations_test COMMAND gitnaga_branch_operations_test)
 
+qt_add_executable(gitnaga_emphasis_test
+    graph_emphasis_test.cpp
+)
+target_link_libraries(gitnaga_emphasis_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_emphasis_test COMMAND gitnaga_emphasis_test)
+
 # Every test runs headless with no desktop theme plugin: the GTK theme tries
 # to open a display and the run dies before a single test executes.
 get_property(gitnaga_tests DIRECTORY PROPERTY TESTS)

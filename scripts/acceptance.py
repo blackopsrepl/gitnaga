@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Visual acceptance: drive the real GitNaga window through every fixture.
 
-    scripts/acceptance.py [--build build/dev] [--out DIR] [--zoo DIR] [--big N] [only...]
+    scripts/acceptance.py [--build build/dev] [--out DIR] [--zoo DIR] [--big N] [--huge] [only...]
 
 Builds the fixture zoo (scripts/fixture-zoo.sh), then runs one scripted
 session per scenario through GITNAGA_DRIVE (see src/ui_driver.hpp), offscreen
@@ -170,6 +170,12 @@ def scenarios(zoo: Path, out: Path):
             {"open": str(zoo / "big")}, {"idle": True}, shot("big"),
             {"print": "commitCount"},
         ],
+        # The ancestry trace: a selection, then a hover on another line that
+        # must add its own ancestry without dropping the selection's.
+        "emphasis": [
+            {"open": str(zoo / "branches")}, {"idle": True}, {"select": 2}, {"idle": True},
+            shot("emphasis-select"), {"hover": [383, 180]}, {"hover": [383, 200]}, {"wait": 300}, shot("emphasis-hover"),
+        ],
     }
 
 
@@ -231,6 +237,19 @@ def sync_scenarios(zoo: Path, shot, sandbox):
     }
 
 
+def huge_scenario(zoo: Path, out: Path):
+    """--huge: a million commits, then select, hover and scroll deep into it."""
+    def shot(name):
+        return {"shot": str(out / f"{name}.png")}
+
+    return [
+        {"open": str(zoo / "big")}, {"idle": True}, shot("huge"), {"print": "commitCount"},
+        {"expect": {"commitCount": "1000000"}},
+        {"select": 0}, {"idle": True}, {"hover": [383, 180]}, {"hover": [383, 200]}, {"wait": 300}, shot("huge-hover"),
+        *[{"wheel": [300, 400, -12000]} for _ in range(40)], {"wait": 300}, shot("huge-deep"),
+    ]
+
+
 def run(binary: Path, name: str, steps, env) -> bool:
     expectations = {}
     script = []
@@ -267,19 +286,28 @@ def main() -> int:
     parser.add_argument("--out", default=str(ROOT / "build/acceptance"))
     parser.add_argument("--zoo", default=None)
     parser.add_argument("--big", type=int, default=100000)
+    parser.add_argument("--huge", action="store_true",
+                        help="build the big fixture at 1M commits and run the huge scenario")
     parser.add_argument("only", nargs="*")
     args = parser.parse_args()
 
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     zoo = Path(args.zoo).resolve() if args.zoo else out / "zoo"
-    subprocess.run([str(ROOT / "scripts/fixture-zoo.sh"), str(zoo), "--big", str(args.big)],
-                   check=True, stdout=subprocess.DEVNULL)
+    big = 1000000 if args.huge else args.big
+    marker = zoo / ".big-size"
+    # A million-commit fixture takes minutes to write; reuse one of the right size.
+    if not (args.zoo and marker.exists() and marker.read_text() == str(big)):
+        subprocess.run([str(ROOT / "scripts/fixture-zoo.sh"), str(zoo), "--big", str(big)],
+                       check=True, stdout=subprocess.DEVNULL)
+        marker.write_text(str(big))
 
     binary = Path(args.build) / "gitnaga"
     env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software",
            "QT_QPA_PLATFORMTHEME": "", "XDG_CONFIG_HOME": str(out / "config")}
     selected = scenarios(zoo, out)
+    if args.huge:
+        selected["huge"] = huge_scenario(zoo, out)
     names = args.only or list(selected)
     results = [run(binary, name, selected[name], env) for name in names]
     print(f"\n{sum(results)}/{len(results)} scenarios passed; screenshots in {out}")
