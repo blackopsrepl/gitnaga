@@ -5,6 +5,7 @@
 
 #include <QCollator>
 #include <QCryptographicHash>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QVariantMap>
 
@@ -84,6 +85,22 @@ void RepositoryController::rebuildReferences()
     emit referencesChanged();
 }
 
+namespace {
+
+// git words a stash "WIP on <branch>: <oid> <subject>" or "On <branch>:
+// <message>"; the sidebar shows what the person wrote, or the subject.
+QString stashTitle(const QString &message)
+{
+    static const QRegularExpression prefix(QStringLiteral("^(?:WIP on|On) [^:]*: "));
+    static const QRegularExpression wip(QStringLiteral("^WIP on [^:]*: [0-9a-f]+ "));
+    auto title = message;
+    if (const auto match = wip.match(title); match.hasMatch())
+        return QStringLiteral("WIP: ") + title.mid(match.capturedLength());
+    return title.remove(prefix);
+}
+
+} // namespace
+
 QVariantList RepositoryController::stashes() const
 {
     QVariantList list;
@@ -93,6 +110,7 @@ QVariantList RepositoryController::stashes() const
         entry.insert(QStringLiteral("shortOid"), stash.oid.left(8));
         entry.insert(QStringLiteral("selector"), stash.selector);
         entry.insert(QStringLiteral("message"), stash.message);
+        entry.insert(QStringLiteral("title"), stashTitle(stash.message));
         list.append(entry);
     }
     return list;
