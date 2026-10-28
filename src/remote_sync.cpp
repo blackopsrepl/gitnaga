@@ -2,6 +2,7 @@
 
 #include "git_sync.hpp"
 #include "repository_controller.hpp"
+#include "undo_stack.hpp"
 
 #include <QGuiApplication>
 #include <QSettings>
@@ -138,7 +139,10 @@ void RemoteSync::pullWith(const QString &mode)
         return;
     }
     const auto pullMode = gitsync::pullModeFromName(m_pullMode);
-    m_repository->runAsyncOperation(tr("Pulled %1 into %2").arg(m_repository->upstream(), branch),
+    // A pull is undone like a merge or rebase: the branch goes back to where
+    // it was. One that stops on conflicts is recorded when it is continued.
+    m_repository->runUndoable(tr("Pulled %1 into %2").arg(m_repository->upstream(), branch),
+                              undo::resetHead(tr("pull"), QStringLiteral("--keep")),
                                     [pullMode](const QString &worktree, const RunOptions &options) {
         if (options.progress)
             options.progress(QObject::tr("Pulling…"));
@@ -199,9 +203,13 @@ void RemoteSync::pushBranch(const QString &branch, const QString &chosenRemote, 
         auto result = gitsync::push(worktree, request, gitsync::withCredentials(worktree, options, askpassProgram()));
         return explainRefusal(std::move(result), *target, request.target.isEmpty() ? request.branch : request.target,
                               forceWithLease);
-    }, [this, target](const QString &, const GitResult<QString> &result) {
-        if (result)
+    }, [this, target](const QString &worktree, const GitResult<QString> &result) {
+        // What was pushed is published: taking back the commits under it, or
+        // anything older, would rewrite history someone may already have.
+        if (result) {
+            m_repository->undoStack()->block(tr("push %1").arg(target->branch), worktree);
             return;
+        }
         if (!target->choices.isEmpty())
             emit remoteChoiceNeeded(QString(), target->choices);
         else if (target->rejected)

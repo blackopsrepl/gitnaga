@@ -1,6 +1,7 @@
 #include "git_test_helpers.hpp"
 #include "remote_sync.hpp"
 #include "repository_controller.hpp"
+#include "undo_stack.hpp"
 
 #include <QDir>
 #include <QSettings>
@@ -177,6 +178,72 @@ private slots:
         controller.sync()->pull();
         QVERIFY(!controller.lastOperationOk());
         QVERIFY2(controller.operationMessage().contains(QStringLiteral("no upstream")), qPrintable(controller.operationMessage()));
+    }
+    // A fetch only moves remote-tracking refs: what GitNaga did locally stays undoable.
+    void fetchKeepsUndo()
+    {
+        Remotes remotes;
+        RepositoryController controller;
+        open(controller, remotes.mine);
+        controller.createBranch(QStringLiteral("spare"), controller.headOid());
+        settle(controller);
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo create branch spare"));
+        remotes.theyPush();
+        controller.sync()->fetch();
+        settle(controller);
+        QCOMPARE(controller.behind(), 1);
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo create branch spare"));
+    }
+
+    void pullIsUndoable()
+    {
+        Remotes remotes;
+        remotes.theyPush();
+        RepositoryController controller;
+        open(controller, remotes.mine);
+        const auto before = controller.headOid();
+        controller.sync()->fetch();
+        settle(controller);
+        controller.sync()->pullWith(QStringLiteral("ff-only"));
+        settle(controller);
+        QVERIFY(controller.headOid() != before);
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo pull"));
+        controller.undo();
+        settle(controller);
+        QCOMPARE(controller.headOid(), before);
+        QCOMPARE(controller.behind(), 1);
+    }
+
+    // Pushed commits are published: neither they nor anything older can be taken back.
+    void pushBlocksUndo()
+    {
+        Remotes remotes;
+        commit(remotes.mine, QStringLiteral("mine.txt"));
+        RepositoryController controller;
+        open(controller, remotes.mine);
+        controller.createBranch(QStringLiteral("spare"), controller.headOid());
+        settle(controller);
+        QVERIFY(controller.undoStack()->available());
+        controller.sync()->push();
+        settle(controller);
+        QVERIFY2(controller.lastOperationOk(), qPrintable(controller.operationMessage()));
+        QVERIFY(!controller.undoStack()->available());
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Can't undo push main"));
+    }
+
+    void upstreamChangesAreUndoable()
+    {
+        Remotes remotes;
+        RepositoryController controller;
+        open(controller, remotes.mine);
+        QCOMPARE(controller.upstream(), QStringLiteral("origin/main"));
+        controller.sync()->unsetUpstream(QStringLiteral("main"));
+        settle(controller);
+        QCOMPARE(controller.upstream(), QString());
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo unset upstream of main"));
+        controller.undo();
+        settle(controller);
+        QCOMPARE(controller.upstream(), QStringLiteral("origin/main"));
     }
 };
 

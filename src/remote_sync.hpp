@@ -57,6 +57,7 @@ signals:
     void remoteChoiceNeeded(const QString &tag, const QStringList &remotes);
 
 private:
+    QVector<QStringList> restoreUpstream(const QString &branch) const;
     void fetchQuietly(bool quiet);
     void autoFetchTick();
     void pushBranch(const QString &branch, const QString &remote, bool forceWithLease);
