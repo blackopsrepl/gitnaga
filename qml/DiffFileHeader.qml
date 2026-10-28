@@ -70,17 +70,30 @@ Rectangle {
                     font.letterSpacing: 0.3
                 }
             }
+            // The name always reads in full; the directory gives way first.
             Text {
-                Layout.fillWidth: true
+                Layout.preferredWidth: implicitWidth
+                Layout.minimumWidth: Math.min(implicitWidth, 90)
                 textFormat: Text.PlainText
-                text: header.directory + header.fileName
-                elide: Text.ElideMiddle
+                text: header.fileName
+                elide: Text.ElideRight
                 color: NagaTheme.text
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
-                ToolTip.visible: pathHover.hovered && truncated
+                ToolTip.visible: pathHover.hovered
                 ToolTip.text: header.path
                 HoverHandler { id: pathHover }
+            }
+            Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.preferredWidth: 0
+                visible: header.directory.length > 0
+                textFormat: Text.PlainText
+                text: header.directory
+                elide: Text.ElideLeft
+                color: NagaTheme.muted
+                font.pixelSize: 11
             }
             Text {
                 visible: (header.file.additions || 0) > 0 || (header.file.deletions || 0) > 0

@@ -98,7 +98,7 @@ QVariantMap RepositoryController::selectedCommit() const
         { QStringLiteral("subject"), m_selected.subject },
         { QStringLiteral("author"), m_selected.author },
         { QStringLiteral("date"), m_selected.authoredAt.isValid()
-                                      ? QLocale().toString(m_selected.authoredAt, QLocale::LongFormat) : QString() },
+                                      ? QLocale().toString(m_selected.authoredAt, QStringLiteral("ddd d MMM yyyy, HH:mm")) : QString() },
         { QStringLiteral("body"), m_selected.body },
         { QStringLiteral("parents"), m_selected.parents },
     };
