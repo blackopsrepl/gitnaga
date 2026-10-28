@@ -189,6 +189,8 @@ void RepositoryController::loadHistory()
             rebuildReferences();
             emit historyChanged();
             perf::mark("history: loaded");
+            if (ok)
+                GitClient::ensureCommitGraph(m_repository.location, commitCount());
         }, Qt::QueuedConnection);
     });
 }
