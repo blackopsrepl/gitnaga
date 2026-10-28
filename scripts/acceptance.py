@@ -13,6 +13,7 @@ script ran, not that the screen is right.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,18 @@ def scenarios(zoo: Path, out: Path):
     """name -> steps. `expect` steps are checked here, not by the app."""
     def shot(name):
         return {"shot": str(out / f"{name}.png")}
+
+    def sandbox(name):
+        """A private copy of `branches` and its remote, for scenarios that
+        push and pull: they must not move the zoo under the others."""
+        root = out / "sandbox" / name
+        shutil.rmtree(root, ignore_errors=True)
+        root.mkdir(parents=True)
+        shutil.copytree(zoo / "remote.git", root / "remote.git")
+        shutil.copytree(zoo / "branches", root / "branches", symlinks=True)
+        subprocess.run(["git", "-C", str(root / "branches"), "remote", "set-url", "origin",
+                        str(root / "remote.git")], check=True)
+        return str(root / "branches")
 
     return {
         "branches": [
@@ -68,9 +81,68 @@ def scenarios(zoo: Path, out: Path):
         "lfs": [
             {"open": str(zoo / "lfs")}, {"idle": True}, {"select": 0}, {"idle": True}, shot("lfs"),
         ],
+        **sync_scenarios(zoo, shot, sandbox),
         "big": [
             {"open": str(zoo / "big")}, {"idle": True}, shot("big"),
             {"print": "commitCount"},
+        ],
+    }
+
+
+def sync_scenarios(zoo: Path, shot, sandbox):
+    """Fetch, pull and push against the zoo's own bare remote."""
+    # A server that takes its time, so the footer can be seen mid-fetch.
+    slow = sandbox("slow")
+    subprocess.run(["git", "-C", slow, "config", "remote.origin.uploadpack", "sleep 3; git-upload-pack"], check=True)
+    return {
+        "sync-fetch-progress": [
+            {"open": slow}, {"idle": True},
+            {"call": "sync.fetch"}, {"wait": 800}, shot("sync-fetching"),
+            {"click": [1382, 887]}, {"idle": True}, shot("sync-fetch-cancelled"),
+            {"print": "operationMessage"}, {"expect": {"operationMessage": "Cancelled"}},
+        ],
+        "sync-toolbar": [
+            {"open": str(zoo / "branches")}, {"idle": True}, shot("sync-toolbar"),
+            {"click": [331, 20]}, {"wait": 300}, shot("sync-fetch-menu"), {"key": "Escape"},
+            {"click": [411, 20]}, {"wait": 300}, shot("sync-pull-menu"), {"key": "Escape"},
+        ],
+        # main is 3 ahead and 1 behind: pull merges, then the push lands.
+        "sync-pull-push": [
+            {"open": sandbox("pull-push")}, {"idle": True},
+            {"call": "sync.fetch"}, {"idle": True},
+            {"call": "sync.pull"}, {"idle": True}, shot("sync-pulled"),
+            {"print": "behind"}, {"expect": {"behind": "0"}},
+            {"call": "sync.push"}, {"idle": True}, shot("sync-pushed"),
+            {"print": "ahead"}, {"expect": {"ahead": "0"}},
+        ],
+        # Pushing the diverged main is refused; the lease replaces it.
+        "sync-rejected": [
+            {"open": sandbox("rejected")}, {"idle": True},
+            {"call": "sync.push"}, {"idle": True}, shot("sync-rejected"),
+            {"click": [785, 514]}, {"idle": True}, shot("sync-forced"),
+            {"print": "ahead"}, {"print": "behind"}, {"expect": {"ahead": "0", "behind": "0"}},
+        ],
+        # topic/merged was never pushed: Pull is off, Push publishes it.
+        "sync-publish": [
+            {"open": sandbox("publish")}, {"idle": True},
+            {"call": "checkoutBranch", "args": ["topic/merged"]}, {"idle": True}, shot("sync-no-upstream"),
+            {"click": [410, 20]}, {"wait": 900}, shot("sync-pull-tooltip"),
+            {"call": "sync.push"}, {"idle": True}, shot("sync-published"),
+            {"print": "upstream"}, {"expect": {"upstream": "origin/topic/merged"}},
+        ],
+        "sync-upstream": [
+            {"open": sandbox("upstream")}, {"idle": True},
+            {"rightClick": [100, 195]}, {"wait": 300}, shot("sync-branch-menu"),
+            {"click": [85, 81]}, {"wait": 400}, shot("sync-upstream-dialog"),
+            {"click": [807, 502]}, {"idle": True}, shot("sync-upstream-set"),
+            {"rightClick": [100, 195]}, {"wait": 300}, shot("sync-branch-menu-tracking"), {"key": "Escape"},
+            {"call": "checkoutBranch", "args": ["topic/merged"]}, {"idle": True},
+            {"print": "upstream"}, {"expect": {"upstream": "origin/feature/search"}},
+        ],
+        "sync-tag": [
+            {"open": sandbox("tag")}, {"idle": True},
+            {"call": "createTag", "args": ["v1.0", "HEAD"]}, {"idle": True},
+            {"call": "sync.pushTag", "args": ["v1.0"]}, {"idle": True}, shot("sync-tag-pushed"),
         ],
     }
 

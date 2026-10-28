@@ -7,6 +7,7 @@ NagaMenu {
     id: menu
     required property var repository
     property var confirm
+    property var upstreamDialog
     property var target: null
 
     readonly property string kind: target ? target.kind : ""
@@ -35,7 +36,25 @@ NagaMenu {
         text: qsTr("Merge ") + menu.name + qsTr(" into ") + menu.repository.currentBranch
         onTriggered: menu.repository.mergeCommit(menu.target.oid, menu.name)
     }
-    NagaMenuSeparator { visible: menu.isLocal || menu.isRemote; height: visible ? implicitHeight : 0 }
+    NagaMenuItem {
+        visible: menu.isLocal
+        height: visible ? implicitHeight : 0
+        text: qsTr("Set upstream…")
+        onTriggered: menu.upstreamDialog.openFor(menu.target)
+    }
+    NagaMenuItem {
+        visible: menu.isLocal && (menu.target.upstream || "").length > 0
+        height: visible ? implicitHeight : 0
+        text: qsTr("Unset upstream ") + (menu.target ? menu.target.upstream : "")
+        onTriggered: menu.repository.sync.unsetUpstream(menu.name)
+    }
+    NagaMenuItem {
+        visible: menu.isTag
+        height: visible ? implicitHeight : 0
+        text: qsTr("Push tag ") + menu.name
+        onTriggered: menu.repository.sync.pushTag(menu.name)
+    }
+    NagaMenuSeparator { visible: menu.isLocal || menu.isRemote || menu.isTag; height: visible ? implicitHeight : 0 }
     NagaMenuItem {
         visible: menu.inGraph
         height: visible ? implicitHeight : 0

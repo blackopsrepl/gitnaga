@@ -1,5 +1,7 @@
 #include "repository_controller.hpp"
 
+#include "remote_sync.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
@@ -12,6 +14,7 @@ namespace GitNaga {
 
 RepositoryController::RepositoryController(QObject *parent)
     : QObject(parent)
+    , m_sync(new RemoteSync(this))
 {
     m_syncTimer.setSingleShot(true);
     m_syncTimer.setInterval(150);

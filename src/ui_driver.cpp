@@ -16,6 +16,22 @@
 
 namespace GitNaga {
 
+namespace {
+
+// "sync.fetch" addresses a member of the repository's `sync` object; a plain
+// name addresses the repository itself.
+QObject *resolve(QObject *repository, QByteArray *name)
+{
+    const auto dot = name->indexOf('.');
+    if (dot < 0)
+        return repository;
+    auto *target = repository->property(name->left(dot).constData()).value<QObject *>();
+    *name = name->mid(dot + 1);
+    return target ? target : repository;
+}
+
+} // namespace
+
 UiDriver::UiDriver(const QString &scriptPath, QQuickWindow *window, RepositoryController *repository, QObject *parent)
     : QObject(parent)
     , m_window(window)
@@ -116,27 +132,30 @@ void UiDriver::next()
     } else if (step.contains(QStringLiteral("type"))) {
         type(step.value(QStringLiteral("type")).toString());
     } else if (step.contains(QStringLiteral("call"))) {
-        const auto name = step.value(QStringLiteral("call")).toString().toUtf8();
+        auto name = step.value(QStringLiteral("call")).toString().toUtf8();
+        auto *target = resolve(m_repository, &name);
         const auto args = step.value(QStringLiteral("args")).toArray();
         QList<QVariant> values;
         for (const auto &arg : args)
             values.append(arg.toVariant());
         bool ok = false;
         switch (values.size()) {
-        case 0: ok = QMetaObject::invokeMethod(m_repository, name.constData()); break;
-        case 1: ok = QMetaObject::invokeMethod(m_repository, name.constData(), Q_ARG(QString, values.at(0).toString())); break;
-        case 2: ok = QMetaObject::invokeMethod(m_repository, name.constData(), Q_ARG(QString, values.at(0).toString()),
+        case 0: ok = QMetaObject::invokeMethod(target, name.constData()); break;
+        case 1: ok = QMetaObject::invokeMethod(target, name.constData(), Q_ARG(QString, values.at(0).toString())); break;
+        case 2: ok = QMetaObject::invokeMethod(target, name.constData(), Q_ARG(QString, values.at(0).toString()),
                                                Q_ARG(QString, values.at(1).toString())); break;
         default: break;
         }
         if (!ok)
             std::fprintf(stderr, "drive: call %s failed\n", name.constData());
     } else if (step.contains(QStringLiteral("set"))) {
-        m_repository->setProperty(step.value(QStringLiteral("set")).toString().toUtf8(),
-                                  step.value(QStringLiteral("value")).toVariant());
+        auto member = step.value(QStringLiteral("set")).toString().toUtf8();
+        resolve(m_repository, &member)->setProperty(member.constData(), step.value(QStringLiteral("value")).toVariant());
     } else if (step.contains(QStringLiteral("print"))) {
         const auto name = step.value(QStringLiteral("print")).toString();
-        std::printf("%s=%s\n", qPrintable(name), qPrintable(m_repository->property(name.toUtf8()).toString()));
+        auto member = name.toUtf8();
+        auto *target = resolve(m_repository, &member);
+        std::printf("%s=%s\n", qPrintable(name), qPrintable(target->property(member.constData()).toString()));
         std::fflush(stdout);
     } else if (step.contains(QStringLiteral("shot"))) {
         const auto path = step.value(QStringLiteral("shot")).toString();

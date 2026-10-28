@@ -106,23 +106,6 @@ ApplicationWindow {
                 font.pixelSize: 12
             }
             Label {
-                visible: text.length > 0
-                text: {
-                    var parts = []
-                    if (repository.ahead > 0)
-                        parts.push("↑" + repository.ahead)
-                    if (repository.behind > 0)
-                        parts.push("↓" + repository.behind)
-                    return parts.join(" ")
-                }
-                color: "#e6b45a"
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
-                ToolTip.visible: trackHover.hovered
-                ToolTip.text: qsTr("Ahead / behind ") + repository.upstream
-                HoverHandler { id: trackHover }
-            }
-            Label {
                 id: wipBadge
                 visible: repository.workInProgressOid.length > 0
                 text: qsTr("● Work in progress")
@@ -134,6 +117,8 @@ ApplicationWindow {
                     onClicked: repository.selectCommit(0)
                 }
             }
+            ToolSeparator {}
+            SyncToolbar { repository: root.repository }
             Item { Layout.fillWidth: true }
             NagaButton {
                 text: qsTr("References")
@@ -226,7 +211,9 @@ ApplicationWindow {
             }
             Label {
                 visible: !repository.busy && repository.operationMessage.length > 0
-                text: repository.operationMessage
+                // git's messages run over several lines; the footer has one.
+                text: repository.operationMessage.replace(/\s*\n\s*/g, " · ")
+                maximumLineCount: 1
                 color: repository.lastOperationOk ? "#4ade80" : "#ff7d8b"
                 font.pixelSize: 11
                 elide: Text.ElideRight

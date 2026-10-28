@@ -19,7 +19,7 @@ class RepositoryController;
 // Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
 // {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
 // {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
-// {"set": property, "value": v}
+// {"set": property, "value": v}  (names may be "sync.<member>")
 // {"shot": path} {"print": property} {"quit": true}
 class UiDriver final : public QObject
 {

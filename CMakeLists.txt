@@ -33,6 +33,8 @@ add_library(gitnaga_core STATIC
     src/git_parse.hpp
     src/git_remote.cpp
     src/git_repository.cpp
+    src/git_sync.cpp
+    src/git_sync.hpp
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
@@ -45,6 +47,9 @@ add_library(gitnaga_core STATIC
     src/repository_operations.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
+    src/remote_sync.cpp
+    src/remote_sync.hpp
+    src/remote_sync_refs.cpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
@@ -55,6 +60,8 @@ target_compile_options(gitnaga_core PRIVATE
 )
 
 qt_add_executable(gitnaga
+    src/askpass.cpp
+    src/askpass.hpp
     src/commit_graph_input.cpp
     src/commit_graph_item.cpp
     src/commit_graph_item.hpp
@@ -71,6 +78,7 @@ qt_add_qml_module(gitnaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/Askpass.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
@@ -93,6 +101,10 @@ qt_add_qml_module(gitnaga
         qml/ReferencesPane.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
+        qml/RemoteChoiceDialog.qml
+        qml/SyncButton.qml
+        qml/SyncToolbar.qml
+        qml/UpstreamDialog.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

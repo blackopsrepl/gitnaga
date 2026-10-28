@@ -2,6 +2,8 @@
 
 #include "git_client.hpp"
 #include "git_refs.hpp"
+#include "git_sync.hpp"
+#include "remote_sync.hpp"
 
 #include <QClipboard>
 #include <QGuiApplication>
@@ -101,7 +103,9 @@ void RepositoryController::deleteRemoteBranch(const QString &reference)
     // remote-tracking ref itself, so there is nothing to reconcile afterwards.
     runAsyncOperation(tr("Deleted %1 on %2").arg(branch, remote),
                       [remote, branch](const QString &repository, const RunOptions &options) {
-                          return GitClient::deleteRemoteBranch(repository, remote, branch, options);
+                          return GitClient::deleteRemoteBranch(
+                              repository, remote, branch,
+                              gitsync::withCredentials(repository, options, RemoteSync::askpassProgram()));
                       });
 }
 
