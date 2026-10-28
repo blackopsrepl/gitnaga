@@ -196,6 +196,13 @@ def scenarios(zoo: Path, out: Path, big_count: int):
             {"file": 1}, {"idle": True}, shot("diff-image"),
             {"file": 2}, {"idle": True}, shot("diff-binary"),
             {"file": 4}, {"idle": True}, shot("diff-whitespace"),
+            {"click": [580, 121]}, {"idle": True}, shot("diff-whitespace-ignored"),
+            {"click": [580, 121]}, {"idle": True},
+            {"file": 5}, {"idle": True}, {"click": [444, 121]}, {"wait": 300}, shot("diff-split"),
+            {"click": [393, 121]}, {"idle": True},
+            {"file": 0}, {"idle": True}, {"click": [771, 121]}, {"idle": True}, {"wait": 300}, shot("diff-large-file"),
+            {"wheel": [640, 500, -12000]}, {"wait": 300}, shot("diff-large-scrolled"),
+            {"click": [705, 121]}, {"idle": True},
         ],
         "lfs": [
             {"open": str(zoo / "lfs")}, {"idle": True}, {"select": 0}, {"idle": True}, shot("lfs"),

@@ -123,7 +123,7 @@ Item {
             }
             Text {
                 visible: card.kind === "submodule" && (card.special.commits || []).length > 0
-                text: qsTr("%n commit(s)", "", (card.special.commits || []).length)
+                text: (card.special.commits || []).length === 1 ? qsTr("1 commit") : qsTr("%1 commits").arg((card.special.commits || []).length)
                 color: NagaTheme.muted
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
