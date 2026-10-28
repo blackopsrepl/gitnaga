@@ -39,13 +39,11 @@ Rectangle {
         category: "DiffView"
         property bool sideBySide: false
         property bool wrap: false
-        property bool ignoreWhitespace: false
         property int contextLines: 3
     }
-    Component.onCompleted: {
-        model.ignoreWhitespace = settings.ignoreWhitespace
-        model.contextLines = settings.contextLines
-    }
+    // Ignoring whitespace is a lens for one look, not a preference: left on,
+    // it would quietly turn off partial staging in the next session.
+    Component.onCompleted: model.contextLines = settings.contextLines
 
     DiffPalette {
         id: diffPalette
@@ -113,10 +111,7 @@ Rectangle {
         showLineOptions: view.specialKind === ""
         onSideBySideToggled: on => settings.sideBySide = on
         onWrapToggled: on => settings.wrap = on
-        onIgnoreWhitespaceToggled: on => {
-            settings.ignoreWhitespace = on
-            view.model.ignoreWhitespace = on
-        }
+        onIgnoreWhitespaceToggled: on => view.model.ignoreWhitespace = on
         onContextChosen: lines => {
             settings.contextLines = lines
             view.model.contextLines = lines
