@@ -65,6 +65,7 @@ target_link_libraries(gitnaga_sync_controller_test PRIVATE gitnaga_core Qt6::Cor
 add_test(NAME gitnaga_sync_controller_test COMMAND gitnaga_sync_controller_test)
 
 add_test(NAME gitnaga_askpass_test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/askpass_test.sh $<TARGET_FILE:gitnaga>)
+add_test(NAME gitnaga_transport_askpass_test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/transport_askpass_test.sh $<TARGET_FILE:gitnaga>)
 
 qt_add_executable(gitnaga_conflict_parser_test
     conflict_parser_test.cpp
