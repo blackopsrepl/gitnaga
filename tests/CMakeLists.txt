@@ -63,3 +63,9 @@ qt_add_executable(gitnaga_rebase_test
 )
 target_link_libraries(gitnaga_rebase_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
 add_test(NAME gitnaga_rebase_test COMMAND gitnaga_rebase_test)
+
+qt_add_executable(gitnaga_branch_operations_test
+    branch_operations_test.cpp
+)
+target_link_libraries(gitnaga_branch_operations_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_branch_operations_test COMMAND gitnaga_branch_operations_test)

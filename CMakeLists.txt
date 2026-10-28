@@ -47,6 +47,7 @@ add_library(gitnaga_core STATIC
     src/repository_worktrees.cpp
     src/repository_loading.cpp
     src/repository_operations.cpp
+    src/repository_rebase.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
 )

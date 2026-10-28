@@ -152,6 +152,22 @@ public:
     Q_INVOKABLE void resetTo(const QString &oid, const QString &mode);
     Q_INVOKABLE void rebaseOnto(const QString &oid, const QString &branch = {});
 
+    // Interactive rebase and history editing (repository_rebase.cpp).
+    // Answers through rebasePlanReady: the commits from `oid` to HEAD.
+    Q_INVOKABLE void requestRebasePlan(const QString &oid);
+    // `base` empty means --root; steps are {oid, action, original, message}.
+    Q_INVOKABLE void startInteractiveRebase(const QString &base, const QVariantList &steps, bool autostash);
+    Q_INVOKABLE void rewordCommit(const QString &oid, const QString &message);
+    Q_INVOKABLE void squashIntoParent(const QString &oid);
+    Q_INVOKABLE void dropCommit(const QString &oid);
+    Q_INVOKABLE bool reachableFromHead(const QString &oid) const;
+    Q_INVOKABLE QString combineMessages(const QStringList &messages) const;
+    // Branch drag and drop (repository_rebase.cpp).
+    Q_INVOKABLE void moveBranch(const QString &name, const QString &oid);
+    Q_INVOKABLE void rebaseBranch(const QString &branch, const QString &onto);
+    Q_INVOKABLE void mergeBranchInto(const QString &source, const QString &target);
+    Q_INVOKABLE void showAllRefs();
+
     // Off-thread git work: the worktree it runs in and the run options that
     // carry the cancel token and the progress reporter.
     using OperationWork = std::function<GitResult<QString>(const QString &worktree, const RunOptions &options)>;
@@ -178,6 +194,8 @@ signals:
     void revealRow(int row);
     void fileSelectionChanged();
     void referencesChanged();
+    // {ok, error, oid, base, steps: [{oid, shortOid, subject, original}]}
+    void rebasePlanReady(const QVariantMap &plan);
 
 private:
     struct PendingOperation {

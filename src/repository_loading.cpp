@@ -129,7 +129,7 @@ void RepositoryController::loadHistory()
     const auto generation = ++m_historyGeneration;
     const auto worktree = m_repository.location.worktree;
     const auto revisions = GitClient::historyRevisions(m_repository.refs, m_view);
-    auto decorations = gitrefs::decorations(m_repository.refs.refs, m_view.showInternal);
+    auto decorations = gitrefs::decorations(m_repository.refs.refs, m_view.showInternal, m_view.hidden);
     // A detached HEAD has no branch to wear; it still deserves a chip.
     if (m_repository.refs.detached && !m_repository.refs.headOid.isEmpty()) {
         Ref head;

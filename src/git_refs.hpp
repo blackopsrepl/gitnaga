@@ -4,6 +4,7 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <QVector>
 
@@ -39,8 +40,11 @@ void parseTrack(const QString &track, int *ahead, int *behind, bool *gone);
 
 QVector<StashEntry> parseStashes(const QByteArray &output);
 
-// Refs each commit wears in the graph, keyed by the peeled commit oid.
-QHash<QString, QVector<Ref>> decorations(const QVector<Ref> &refs, bool showInternal);
+// Refs each commit wears in the graph, keyed by the peeled commit oid. A
+// hidden ref wears no chip, except the checked-out branch, which the graph
+// never hides from the person working on it.
+QHash<QString, QVector<Ref>> decorations(const QVector<Ref> &refs, bool showInternal,
+                                         const QSet<QString> &hidden = {});
 
 QString kindName(RefKind kind);
 

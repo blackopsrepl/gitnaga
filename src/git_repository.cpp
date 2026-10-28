@@ -115,7 +115,7 @@ GitResult<RepositorySnapshot> GitClient::loadRepository(const QString &path, con
     snapshot.status = *status;
 
     auto history = streamHistory(snapshot.location.worktree, historyRevisions(snapshot.refs, request),
-                                 gitrefs::decorations(snapshot.refs.refs, request.showInternal), 5000,
+                                 gitrefs::decorations(snapshot.refs.refs, request.showInternal, request.hidden), 5000,
                                  [&snapshot](QVector<Commit> &&chunk) { snapshot.commits.append(std::move(chunk)); });
     if (!history)
         return std::unexpected(history.error());
