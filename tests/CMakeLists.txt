@@ -51,3 +51,15 @@ qt_add_executable(gitnaga_controller_test
 )
 target_link_libraries(gitnaga_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_controller_test COMMAND gitnaga_controller_test)
+
+qt_add_executable(gitnaga_rebase_todo_test
+    rebase_todo_test.cpp
+)
+target_link_libraries(gitnaga_rebase_todo_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_rebase_todo_test COMMAND gitnaga_rebase_todo_test)
+
+qt_add_executable(gitnaga_rebase_test
+    rebase_test.cpp
+)
+target_link_libraries(gitnaga_rebase_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_rebase_test COMMAND gitnaga_rebase_test)

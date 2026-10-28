@@ -31,11 +31,15 @@ add_library(gitnaga_core STATIC
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
+    src/git_rebase.cpp
+    src/git_rebase.hpp
     src/git_remote.cpp
     src/git_repository.cpp
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
+    src/rebase_todo.cpp
+    src/rebase_todo.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
     src/repository_controller.cpp
