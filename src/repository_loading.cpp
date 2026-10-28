@@ -115,7 +115,7 @@ void RepositoryController::applySync(const SyncResult &result, bool forceHistory
         configureWatcher();
     if (opened)
         emit repositoryChanged();
-    m_undo.observe(m_repository.location.worktree, m_repository.refs.fingerprint);
+    m_undo.observe(m_repository.location.worktree, m_repository.refs.localFingerprint);
     rebuildReferences();
     applyStatus(result.status);
     if (refsMoved)

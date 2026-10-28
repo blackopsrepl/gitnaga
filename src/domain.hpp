@@ -95,6 +95,10 @@ struct RefSnapshot {
     QString currentBranch;
     bool detached = false;
     QByteArray fingerprint;
+    // What only this repository's own operations move: local branches (with
+    // their upstream setting), tags, stashes and HEAD. A fetch moves
+    // remote-tracking refs and must not look like someone else's change.
+    QByteArray localFingerprint;
 };
 
 struct FileChange {

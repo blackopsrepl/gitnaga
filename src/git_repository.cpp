@@ -87,7 +87,15 @@ GitResult<RefSnapshot> GitClient::loadRefs(const RepositoryLocation &location)
         }
     }
 
-    snapshot.fingerprint = *refs + '\0' + headRef.toUtf8() + '\0' + snapshot.headOid.toUtf8() + '\0' + stashOutput;
+    const auto headState = headRef.toUtf8() + '\0' + snapshot.headOid.toUtf8() + '\0' + stashOutput;
+    snapshot.fingerprint = *refs + '\0' + headState;
+    for (const auto &ref : std::as_const(snapshot.refs)) {
+        if (ref.kind == RefKind::Remote)
+            continue;
+        snapshot.localFingerprint += (ref.fullName + QLatin1Char(' ') + ref.target + QLatin1Char(' ') + ref.upstream).toUtf8();
+        snapshot.localFingerprint += '\n';
+    }
+    snapshot.localFingerprint += headState;
     return snapshot;
 }
 
