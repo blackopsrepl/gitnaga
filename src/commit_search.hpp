@@ -44,3 +44,6 @@ GitResult<QStringList> searchHistory(const QString &worktree, const QStringList 
                                      const SearchQuery &query, const CancelToken &cancel = {});
 
 } // namespace GitNaga
+
+// The search snapshot grows with the history; relocating moves it in one copy.
+Q_DECLARE_TYPEINFO(GitNaga::SearchRecord, Q_RELOCATABLE_TYPE);

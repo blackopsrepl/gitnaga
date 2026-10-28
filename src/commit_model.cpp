@@ -98,6 +98,19 @@ int CommitModel::offset() const
     return m_workInProgress ? 1 : 0;
 }
 
+namespace {
+
+// The first 16 hex digits of an object id; anything else (a short or
+// non-hex id) gets a key no commit has, so lookups simply miss.
+quint64 oidKey(const QString &oid)
+{
+    bool ok = false;
+    const auto key = oid.size() >= 16 ? QStringView(oid).left(16).toULongLong(&ok, 16) : 0;
+    return ok ? key : ~quint64{ 0 };
+}
+
+} // namespace
+
 void CommitModel::reindex(qsizetype from)
 {
     // Positions are kept relative to the history, not to the rows, so the
@@ -110,7 +123,7 @@ void CommitModel::reindex(qsizetype from)
         m_rowByOid.reserve(m_commits.size());
     }
     for (qsizetype row = std::max<qsizetype>(from, offset()); row < m_commits.size(); ++row)
-        m_rowByOid.insert(m_commits.at(row).oid, static_cast<int>(row) - offset());
+        m_rowByOid.emplace(oidKey(m_commits.at(row).oid), static_cast<int>(row) - offset());
 }
 
 void CommitModel::replace(QVector<Commit> commits)
@@ -194,8 +207,18 @@ int CommitModel::rowOf(const QString &oid) const
 {
     if (m_workInProgress && oid == worktreeOid())
         return 0;
-    const auto found = m_rowByOid.constFind(oid);
-    return found == m_rowByOid.constEnd() ? -1 : *found + offset();
+    const auto found = m_rowByOid.constFind(oidKey(oid));
+    if (found == m_rowByOid.constEnd())
+        return -1;
+    const int row = *found + offset();
+    if (m_commits.at(row).oid == oid)
+        return row;
+    // Two ids sharing their first 64 bits: the table holds the first one, so
+    // look for the other the slow way.
+    for (qsizetype other = offset(); other < m_commits.size(); ++other)
+        if (m_commits.at(other).oid == oid)
+            return static_cast<int>(other);
+    return -1;
 }
 
 QVariantMap CommitModel::at(int row) const

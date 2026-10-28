@@ -62,8 +62,10 @@ private:
 
     QVector<Commit> m_commits;
     // Object id -> position in the history (the row without the
-    // uncommitted-work row on top).
-    QHash<QString, int> m_rowByOid;
+    // uncommitted-work row on top), keyed by the id's first 64 bits: growing
+    // a million-entry table then rehashes integers, not strings, so a
+    // streamed chunk never stalls a frame. Lookups confirm the full id.
+    QHash<quint64, int> m_rowByOid;
     bool m_workInProgress = false;
 };
 
