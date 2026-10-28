@@ -27,6 +27,14 @@ QtObject {
     readonly property color text: "#e8ebf2"
     readonly property color muted: "#8590a3"
     readonly property color accent: "#34d399"
+    // Something half done that needs the person (a stopped merge), and
+    // something that went wrong or cannot be taken back.
+    readonly property color warning: "#e6b45a"
+    readonly property color danger: "#ff7d8b"
+    // The two sides of a conflict, so ours and theirs read the same everywhere.
+    readonly property color ours: "#9fc2ff"
+    readonly property color theirs: "#d7a6ff"
+    readonly property color code: "#cbd0dc"
 
     // Interaction states.
     readonly property color hoverFill: "#1f2836"
@@ -42,5 +50,11 @@ QtObject {
     // its own green.
     function accentTint(strength) {
         return Qt.rgba(accent.r, accent.g, accent.b, strength)
+    }
+    function warningTint(strength) {
+        return Qt.rgba(warning.r, warning.g, warning.b, strength)
+    }
+    function tint(base, strength) {
+        return Qt.rgba(base.r, base.g, base.b, strength)
     }
 }

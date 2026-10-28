@@ -153,7 +153,8 @@ Popup {
         entries.push({ label: qsTr("Reset ") + branch + qsTr(" to ") + shortOid + qsTr(" (soft)"), run: function() { repository.resetTo(target, "soft") } })
         entries.push({ label: qsTr("Reset ") + branch + qsTr(" to ") + shortOid + qsTr(" (mixed)"), run: function() { repository.resetTo(target, "mixed") } })
         entries.push({ label: qsTr("Hard reset ") + branch + qsTr(" to ") + shortOid + qsTr("…"), destructive: true, run: function() {
-            menu.confirm.ask(qsTr("Discard all working tree changes and move ") + branch + qsTr(" to ") + shortOid + qsTr("?"),
+            menu.confirm.ask(qsTr("Discard all working tree changes and move ") + branch + qsTr(" to ") + shortOid
+                             + qsTr("? Undo can move the branch back, but the discarded changes are gone for good."),
                              function() { repository.resetTo(target, "hard") })
         } })
         entries.push({ label: qsTr("Rebase ") + branch + qsTr(" onto ") + label + qsTr("…"), destructive: true, run: function() {

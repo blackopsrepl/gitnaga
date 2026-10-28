@@ -46,6 +46,7 @@ ApplicationWindow {
     Action { id: openAction; text: qsTr("&Open Repository…"); shortcut: "Ctrl+O"; onTriggered: repositoryDialog.openAt(root.repository.repositoryPath) }
     Action { id: worktreesAction; text: qsTr("&Worktrees…"); shortcut: "Ctrl+3"; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: worktreeDialog.openManager() }
     Action { id: refreshAction; text: qsTr("&Refresh"); shortcut: "Ctrl+R"; enabled: repository.repositoryPath.length > 0 && !repository.busy; onTriggered: repository.refresh() }
+    Action { id: undoAction; text: repository.undoStack.label; shortcut: "Ctrl+Z"; enabled: repository.undoStack.available && !repository.busy; onTriggered: repository.undo() }
     Action { id: quitAction; text: qsTr("&Quit"); shortcut: "Ctrl+Q"; onTriggered: Qt.quit() }
     Action { id: toggleReferencesAction; text: qsTr("References sidebar"); checkable: true; checked: true; shortcut: "Ctrl+1"; onTriggered: referencesVisible = checked }
     Action { id: toggleReviewAction; text: qsTr("Review sidebar"); checkable: true; checked: true; shortcut: "Ctrl+2"; onTriggered: reviewVisible = checked }
@@ -232,6 +233,7 @@ ApplicationWindow {
                 elide: Text.ElideRight
                 Layout.maximumWidth: 520
             }
+            UndoButton { repository: root.repository; action: undoAction }
             Label {
                 text: repository.commitCount + qsTr(" commits")
                       + (repository.workInProgressOid.length > 0 ? qsTr(" · work in progress") : "")

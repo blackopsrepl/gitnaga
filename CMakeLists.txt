@@ -83,6 +83,9 @@ qt_add_qml_module(gitnaga
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
+        qml/ConflictBlockView.qml
+        qml/ConflictDialog.qml
+        qml/ConflictFileRow.qml
         qml/EmptyState.qml
         qml/GraphPane.qml
         qml/GraphScrollBar.qml
@@ -93,6 +96,7 @@ qt_add_qml_module(gitnaga
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
         qml/OpenRepositoryDialog.qml
+        qml/OperationBanner.qml
         qml/AddWorktreeDialog.qml
         qml/WorktreeDialog.qml
         qml/NagaIconButton.qml
@@ -102,6 +106,7 @@ qt_add_qml_module(gitnaga
         qml/ReferencesPane.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
+        qml/UndoButton.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE
