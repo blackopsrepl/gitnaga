@@ -70,7 +70,7 @@ def scenarios(zoo: Path, out: Path, big_count: int):
         ],
         "staging": [
             {"open": str(zoo / "hunks")}, {"idle": True},
-            {"select": "WORKTREE"}, {"idle": True}, shot("staging-sections"),
+            {"select": "WORKTREE"}, {"idle": True}, {"click": [1000, 294]}, {"idle": True}, shot("staging-sections"),
             {"click": [400, 216]}, {"click": [400, 235], "modifiers": "Shift"}, {"wait": 300},
             shot("staging-lines"),
             {"click": [663, 836]}, {"idle": True}, shot("staging-lines-staged"),
@@ -78,6 +78,8 @@ def scenarios(zoo: Path, out: Path, big_count: int):
             {"click": [868, 316]}, {"idle": True}, shot("staging-hunk"),
             {"print": "operationMessage"}, {"expect": {"operationMessage": "Staged a hunk of lines.txt"}},
             {"key": "Escape"}, {"wait": 300}, shot("staging-back-to-graph"),
+            {"key": "Ctrl+="}, {"wait": 200}, {"print": "window.graphZoom"}, {"key": "Ctrl+0"}, {"wait": 200},
+            {"expect": {"window.graphZoom": "1.18"}},
             {"click": [1020, 224]}, {"wait": 400}, shot("staging-stash-dialog"), {"key": "Escape"},
             {"click": [954, 224]}, {"idle": True}, {"wait": 300}, shot("staging-amend"),
         ],

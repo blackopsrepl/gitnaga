@@ -136,12 +136,17 @@ QVariant UiDriver::readProperty(const QString &path) const
     const auto parts = path.split(QLatin1Char('.'));
     if (parts.size() == 1)
         return m_repository->property(path.toUtf8());
-    // "sync.ahead" names a repository part; anything else starts at the window.
-    QObject *object = m_repository->property(parts.first().toUtf8()).isValid() ? m_repository
-                                                                              : static_cast<QObject *>(m_window);
+    // "sync.ahead" names a repository part, "window.graphZoom" the window
+    // itself; anything else starts at the window's own properties.
+    auto steps = parts;
+    QObject *object = m_window;
+    if (steps.first() == QStringLiteral("window"))
+        steps.removeFirst();
+    else if (m_repository->property(steps.first().toUtf8()).isValid())
+        object = m_repository;
     // Each step is an object property or, like "selectedCommit.subject", a map key.
     QVariant value = QVariant::fromValue(object);
-    for (const auto &part : parts) {
+    for (const auto &part : std::as_const(steps)) {
         if (auto *step = value.value<QObject *>())
             value = step->property(part.toUtf8());
         else
@@ -187,7 +192,9 @@ void UiDriver::next()
         else
             m_repository->selectOid(target.toString());
     } else if (step.contains(QStringLiteral("file"))) {
+        // As a person picks it: the file's diff opens in the middle too.
         m_repository->selectFile(step.value(QStringLiteral("file")).toInt());
+        QMetaObject::invokeMethod(m_window, "openDiff");
     } else if (step.contains(QStringLiteral("click")) || step.contains(QStringLiteral("doubleClick"))
                || step.contains(QStringLiteral("rightClick"))) {
         const bool twice = step.contains(QStringLiteral("doubleClick"));
