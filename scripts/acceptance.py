@@ -86,6 +86,16 @@ def scenarios(zoo: Path, out: Path):
             shot("branch-drop-confirm"), {"click": [703, 487]}, {"idle": True}, shot("branch-drop-result"),
             {"print": "commitCount"}, {"expect": {"commitCount": "7"}},
         ],
+        "edit-message": [
+            {"open": str(zoo / "quick")}, {"idle": True},
+            {"rightClick": [500, 236]}, {"wait": 300}, {"click": [560, 462]}, {"idle": True}, {"wait": 300},
+            {"key": "Ctrl+A"}, {"type": "feat(parser): parse expressions by precedence"}, shot("edit-message"),
+            {"click": [887, 580]}, {"idle": True},
+            {"rightClick": [500, 164]}, {"wait": 300}, shot("quick-actions-menu"), {"click": [560, 416]}, {"idle": True},
+            {"rightClick": [500, 236]}, {"wait": 300}, {"click": [560, 514]}, {"wait": 300}, shot("drop-confirm"),
+            {"click": [703, 487]}, {"idle": True}, shot("quick-actions-result"),
+            {"print": "commitCount"}, {"expect": {"commitCount": "6"}},
+        ],
         "hide-solo": [
             {"open": str(zoo / "branches")}, {"idle": True}, {"call": "showAllRefs"}, {"idle": True},
             {"click": [282, 195]}, {"idle": True}, {"click": [282, 245]}, {"idle": True}, shot("hidden-refs"),
