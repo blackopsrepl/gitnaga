@@ -23,6 +23,11 @@ class RepositoryController final : public QObject
     Q_PROPERTY(CommitModel *commits READ commits CONSTANT)
     Q_PROPERTY(FileChangeModel *changedFiles READ changedFiles CONSTANT)
     Q_PROPERTY(DiffLineModel *diffLines READ diffLines CONSTANT)
+    Q_PROPERTY(FileChangeModel *unstagedFiles READ unstagedFiles CONSTANT)
+    Q_PROPERTY(FileChangeModel *stagedFiles READ stagedFiles CONSTANT)
+    // "unstaged" or "staged" while a work-in-progress file is shown.
+    Q_PROPERTY(QString wipSide READ wipSide NOTIFY fileSelectionChanged)
+    Q_PROPERTY(int stagedCount READ stagedCount NOTIFY statusChanged)
     Q_PROPERTY(QString repositoryPath READ repositoryPath NOTIFY repositoryChanged)
     Q_PROPERTY(QString repositoryName READ repositoryName NOTIFY repositoryChanged)
     Q_PROPERTY(QString currentBranch READ currentBranch NOTIFY referencesChanged)
@@ -65,6 +70,10 @@ public:
     CommitModel *commits();
     FileChangeModel *changedFiles();
     DiffLineModel *diffLines();
+    FileChangeModel *unstagedFiles() { return &m_unstagedFiles; }
+    FileChangeModel *stagedFiles() { return &m_stagedFiles; }
+    QString wipSide() const;
+    int stagedCount() const;
     QString repositoryPath() const;
     QString repositoryName() const;
     QString currentBranch() const;
@@ -115,7 +124,22 @@ public:
     Q_INVOKABLE void setRefHidden(const QString &fullName, bool hidden);
     Q_INVOKABLE void setSoloRef(const QString &fullName);
     Q_INVOKABLE void copyToClipboard(const QString &text) const;
-    Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description);
+    // Commits the index; amending rewrites HEAD with it.
+    Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description, bool amend = false);
+    // Staging (repository_staging.cpp). Rows index the side's own list;
+    // `action` is "stage", "unstage" or "discard".
+    Q_INVOKABLE void selectWorktreeFile(const QString &side, int row);
+    Q_INVOKABLE void stageFile(int row);
+    Q_INVOKABLE void unstageFile(int row);
+    Q_INVOKABLE void discardFile(int row);
+    Q_INVOKABLE void stageAll();
+    Q_INVOKABLE void unstageAll();
+    Q_INVOKABLE void discardAll();
+    Q_INVOKABLE void applyHunk(int hunkRow, const QString &action);
+    Q_INVOKABLE void applyLines(const QVariantList &rows, const QString &action);
+    Q_INVOKABLE void loadAmendMessage();
+    Q_INVOKABLE void stashWorktree(const QString &message, bool includeUntracked);
+    Q_INVOKABLE void stashAction(const QString &action, const QString &selector, const QString &oid);
     Q_INVOKABLE QVariantList directories(const QString &path) const;
     Q_INVOKABLE QString homeDirectory() const;
     Q_INVOKABLE bool looksLikeRepository(const QString &path) const;
@@ -178,6 +202,7 @@ signals:
     void revealRow(int row);
     void fileSelectionChanged();
     void referencesChanged();
+    void amendMessageLoaded(const QString &summary, const QString &description, bool published);
 
 private:
     struct PendingOperation {
@@ -204,10 +229,16 @@ private:
     void rebuildReferences();
     void loadViewSettings();
     void saveViewSettings() const;
+    void showWorktree();
+    void runStaging(const QString &successMessage, OperationWork work);
+    void applyPatchRows(const QSet<int> &rows, const QString &action);
+    bool isStash(const QString &oid) const;
 
     CommitModel m_commits;
     FileChangeModel m_changedFiles;
     DiffLineModel m_diffLines;
+    FileChangeModel m_unstagedFiles;
+    FileChangeModel m_stagedFiles;
     QFileSystemWatcher m_watcher;
     QTimer m_syncTimer;
     QTimer m_statusTimer;
@@ -216,6 +247,10 @@ private:
     CommitDetails m_selected;
     QString m_selectedOid;
     QString m_selectedPath;
+    DiffSide m_selectedSide = DiffSide::Commit;
+    // The (side, path) the loaded diff belongs to; line actions refuse a
+    // diff that is still catching up with the selection.
+    QString m_diffKey;
     QString m_requestedPath;
     QString m_recordedWorktree;
     QString m_error;

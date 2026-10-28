@@ -9,10 +9,11 @@ namespace GitNaga {
 class FileChangeModel final : public QAbstractListModel
 {
     Q_OBJECT
-    Q_PROPERTY(int selectedCount READ selectedCount NOTIFY selectedChanged)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
-    enum Role { StatusRole = Qt::UserRole + 1, PathRole, OldPathRole, FileNameRole, DirectoryRole, SelectedRole };
+    enum Role { StatusRole = Qt::UserRole + 1, PathRole, OldPathRole, FileNameRole, DirectoryRole, UntrackedRole,
+                ConflictedRole, SubmoduleRole };
 
     explicit FileChangeModel(QObject *parent = nullptr);
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -20,21 +21,15 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     void replace(QVector<FileChange> files);
     const FileChange *fileAt(int row) const;
+    const QVector<FileChange> &files() const { return m_files; }
 
-    // Commit selection for the uncommitted-work row. Defaults mirror the
-    // index, so a commit picks up exactly what the user had staged.
-    Q_INVOKABLE void setSelected(int row, bool selected);
-    Q_INVOKABLE void setAllSelected(bool selected);
-    Q_INVOKABLE QStringList selectedPaths() const;
-    Q_INVOKABLE QStringList stagedUnselectedPaths() const;
-    int selectedCount() const;
+    int count() const;
 
 signals:
-    void selectedChanged();
+    void countChanged();
 
 private:
     QVector<FileChange> m_files;
-    QVector<bool> m_selected;
 };
 
 } // namespace GitNaga

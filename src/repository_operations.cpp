@@ -68,20 +68,6 @@ void RepositoryController::createBranch(const QString &name, const QString &oid)
                  tr("Created branch %1 at %2").arg(name, shortOid(oid)));
 }
 
-void RepositoryController::commitWorktree(const QString &summary, const QString &description)
-{
-    const auto include = m_changedFiles.selectedPaths();
-    const auto unstage = m_changedFiles.stagedUnselectedPaths();
-    if (include.isEmpty()) {
-        reportFailure(tr("Select at least one file to commit"));
-        return;
-    }
-    runAsyncOperation(tr("Committed %1").arg(summary.left(48)),
-                      [include, unstage, summary, description](const QString &worktree, const RunOptions &) {
-                          return GitClient::commitWorktree(worktree, include, unstage, summary, description);
-                      });
-}
-
 void RepositoryController::deleteBranch(const QString &name)
 {
     if (name.isEmpty())

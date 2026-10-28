@@ -28,6 +28,8 @@ add_library(gitnaga_core STATIC
     src/git_worktrees.cpp
     src/git_history.cpp
     src/git_status.cpp
+    src/git_staging.cpp
+    src/git_staging.hpp
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
@@ -46,6 +48,8 @@ add_library(gitnaga_core STATIC
     src/repository_loading.cpp
     src/repository_operations.cpp
     src/repository_selection.cpp
+    src/repository_staging.cpp
+    src/repository_commit.cpp
     src/repository_references.cpp
 )
 

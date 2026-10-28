@@ -1,5 +1,7 @@
 #include "repository_controller.hpp"
 
+#include "git_staging.hpp"
+
 #include <QFutureWatcher>
 #include <QtConcurrentRun>
 
@@ -30,16 +32,17 @@ void RepositoryController::inspect(const QString &oid, int row)
     const auto generation = ++m_selectionGeneration;
     ++m_diffGeneration;
     m_diffLines.clear();
+    m_diffKey.clear();
 
     if (oid == worktreeOid()) {
-        const auto inspection = GitClient::inspectWorktree(m_repository.status);
-        m_selected = inspection.details;
-        m_changedFiles.replace(inspection.files);
+        m_selected = GitClient::inspectWorktree(m_repository.status).details;
         emit selectionChanged();
         emit revealRow(row);
-        selectFile(inspection.files.isEmpty() ? -1 : 0);
+        showWorktree();
         return;
     }
+    m_unstagedFiles.replace({});
+    m_stagedFiles.replace({});
 
     emit selectionChanged();
     emit revealRow(row);
@@ -59,31 +62,46 @@ void RepositoryController::inspect(const QString &oid, int row)
         emit selectionChanged();
         selectFile(result->files.isEmpty() ? -1 : 0);
     });
-    watcher->setFuture(QtConcurrent::run([worktree, oid] { return GitClient::inspectCommit(worktree, oid); }));
+    // A stash also lists the untracked files it saved in its third parent.
+    const bool stash = isStash(oid);
+    watcher->setFuture(QtConcurrent::run([worktree, oid, stash] {
+        return stash ? staging::inspectStash(worktree, oid) : GitClient::inspectCommit(worktree, oid);
+    }));
 }
 
 void RepositoryController::selectFile(int row)
 {
     const auto *file = m_changedFiles.fileAt(row);
     m_selectedFile = file ? row : -1;
-    emit fileSelectionChanged();
     const auto generation = ++m_diffGeneration;
     if (!file || m_selectedOid.isEmpty()) {
         m_selectedPath.clear();
         m_diffLines.clear();
+        m_diffKey.clear();
+        emit fileSelectionChanged();
         return;
     }
     m_selectedPath = file->path;
     const bool worktree = m_selectedOid == worktreeOid();
+    // Work in progress lists the unstaged files first, then the staged ones,
+    // and each side diffs against its own base.
+    m_selectedSide = !worktree ? DiffSide::Commit
+                   : row < m_unstagedFiles.count() ? DiffSide::Unstaged : DiffSide::Staged;
     const auto repository = m_repository.location.worktree;
-    const auto oid = worktree ? m_repository.refs.headOid : m_selected.oid;
+    // A stash's untracked files live in its third parent, not in the stash.
+    const bool stashedUntracked = !worktree && file->untracked && m_selected.parents.size() >= 3;
+    const auto oid = worktree ? m_repository.refs.headOid
+                   : stashedUntracked ? m_selected.parents.at(2) : m_selected.oid;
     const auto path = file->path;
     const auto oldPath = file->oldPath;
-    const auto side = worktree ? DiffSide::Worktree : DiffSide::Commit;
-    const bool untracked = file->untracked;
+    const auto side = m_selectedSide;
+    const bool untracked = file->untracked && worktree;
+    const auto key = QString::number(static_cast<int>(side)) + QLatin1Char(':') + path;
+    m_diffKey.clear();
+    emit fileSelectionChanged();
 
     auto *watcher = new QFutureWatcher<GitResult<QVector<DiffLine>>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation, key] {
         const auto result = watcher->result();
         watcher->deleteLater();
         if (generation != m_diffGeneration)
@@ -93,6 +111,7 @@ void RepositoryController::selectFile(int row)
             return;
         }
         m_diffLines.replace(*result);
+        m_diffKey = key;
     });
     watcher->setFuture(QtConcurrent::run([repository, oid, path, oldPath, side, untracked] {
         return GitClient::loadDiff(repository, oid, path, oldPath, side, untracked);
@@ -120,7 +139,10 @@ void RepositoryController::clearSelection()
     m_selectedRow = -1;
     m_selectedFile = -1;
     m_changedFiles.replace({});
+    m_unstagedFiles.replace({});
+    m_stagedFiles.replace({});
     m_diffLines.clear();
+    m_diffKey.clear();
     emit selectionChanged();
     emit fileSelectionChanged();
 }
