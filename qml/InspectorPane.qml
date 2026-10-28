@@ -7,6 +7,8 @@ Rectangle {
     id: pane
     required property var repository
     signal closeRequested()
+    signal fileMenuRequested(string path, point scenePosition)
+    function focusFiles() { files.forceActiveFocus() }
 
     // True while the reviewed row is the uncommitted-work snapshot: that is
     // when the commit composer is shown. Declared on the component root, so
@@ -190,6 +192,8 @@ Rectangle {
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         ScrollBar.vertical: ScrollBar {}
+                        Keys.onUpPressed: repository.selectFile(Math.max(0, files.currentIndex - 1))
+                        Keys.onDownPressed: repository.selectFile(Math.min(files.count - 1, files.currentIndex + 1))
                         // Custom row rather than ItemDelegate: the control
                         // default painted its own highlight, which was the one
                         // surface whose hover and selection did not follow the
@@ -200,6 +204,7 @@ Rectangle {
                             required property string status
                             required property string fileName
                             required property string directory
+                            required property string path
                             width: files.width
                             height: 34
                             // `selected` is the model's commit-selection role;
@@ -223,7 +228,11 @@ Rectangle {
                             }
                             HoverHandler { id: fileHover }
                             TapHandler {
-                                onTapped: repository.selectFile(fileRow.index)
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onTapped: (point, button) => {
+                                    repository.selectFile(fileRow.index)
+                                    if (button === Qt.RightButton) pane.fileMenuRequested(fileRow.path, point.scenePosition)
+                                }
                             }
                             RowLayout {
                                 anchors.fill: parent

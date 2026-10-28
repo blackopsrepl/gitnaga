@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QString>
 
+#include "navigation_controller.hpp"
 #include "repository_controller.hpp"
 #include "ui_driver.hpp"
 
@@ -15,9 +16,13 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName(QStringLiteral("GitNaga"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("gitnaga.io"));
 
-    QQmlApplicationEngine engine;
+    // The controllers outlive the engine: a scene torn down after them would
+    // re-evaluate every binding against a dead object on the way out.
     GitNaga::RepositoryController repository;
-    engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) } });
+    GitNaga::NavigationController navigation(&repository);
+    QQmlApplicationEngine engine;
+    engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) },
+                                  { QStringLiteral("navigation"), QVariant::fromValue(&navigation) } });
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,

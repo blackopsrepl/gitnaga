@@ -83,18 +83,24 @@ qt_add_qml_module(gitnaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/BlamePanel.qml
+        qml/CommandPalette.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
         qml/EmptyState.qml
+        qml/FileHistoryPanel.qml
+        qml/GraphKeys.qml
         qml/GraphPane.qml
         qml/GraphScrollBar.qml
+        qml/HistoryDiffView.qml
         qml/InspectorPane.qml
         qml/Main.qml
         qml/NagaButton.qml
         qml/NagaMenuItem.qml
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
+        qml/NavigationLayer.qml
         qml/OpenRepositoryDialog.qml
         qml/AddWorktreeDialog.qml
         qml/WorktreeDialog.qml
@@ -105,6 +111,8 @@ qt_add_qml_module(gitnaga
         qml/ReferencesPane.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
+        qml/SearchField.qml
+        qml/SheetPanel.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

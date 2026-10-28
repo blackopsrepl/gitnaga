@@ -10,7 +10,12 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
+    required property var navigation
+    // Enter on the graph hands the keyboard to the review's file list.
+    signal focusReviewRequested()
 
+    function focusSearch() { searchField.focusInput() }
+    function focusGraph() { graph.forceActiveFocus() }
     function ensureVisible(row) {
         graph.ensureVisible(row)
     }
@@ -44,6 +49,8 @@ Rectangle {
                 anchors.rightMargin: 8
                 spacing: 8
                 Text {
+                    // A narrow pane gives the title's room to an active search.
+                    visible: !searchField.engaged || pane.width > 720
                     text: qsTr("Commit graph")
                     color: NagaTheme.text
                     font.pixelSize: 12
@@ -56,6 +63,15 @@ Rectangle {
                     font.pixelSize: 11
                 }
                 Item { Layout.fillWidth: true }
+                SearchField {
+                    id: searchField
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 340
+                    Layout.maximumWidth: 400
+                    search: pane.navigation.search
+                    onFinished: graph.forceActiveFocus()
+                }
                 NagaIconButton {
                     text: "−"
                     tooltip: qsTr("Zoom out")
@@ -96,7 +112,13 @@ Rectangle {
                 headOid: repository.headOid
                 laneLimit: graph.laneWidth > pane.graphColumn ? pane.graphColumn : 0
                 workInProgressOid: repository.workInProgressOid
-                onCommitClicked: (row) => repository.selectCommit(row)
+                focus: true
+                activeFocusOnTab: true
+                Keys.onPressed: (event) => keyboard.handle(event)
+                onCommitClicked: (row) => {
+                    graph.forceActiveFocus()
+                    repository.selectCommit(row)
+                }
                 onContextRequested: (row, oid, pos) => {
                     var local = pane.mapFromItem(null, pos)
                     var info = row >= 0 ? repository.commits.at(row) : null
@@ -114,6 +136,7 @@ Rectangle {
                 width: parent.width - x
                 repository: pane.repository
                 graph: graph
+                search: pane.navigation.search
             }
 
             // Drag the lane column's edge to give the graph or the labels room.
@@ -158,6 +181,14 @@ Rectangle {
             if (row >= 0)
                 graph.ensureVisible(row)
         }
+    }
+
+    GraphKeys {
+        id: keyboard
+        repository: pane.repository
+        navigation: pane.navigation
+        graph: graph
+        onFocusReviewRequested: pane.focusReviewRequested()
     }
 
     CommitMenu {

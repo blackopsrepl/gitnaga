@@ -73,6 +73,15 @@ Canvas {
             ctx.moveTo(5.9, 8)
             ctx.lineTo(9.6, 8)
             ctx.stroke()
+        } else if (name === "search") {
+            // Magnifier: a lens and its handle.
+            ctx.beginPath()
+            ctx.arc(6.8, 6.8, 4.3, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(10, 10)
+            ctx.lineTo(14, 14)
+            ctx.stroke()
         }
     }
 }

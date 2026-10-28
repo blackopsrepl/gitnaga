@@ -32,7 +32,15 @@ void NavigationController::showBlame(const QString &path, const QString &revisio
 {
     if (!m_repository || path.isEmpty())
         return;
-    const auto at = revision == worktreeOid() ? QString() : revision;
+    auto at = revision == worktreeOid() ? QString() : revision;
+    // A file deleted by the reviewed commit has no lines there; what a person
+    // wants is who wrote the lines that commit removed.
+    const auto *files = m_repository->changedFiles();
+    for (int row = 0; row < files->rowCount() && !at.isEmpty(); ++row) {
+        const auto *file = files->fileAt(row);
+        if (file->path == path && file->status == QStringLiteral("D") && at == m_repository->selectedOid())
+            at = m_repository->selectedParents().value(0, at);
+    }
     m_blame.load(m_repository->repositoryPath(), at, path);
     emit blameRequested();
 }

@@ -3,6 +3,7 @@
 #include "repository_controller.hpp"
 
 #include <QFutureWatcher>
+#include <cstdio>
 #include <QtConcurrentRun>
 
 #include <algorithm>
@@ -26,9 +27,23 @@ CommitSearch::CommitSearch(RepositoryController *repository, QObject *parent)
     if (!repository)
         return;
     auto *model = repository->commits();
-    connect(model, &QAbstractItemModel::rowsInserted, &m_remapTimer, qOverload<>(&QTimer::start));
+    connect(model, &QAbstractItemModel::rowsInserted, this, [this, model](const QModelIndex &, int first, int last) {
+        // Streamed chunks append and the uncommitted-work row comes and goes
+        // on top; neither changes the commits already snapshotted.
+        if (first != model->count() - (last - first + 1) && !isWorkInProgressRow(first, last))
+            m_records.clear();
+        // Copying each chunk as it lands spreads the cost over the load, so
+        // the first search over a long history does not stall the window.
+        snapshot();
+        m_remapTimer.start();
+    });
+    connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, this, [this](const QModelIndex &, int first, int last) {
+        if (!isWorkInProgressRow(first, last))
+            m_records.clear();
+    });
     connect(model, &QAbstractItemModel::rowsRemoved, &m_remapTimer, qOverload<>(&QTimer::start));
     connect(model, &QAbstractItemModel::modelReset, this, [this] {
+        m_records.clear();
         m_historyReset = true;
         m_remapTimer.start();
     });
@@ -97,12 +112,13 @@ void CommitSearch::clear()
     start(false);
 }
 
-void CommitSearch::runNow()
+bool CommitSearch::runNow()
 {
-    if (m_debounce.isActive()) {
-        m_debounce.stop();
-        start(true);
-    }
+    if (!m_debounce.isActive())
+        return false;
+    m_debounce.stop();
+    start(true);
+    return true;
 }
 
 void CommitSearch::selectRow(int row)
@@ -111,19 +127,26 @@ void CommitSearch::selectRow(int row)
         m_repository->selectOid(commit->oid);
 }
 
-QVector<SearchRecord> CommitSearch::snapshot() const
+bool CommitSearch::isWorkInProgressRow(int first, int last) const
 {
-    // Copies share the strings with the model, so this is a pointer copy per
-    // field; the comparisons themselves happen on the worker.
+    const auto *commit = m_repository->commits()->commitAt(first);
+    return first == 0 && last == 0 && commit && commit->oid == worktreeOid();
+}
+
+QVector<SearchRecord> CommitSearch::snapshot()
+{
+    // Only rows streamed in since the last search are copied, so a search
+    // over a long history costs the GUI thread nothing it already paid for;
+    // the copies share their strings with the model, and the comparisons
+    // themselves happen on the worker.
     const auto *model = m_repository->commits();
-    QVector<SearchRecord> records;
-    records.reserve(model->count());
-    for (int row = 0; row < model->count(); ++row) {
+    const int offset = model->hasWorkInProgress() ? 1 : 0;
+    for (int row = static_cast<int>(m_records.size()) + offset; row < model->count(); ++row) {
         const auto *commit = model->commitAt(row);
         if (commit && commit->oid != worktreeOid())
-            records.append({ commit->oid, commit->subject, commit->author, commit->authorEmail });
+            m_records.append({ commit->oid, commit->subject, commit->author, commit->authorEmail });
     }
-    return records;
+    return m_records;
 }
 
 QStringList CommitSearch::revisions() const
@@ -165,7 +188,8 @@ void CommitSearch::start(bool fresh)
             return searchHistory(worktree, revisions, query, cancel);
         }));
     } else {
-        watcher->setFuture(QtConcurrent::run([records = snapshot(), query, cancel]() -> GitResult<QStringList> {
+        QElapsedTimer probe; probe.start(); auto records = snapshot(); fprintf(stderr, "SNAPSHOT %lld ms %lld\n", (long long)probe.elapsed(), (long long)records.size());
+        watcher->setFuture(QtConcurrent::run([records, query, cancel]() -> GitResult<QStringList> {
             return matchRecords(records, query, cancel);
         }));
     }

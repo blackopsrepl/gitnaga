@@ -10,6 +10,8 @@ ListView {
 
     required property var repository
     required property var graph
+    // While a search is active its hits are marked and the rest recede.
+    property var search: null
 
     model: repository.commits
     // Interactive stays off so wheel and drag still reach the graph; enabling
@@ -44,10 +46,29 @@ ListView {
         // Below ~26 px per row a two-line layout cannot fit without colliding
         // with its neighbours, so collapse to one line.
         readonly property bool compact: graph.effectiveRowHeight < 26
+        readonly property bool searching: labels.search !== null && labels.search.active
+        readonly property bool matched: searching && labels.search.revision >= 0 && labels.search.isMatch(index)
+        opacity: searching && !matched && !snapshot ? 0.3 : 1
+
+        Rectangle {
+            visible: rowItem.matched
+            anchors.fill: parent
+            anchors.topMargin: 1
+            anchors.bottomMargin: 1
+            anchors.rightMargin: 10
+            radius: 3
+            color: NagaTheme.searchHitTint(rowItem.current ? 0.2 : 0.11)
+            Rectangle {
+                width: 2
+                height: parent.height
+                color: NagaTheme.searchHit
+            }
+        }
 
         Text {
             visible: rowItem.compact
             anchors.left: parent.left
+            anchors.leftMargin: rowItem.matched ? 6 : 0
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
@@ -61,6 +82,7 @@ ListView {
         Column {
             visible: !rowItem.compact
             anchors.left: parent.left
+            anchors.leftMargin: rowItem.matched ? 6 : 0
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter

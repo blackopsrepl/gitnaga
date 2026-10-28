@@ -38,6 +38,12 @@ QtObject {
     readonly property color accentContent: "#7cf0bd"
     readonly property color accentContentHover: "#a7f8d3"
 
+    // Search hits: a warm marker that cannot be mistaken for selection.
+    readonly property color searchHit: "#f5c04a"
+    function searchHitTint(strength) {
+        return Qt.rgba(searchHit.r, searchHit.g, searchHit.b, strength)
+    }
+
     // Accent tints for selected/active surfaces, so no component has to invent
     // its own green.
     function accentTint(strength) {

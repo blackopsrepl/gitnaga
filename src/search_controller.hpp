@@ -50,8 +50,9 @@ public:
     Q_INVOKABLE void next();
     Q_INVOKABLE void previous();
     Q_INVOKABLE void clear();
-    // Starts the pending query now instead of after the typing pause.
-    Q_INVOKABLE void runNow();
+    // Starts the pending query now instead of after the typing pause; false
+    // when nothing was pending, so Enter can mean "next" instead.
+    Q_INVOKABLE bool runNow();
 
 signals:
     void queryChanged();
@@ -66,13 +67,16 @@ private:
     void historyMoved();
     void setRunning(bool running);
     void selectRow(int row);
-    QVector<SearchRecord> snapshot() const;
+    QVector<SearchRecord> snapshot();
+    bool isWorkInProgressRow(int first, int last) const;
     QStringList revisions() const;
 
     QPointer<RepositoryController> m_repository;
     QString m_query;
     SearchQuery m_parsed;
     QSet<QString> m_hits;
+    // The loaded commits as the matcher sees them, extended as rows stream in.
+    QVector<SearchRecord> m_records;
     QVector<int> m_rows;
     QString m_error;
     QTimer m_debounce;
