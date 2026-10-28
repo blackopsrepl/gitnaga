@@ -17,8 +17,18 @@ add_library(gitnaga_core STATIC
     src/commit_model.cpp
     src/commit_model.hpp
     src/filesystem_operations.cpp
+    src/diff_document.cpp
+    src/diff_document.hpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
+    src/file_diff.hpp
+    src/file_diff_classify.cpp
+    src/git_file_diff.cpp
+    src/intraline_diff.cpp
+    src/intraline_diff.hpp
+    src/syntax_highlight.cpp
+    src/syntax_highlight.hpp
+    src/syntax_languages.cpp
     src/file_change_model.cpp
     src/file_change_model.hpp
     src/git_client.cpp

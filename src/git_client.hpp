@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain.hpp"
+#include "file_diff.hpp"
 
 #include <QByteArray>
 #include <QHash>
@@ -72,7 +73,11 @@ public:
     static CommitInspection inspectWorktree(const WorktreeStatus &status);
     static GitResult<QVector<DiffLine>> loadDiff(const QString &worktree, const QString &oid, const QString &path,
                                                  const QString &oldPath = {}, DiffSide side = DiffSide::Commit,
-                                                 bool untracked = false);
+                                                 bool untracked = false, const DiffOptions &options = {});
+    // The diff ready to show: parsed, highlighted, paired, and classified
+    // (binary, image, submodule, LFS) with what the card needs.
+    static GitResult<FileDiff> loadFileDiff(const DiffRequest &request, const DiffOptions &options = {});
+    static GitResult<QByteArray> readBlob(const QString &worktree, const BlobSource &source);
 
     // Writing.
     static GitResult<QString> addWorktree(const QString &repository, const QString &path,
