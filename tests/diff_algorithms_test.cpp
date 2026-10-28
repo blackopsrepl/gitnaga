@@ -139,6 +139,20 @@ private slots:
         QCOMPARE(detail::expandTabs(u"\tx\ty"), QStringLiteral("    x   y"));
     }
 
+    // A tab traded for spaces would read as an unchanged line; its whitespace
+    // is drawn instead, column for column, and the word diff marks it.
+    void showsWhitespaceOnlyChanges()
+    {
+        QCOMPARE(detail::showWhitespace(u"\tx y"), QString(QChar(0x2192)) + QStringLiteral("   x") + QChar(0x00B7) + u'y');
+        QVERIFY(detail::differsOnlyInWhitespace(u"\tline", u"    line"));
+        QVERIFY(!detail::differsOnlyInWhitespace(u"line", u"lines"));
+        const auto doc = document("diff --git a/s b/s\n--- a/s\n+++ b/s\n@@ -1 +1 @@\n-    line 0\n+\tline 0\n");
+        QCOMPARE(doc.rows.at(1).content, QString(4, QChar(0x00B7)) + QStringLiteral("line") + QChar(0x00B7) + u'0');
+        QCOMPARE(doc.rows.at(2).content, QString(QChar(0x2192)) + QStringLiteral("   line") + QChar(0x00B7) + u'0');
+        QVERIFY(!doc.rows.at(1).style.changed.isEmpty());
+        QVERIFY(!doc.rows.at(2).style.changed.isEmpty());
+    }
+
     void buildsLargeDiffsQuickly()
     {
         QByteArray patch = "diff --git a/big.cpp b/big.cpp\n--- a/big.cpp\n+++ b/big.cpp\n@@ -1,10000 +1,10000 @@\n";

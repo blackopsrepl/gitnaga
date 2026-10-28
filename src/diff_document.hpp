@@ -74,6 +74,10 @@ DiffDocument buildDiffDocument(const QVector<DiffLine> &lines, const QString &pa
 namespace detail {
 
 QString expandTabs(QStringView text, int width = 4);
+// expandTabs with the whitespace drawn: a tab as an arrow padded to its stop,
+// a space as a middle dot, for lines whose only change is whitespace.
+QString showWhitespace(QStringView text, int width = 4);
+bool differsOnlyInWhitespace(QStringView before, QStringView after);
 // Pairs each run of deletions with the additions right after it (marking
 // intra-line changes on both), and lays the rows out side by side.
 QVector<SplitRow> pairRows(QVector<DiffRow> &rows);

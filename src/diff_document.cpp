@@ -165,6 +165,37 @@ QString expandTabs(QStringView text, int width)
     return result;
 }
 
+QString showWhitespace(QStringView text, int width)
+{
+    QString result;
+    result.reserve(text.size() + 8);
+    for (const auto character : text) {
+        if (character == QLatin1Char('\t')) {
+            result.append(QChar(0x2192));
+            result.append(QString(width - 1 - static_cast<int>((result.size() - 1) % width), QLatin1Char(' ')));
+        } else if (character == QLatin1Char(' ')) {
+            result.append(QChar(0x00B7));
+        } else {
+            result.append(character);
+        }
+    }
+    return result;
+}
+
+bool differsOnlyInWhitespace(QStringView before, QStringView after)
+{
+    if (before == after)
+        return false;
+    auto squeeze = [](QStringView text) {
+        QString kept;
+        for (const auto character : text)
+            if (!character.isSpace())
+                kept.append(character);
+        return kept;
+    };
+    return squeeze(before) == squeeze(after);
+}
+
 QVector<SplitRow> pairRows(QVector<DiffRow> &rows)
 {
     QVector<SplitRow> split;
@@ -198,6 +229,15 @@ QVector<SplitRow> pairRows(QVector<DiffRow> &rows)
             auto &after = rows[added.at(n)];
             before.pair = added.at(n);
             after.pair = removed.at(n);
+            // Tabs against spaces, or trailing blanks, look identical once
+            // expanded: show the whitespace itself so the change can be seen.
+            // Each marker keeps its column, so syntax spans stay aligned.
+            const auto oldText = QStringView(before.text).mid(1);
+            const auto newText = QStringView(after.text).mid(1);
+            if (differsOnlyInWhitespace(oldText, newText)) {
+                before.content = showWhitespace(oldText);
+                after.content = showWhitespace(newText);
+            }
             auto changes = intralineDiff(before.content, after.content);
             before.style.changed = std::move(changes.removed);
             after.style.changed = std::move(changes.added);
