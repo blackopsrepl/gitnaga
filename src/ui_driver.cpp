@@ -246,9 +246,15 @@ void UiDriver::next()
     } else if (step.contains(QStringLiteral("print"))) {
         const auto name = step.value(QStringLiteral("print")).toString();
         const auto value = readProperty(name);
-        // Lists print joined, so a scenario can expect them as one string.
-        const auto text = value.typeId() == QMetaType::QStringList ? value.toStringList().join(QLatin1Char(','))
-                                                                   : value.toString();
+        // String lists print joined, so a scenario can expect them as one
+        // string; lists and maps of values print as compact JSON.
+        QString text;
+        if (value.typeId() == QMetaType::QStringList)
+            text = value.toStringList().join(QLatin1Char(','));
+        else if (value.typeId() == QMetaType::QVariantList || value.typeId() == QMetaType::QVariantMap)
+            text = QString::fromUtf8(QJsonDocument::fromVariant(value).toJson(QJsonDocument::Compact));
+        else
+            text = value.toString();
         std::printf("%s=%s\n", qPrintable(name), qPrintable(text));
         std::fflush(stdout);
     } else if (step.contains(QStringLiteral("shot"))) {
