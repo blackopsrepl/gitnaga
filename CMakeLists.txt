@@ -60,6 +60,8 @@ target_compile_options(gitnaga_core PRIVATE
 )
 
 qt_add_executable(gitnaga
+    src/askpass.cpp
+    src/askpass.hpp
     src/commit_graph_input.cpp
     src/commit_graph_item.cpp
     src/commit_graph_item.hpp
@@ -76,6 +78,7 @@ qt_add_qml_module(gitnaga
     VERSION 1.0
     NO_IMPORT_SCAN
     QML_FILES
+        qml/Askpass.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml

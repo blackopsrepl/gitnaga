@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QString>
 
+#include "askpass.hpp"
+#include "remote_sync.hpp"
 #include "repository_controller.hpp"
 #include "ui_driver.hpp"
 
@@ -9,11 +11,16 @@
 
 int main(int argc, char *argv[])
 {
+    // Started by git or ssh to ask for a credential: answer it and leave.
+    if (const int code = GitNaga::askpass::run(argc, argv); code >= 0)
+        return code;
+
     QGuiApplication application(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("GitNaga"));
     QCoreApplication::setApplicationVersion(QStringLiteral(GITNAGA_VERSION));
     QCoreApplication::setOrganizationName(QStringLiteral("GitNaga"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("gitnaga.io"));
+    GitNaga::RemoteSync::setAskpassProgram(QCoreApplication::applicationFilePath());
 
     QQmlApplicationEngine engine;
     GitNaga::RepositoryController repository;
