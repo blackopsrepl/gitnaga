@@ -37,7 +37,7 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
     const qreal scale = style.laneSpacing / 22.0;
     painter->setBrush(Qt::NoBrush);
     for (int row = first; row <= last; ++row) {
-        const auto &commit = m_rows.at(row);
+        const auto &commit = rows().at(row);
         for (const auto &edge : graph::edgesFor(commit, row, m_contentY, style)) {
             if (edge.path.size() < 2)
                 continue;
@@ -74,6 +74,24 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
             painter->drawPath(path);
         }
     }
+}
+
+void CommitGraphItem::paintWorkInProgressLink(QPainter *painter, int first, const graph::GraphStyle &style) const
+{
+    // The uncommitted row sits on top, HEAD may be anywhere below it: a dashed
+    // line ties the two together so it is clear where a commit would land.
+    if (first > 0 || m_workInProgressOid.isEmpty() || rows().isEmpty() || rows().first().oid != m_workInProgressOid
+        || m_headRow <= 0)
+        return;
+    const auto from = graph::nodeFor(rows().first(), 0, m_contentY, style).center;
+    const auto to = graph::nodeFor(rows().at(m_headRow), m_headRow, m_contentY, style).center;
+    const qreal scale = style.laneSpacing / 22.0;
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(QPen(withAlpha(laneColor(rows().at(m_headRow).colorIndex), 200), 1.6 * scale, Qt::DashLine,
+                         Qt::RoundCap, Qt::RoundJoin));
+    QPainterPath path(from);
+    path.cubicTo(QPointF(from.x(), (from.y() + to.y()) / 2.0), QPointF(to.x(), (from.y() + to.y()) / 2.0), to);
+    painter->drawPath(path);
 }
 
 void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const graph::Node &node, qreal radius,
@@ -144,13 +162,13 @@ void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const g
 
 void CommitGraphItem::paint(QPainter *painter)
 {
-    if (m_rows.isEmpty() || effectiveRowHeight() <= 0.0)
+    if (rows().isEmpty() || effectiveRowHeight() <= 0.0)
         return;
     painter->setRenderHint(QPainter::Antialiasing, true);
 
     const auto st = style();
     const int first = graph::firstVisibleRow(m_contentY, height(), st);
-    const int last = graph::lastVisibleRow(m_contentY, height(), static_cast<int>(m_rows.size()), st);
+    const int last = graph::lastVisibleRow(m_contentY, height(), static_cast<int>(rows().size()), st);
     if (last < first)
         return;
 
@@ -160,8 +178,8 @@ void CommitGraphItem::paint(QPainter *painter)
         // selected row; the pointer's row takes a neutral wash so hover never
         // reads as a brighter version of the branch hue.
         const bool hoveredRow = row == m_hoveredRow && row != m_selectedRow;
-        const QColor band = hoveredRow ? hoverColor : laneColor(m_rows.at(row).colorIndex);
-        const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(m_rows.at(row).oid);
+        const QColor band = hoveredRow ? hoverColor : laneColor(rows().at(row).colorIndex);
+        const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(rows().at(row).oid);
         int alpha = 26;
         if (row == m_selectedRow)
             alpha = 56;
@@ -172,13 +190,27 @@ void CommitGraphItem::paint(QPainter *painter)
         painter->fillRect(QRectF(0.0, y, width(), st.rowHeight), withAlpha(band, alpha));
     }
 
+    const bool clipped = m_laneLimit > 0.0 && m_laneLimit < laneWidth();
+    painter->save();
+    if (clipped)
+        painter->setClipRect(QRectF(0.0, 0.0, m_laneLimit, height()));
     paintEdges(painter, first, last, st);
+    paintWorkInProgressLink(painter, first, st);
 
     const qreal radius = std::clamp(8.0 * (st.laneSpacing / 22.0), 4.0, 16.0);
     for (int row = first; row <= last; ++row) {
-        const auto &commit = m_rows.at(row);
+        const auto &commit = rows().at(row);
         const auto node = graph::nodeFor(commit, row, m_contentY, st);
         paintNode(painter, commit, node, radius, row == m_headRow, row == m_selectedRow, row == m_hoveredRow);
+    }
+    painter->restore();
+
+    if (clipped) {
+        // Lanes continue past the column; a fade says so instead of a hard cut.
+        QLinearGradient fade(QPointF(m_laneLimit - 18.0, 0.0), QPointF(m_laneLimit, 0.0));
+        fade.setColorAt(0.0, QColor(8, 11, 18, 0));
+        fade.setColorAt(1.0, QColor(8, 11, 18, 230));
+        painter->fillRect(QRectF(m_laneLimit - 18.0, 0.0, 18.0, height()), fade);
     }
 }
 

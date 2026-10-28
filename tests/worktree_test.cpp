@@ -149,13 +149,10 @@ private slots:
 
         const auto snapshot = GitClient::loadRepository(linkedPath);
         QVERIFY(snapshot.has_value());
-        QCOMPARE(snapshot->worktree, linkedPath);
-        QCOMPARE(snapshot->commonDirectory, root + QStringLiteral("/.git"));
-        QVERIFY(snapshot->gitDirectory != snapshot->commonDirectory);
-        QVERIFY(!snapshot->workInProgressOid.isEmpty());
-        const auto changes = GitClient::inspectWorktree(linkedPath);
-        QVERIFY(changes.has_value());
-        QCOMPARE(changes->files.size(), 2);
+        QCOMPARE(snapshot->location.worktree, linkedPath);
+        QCOMPARE(snapshot->location.commonDirectory, root + QStringLiteral("/.git"));
+        QVERIFY(snapshot->location.gitDirectory != snapshot->location.commonDirectory);
+        QCOMPARE(snapshot->status.files.size(), 2);
         const auto mainStatus = GitClient::mutate(root, { QStringLiteral("status"), QStringLiteral("--porcelain") },
                                                   QStringLiteral("read main status"));
         QVERIFY(mainStatus.has_value());

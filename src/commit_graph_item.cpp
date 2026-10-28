@@ -32,24 +32,36 @@ void CommitGraphItem::setModel(CommitModel *model)
     m_model = model;
     if (m_model) {
         connect(m_model, &QAbstractItemModel::modelReset, this, &CommitGraphItem::synchronizeRows);
-        connect(m_model, &QAbstractItemModel::rowsInserted, this, &CommitGraphItem::synchronizeRows);
+        connect(m_model, &QAbstractItemModel::rowsInserted, this,
+                [this](const QModelIndex &, int first, int last) { rowsAppended(first, last); });
+        connect(m_model, &QAbstractItemModel::dataChanged, this, [this] { update(); });
         connect(m_model, &QAbstractItemModel::rowsRemoved, this, &CommitGraphItem::synchronizeRows);
     }
     synchronizeRows();
     emit modelChanged();
 }
 
+const QVector<Commit> &CommitGraphItem::rows() const
+{
+    static const QVector<Commit> empty;
+    return m_model ? m_model->commits() : empty;
+}
+
+const QHash<QString, int> &CommitGraphItem::rowIndex() const
+{
+    static const QHash<QString, int> empty;
+    return m_model ? m_model->rowIndex() : empty;
+}
+
 void CommitGraphItem::synchronizeRows()
 {
-    m_rows = m_model ? m_model->commits() : QVector<Commit>{};
-    m_maximumLane = graph::maximumLane(m_rows);
-    m_rowByOid.clear();
-    for (qsizetype row = 0; row < m_rows.size(); ++row)
-        m_rowByOid.insert(m_rows.at(row).oid, static_cast<int>(row));
+    // The rows are read straight from the model; nothing is copied, so a
+    // history streaming in costs the graph only the rows that arrived.
+    m_maximumLane = graph::maximumLane(rows());
     recomputeHeadRow();
-    if (m_selectedRow >= m_rows.size())
+    if (m_selectedRow >= rows().size())
         setSelectedRow(-1);
-    if (m_hoveredRow >= m_rows.size())
+    if (m_hoveredRow >= rows().size())
         m_hoveredRow = -1;
     // A new row set invalidates the cached ancestry: the same row index now
     // refers to a different commit, so force a rebuild instead of reusing a set
@@ -57,6 +69,26 @@ void CommitGraphItem::synchronizeRows()
     invalidateHighlight();
     recomputeHighlight();
     clampContent();
+    emit metricsChanged();
+    update();
+}
+
+void CommitGraphItem::rowsAppended(int first, int last)
+{
+    // A streamed chunk lands below everything already shown: rows above it
+    // keep their index, so only the new rows need measuring.
+    if (first == 0 || last != rows().size() - 1) {
+        synchronizeRows();
+        return;
+    }
+    for (int row = first; row <= last; ++row)
+        m_maximumLane = std::max(m_maximumLane, rows().at(row).lane);
+    if (m_headRow < 0)
+        recomputeHeadRow();
+    if (!m_highlight.isEmpty()) {
+        invalidateHighlight();
+        recomputeHighlight();
+    }
     emit metricsChanged();
     update();
 }
@@ -109,7 +141,7 @@ int CommitGraphItem::selectedRow() const { return m_selectedRow; }
 
 void CommitGraphItem::setSelectedRow(int row)
 {
-    const int normalized = row < 0 || row >= m_rows.size() ? -1 : row;
+    const int normalized = row < 0 || row >= rows().size() ? -1 : row;
     if (m_selectedRow == normalized)
         return;
     m_selectedRow = normalized;
@@ -127,13 +159,13 @@ void CommitGraphItem::recomputeHighlight()
         return;
     m_highlightSelectedRow = m_selectedRow;
     m_highlightHoveredRow = m_hoveredRow;
-    m_highlight = graph::emphasisOids(m_rows, m_rowByOid, m_selectedRow, m_hoveredRow);
+    m_highlight = graph::emphasisOids(rows(), rowIndex(), m_selectedRow, m_hoveredRow);
     rebuildEmphasisSpans();
 }
 
 void CommitGraphItem::rebuildEmphasisSpans()
 {
-    m_emphasisSpans = graph::emphasisSpans(m_rows, m_highlight);
+    m_emphasisSpans = graph::emphasisSpans(rows(), m_highlight);
 }
 
 int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
@@ -173,18 +205,22 @@ void CommitGraphItem::recomputeHeadRow()
     m_headRow = -1;
     if (m_headOid.isEmpty())
         return;
-    for (qsizetype row = 0; row < m_rows.size(); ++row) {
-        if (m_rows.at(row).oid == m_headOid) {
-            m_headRow = static_cast<int>(row);
-            return;
-        }
-    }
+    m_headRow = rowIndex().value(m_headOid, -1);
 }
 
 qreal CommitGraphItem::effectiveRowHeight() const { return m_baseRowHeight * m_zoom; }
 qreal CommitGraphItem::laneWidth() const { return graph::laneAreaWidth(m_maximumLane, style()); }
-qreal CommitGraphItem::contentHeight() const { return static_cast<qreal>(m_rows.size()) * effectiveRowHeight(); }
+qreal CommitGraphItem::contentHeight() const { return static_cast<qreal>(rows().size()) * effectiveRowHeight(); }
 qreal CommitGraphItem::maxContentY() const { return std::max(0.0, contentHeight() - height()); }
+
+void CommitGraphItem::setLaneLimit(qreal limit)
+{
+    if (qFuzzyCompare(m_laneLimit + 1.0, limit + 1.0))
+        return;
+    m_laneLimit = limit;
+    emit laneLimitChanged();
+    update();
+}
 
 qreal CommitGraphItem::minimumZoom() { return kMinimumZoom; }
 
@@ -217,15 +253,15 @@ void CommitGraphItem::ensureVisible(int row)
 int CommitGraphItem::rowAt(qreal localY) const
 {
     const qreal rowHeight = effectiveRowHeight();
-    if (rowHeight <= 0.0 || m_rows.isEmpty() || localY < 0.0)
+    if (rowHeight <= 0.0 || rows().isEmpty() || localY < 0.0)
         return -1;
     const int row = static_cast<int>(std::floor((m_contentY + localY) / rowHeight));
-    return row >= 0 && row < m_rows.size() ? row : -1;
+    return row >= 0 && row < rows().size() ? row : -1;
 }
 
 QString CommitGraphItem::oidAt(int row) const
 {
-    return row >= 0 && row < m_rows.size() ? m_rows.at(row).oid : QString();
+    return row >= 0 && row < rows().size() ? rows().at(row).oid : QString();
 }
 
 } // namespace GitNaga

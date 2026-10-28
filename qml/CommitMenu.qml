@@ -81,28 +81,14 @@ Popup {
     function add(label, run) {
         actions.push({ label: label, run: run, separator: false })
     }
-    function localBranches(refs) {
+    // Refs arrive typed from the model: {name, kind, isHead, ...}.
+    function namesOfKind(refs, kind) {
         var out = []
         if (!refs)
             return out
         for (var i = 0; i < refs.length; ++i) {
-            if (refs[i].indexOf("⇄ ") !== 0 && refs[i].indexOf("# ") !== 0)
-                out.push(refs[i])
-        }
-        return out
-    }
-
-    // The graph's ref chips carry the same prefixes as the references sidebar:
-    // "⇄ " for a remote, "# " for a tag, nothing for a local branch. Strip the
-    // remote prefix so the result is the remote-tracking ref's short name, the
-    // form the controller's remote delete takes.
-    function remoteReferences(refs) {
-        var out = []
-        if (!refs)
-            return out
-        for (var i = 0; i < refs.length; ++i) {
-            if (refs[i].indexOf("⇄ ") === 0)
-                out.push(refs[i].substring(2))
+            if (refs[i].kind === kind)
+                out.push(refs[i].name)
         }
         return out
     }
@@ -131,9 +117,12 @@ Popup {
         var refs = info.refs || []
         var target = oid
         var shortOid = info.shortOid || String(oid).substring(0, 8)
-        var branch = repository.currentBranch
-        var branches = localBranches(refs)
-        var remotes = remoteReferences(refs)
+        // A detached HEAD has no branch to name; say what actually moves.
+        var branch = repository.currentBranch.length > 0 ? repository.currentBranch : qsTr("detached HEAD")
+        var branches = namesOfKind(refs, "local")
+        var remotes = namesOfKind(refs, "remote")
+        var mergeName = branches.length > 0 ? branches[0] : (remotes.length > 0 ? remotes[0] : "")
+        var label = mergeName.length > 0 ? mergeName : shortOid
         var entries = []
 
         entries.push({ label: qsTr("Checkout ") + shortOid, run: function() { repository.checkoutCommit(target) } })
@@ -157,7 +146,7 @@ Popup {
 
         entries.push({ separator: true })
         entries.push({ label: qsTr("Cherry-pick ") + shortOid + qsTr(" onto ") + branch, run: function() { repository.cherryPick(target) } })
-        entries.push({ label: qsTr("Merge ") + shortOid + qsTr(" into ") + branch, run: function() { repository.mergeCommit(target) } })
+        entries.push({ label: qsTr("Merge ") + label + qsTr(" into ") + branch, run: function() { repository.mergeCommit(target, mergeName) } })
         entries.push({ label: qsTr("Revert ") + shortOid, run: function() { repository.revertCommit(target) } })
 
         entries.push({ separator: true })
@@ -167,9 +156,9 @@ Popup {
             menu.confirm.ask(qsTr("Discard all working tree changes and move ") + branch + qsTr(" to ") + shortOid + qsTr("?"),
                              function() { repository.resetTo(target, "hard") })
         } })
-        entries.push({ label: qsTr("Rebase ") + branch + qsTr(" onto ") + shortOid + qsTr("…"), destructive: true, run: function() {
-            menu.confirm.ask(qsTr("Rebase ") + branch + qsTr(" onto ") + shortOid + qsTr("?"),
-                             function() { repository.rebaseOnto(target) })
+        entries.push({ label: qsTr("Rebase ") + branch + qsTr(" onto ") + label + qsTr("…"), destructive: true, run: function() {
+            menu.confirm.ask(qsTr("Rebase ") + branch + qsTr(" onto ") + label + qsTr("?"),
+                             function() { repository.rebaseOnto(target, mergeName) })
         } })
 
         if (branches.length > 0) {

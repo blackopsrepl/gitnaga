@@ -34,7 +34,7 @@ QVariantList RepositoryController::worktrees() const
         entry.insert(QStringLiteral("isDetached"), worktree.isDetached);
         entry.insert(QStringLiteral("isLocked"), worktree.isLocked);
         entry.insert(QStringLiteral("isPrunable"), worktree.isPrunable);
-        entry.insert(QStringLiteral("isCurrent"), worktree.path == m_repository.worktree);
+        entry.insert(QStringLiteral("isCurrent"), worktree.path == m_repository.location.worktree);
         entries.append(entry);
     }
     return entries;
@@ -81,7 +81,7 @@ void RepositoryController::addWorktree(const QString &path, const QString &branc
 void RepositoryController::removeWorktree(const QString &path, bool force)
 {
     const auto *target = registeredWorktree(m_repository, path);
-    if (!target || target->isMain || target->isBare || target->isPrunable || target->path == m_repository.worktree) {
+    if (!target || target->isMain || target->isBare || target->isPrunable || target->path == m_repository.location.worktree) {
         const auto message = tr("Only an inactive linked worktree can be removed");
         setOperationMessage(message);
         emit operationFinished(false, message);
@@ -119,7 +119,7 @@ void RepositoryController::unlockWorktree(const QString &path)
 void RepositoryController::moveWorktree(const QString &path, const QString &newPath)
 {
     const auto *target = registeredWorktree(m_repository, path);
-    if (!target || target->isMain || target->isBare || target->isPrunable || target->path == m_repository.worktree || newPath.trimmed().isEmpty())
+    if (!target || target->isMain || target->isBare || target->isPrunable || target->path == m_repository.location.worktree || newPath.trimmed().isEmpty())
         return;
     runOperation(QStringLiteral("move worktree"),
                  { QStringLiteral("worktree"), QStringLiteral("move"), QStringLiteral("--"), target->path, newPath },

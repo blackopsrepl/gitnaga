@@ -2,14 +2,8 @@
 
 #include "git_parse.hpp"
 
-#include <QDebug>
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QHash>
 #include <QProcess>
 #include <QProcessEnvironment>
-#include <QTemporaryDir>
 
 namespace GitNaga {
 
@@ -17,23 +11,66 @@ using detail::decode;
 
 namespace {
 
-GitError processError(const QString &operation, QProcess &process)
+// Git paints progress with carriage returns; a person wants the last state of
+// the line, not every intermediate percentage.
+void reportProgress(QByteArray &pending, const QByteArray &chunk, const std::function<void(const QString &)> &progress)
 {
-    return GitError{ operation, decode(process.readAllStandardError()).trimmed(), process.exitCode() };
+    pending.append(chunk);
+    qsizetype cut = -1;
+    for (qsizetype index = pending.size() - 1; index >= 0; --index) {
+        if (pending.at(index) == '\r' || pending.at(index) == '\n') {
+            cut = index;
+            break;
+        }
+    }
+    if (cut < 0)
+        return;
+    const auto complete = pending.left(cut);
+    pending.remove(0, cut + 1);
+    const auto lines = complete.split('\n');
+    for (auto it = lines.crbegin(); it != lines.crend(); ++it) {
+        const auto parts = it->split('\r');
+        for (auto part = parts.crbegin(); part != parts.crend(); ++part) {
+            const auto text = decode(*part).trimmed();
+            if (!text.isEmpty()) {
+                progress(text);
+                return;
+            }
+        }
+    }
+}
+
+QString failureMessage(const QByteArray &standardError, const QByteArray &standardOutput)
+{
+    // Conflicts and refusals often land on stdout (merge, cherry-pick), so a
+    // silent stderr is not an empty explanation.
+    auto message = decode(standardError).trimmed();
+    if (message.isEmpty())
+        message = decode(standardOutput).trimmed();
+    return message;
 }
 
 } // namespace
 
-GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList &arguments, const QString &operation)
+GitResult<QString> GitClient::mutate(const QString &worktree, const QStringList &arguments, const QString &operation,
+                                     const RunOptions &options)
 {
-    auto output = run(worktree, arguments, operation);
+    auto output = run(worktree, arguments, operation, options);
     if (!output)
         return std::unexpected(output.error());
     return decode(*output).trimmed();
 }
 
 GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments,
-                                     const QString &operation, const QHash<QString, QString> &extraEnvironment)
+                                     const QString &operation, const QHash<QString, QString> &environment)
+{
+    RunOptions options;
+    options.environment = environment;
+    return run(workingDirectory, arguments, operation, options);
+}
+
+GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStringList &arguments,
+                                     const QString &operation, const RunOptions &options)
 {
     QProcess process;
     process.setWorkingDirectory(workingDirectory);
@@ -43,7 +80,11 @@ GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStr
     environment.insert(QStringLiteral("GIT_TERMINAL_PROMPT"), QStringLiteral("0"));
     environment.insert(QStringLiteral("GIT_EDITOR"), QStringLiteral("true"));
     environment.insert(QStringLiteral("GIT_SEQUENCE_EDITOR"), QStringLiteral("true"));
-    for (auto it = extraEnvironment.constBegin(); it != extraEnvironment.constEnd(); ++it)
+    // A viewer must never write the index behind the user's back: without
+    // this, every `git status` refreshes the index, the watcher sees the
+    // write, and the refresh it triggers runs `git status` again.
+    environment.insert(QStringLiteral("GIT_OPTIONAL_LOCKS"), QStringLiteral("0"));
+    for (auto it = options.environment.constBegin(); it != options.environment.constEnd(); ++it)
         environment.insert(it.key(), it.value());
     process.setProcessEnvironment(environment);
     process.setProgram(QStringLiteral("git"));
@@ -51,20 +92,56 @@ GitResult<QByteArray> GitClient::run(const QString &workingDirectory, const QStr
     process.setProcessChannelMode(QProcess::SeparateChannels);
     process.start();
 
-    if (!process.waitForStarted(5000)) {
+    if (!process.waitForStarted(10000)) {
         // A program that cannot be started is not a command that failed: the
         // caller has to be able to tell them apart, so carry QProcess's own
         // FailedToStart code instead of the generic exit code.
         return std::unexpected(GitError{ operation, process.errorString(), QProcess::FailedToStart });
     }
-    if (!process.waitForFinished(30000)) {
-        process.kill();
-        process.waitForFinished();
-        return std::unexpected(GitError{ operation, QStringLiteral("Git command timed out") });
+    if (!options.input.isEmpty())
+        process.write(options.input);
+    process.closeWriteChannel();
+
+    QByteArray standardOutput;
+    QByteArray standardError;
+    QByteArray pendingProgress;
+    bool stoppedByReader = false;
+    const auto drain = [&] {
+        const auto out = process.readAllStandardOutput();
+        if (!out.isEmpty()) {
+            if (options.output) {
+                if (!stoppedByReader && !options.output(out)) {
+                    stoppedByReader = true;
+                    process.kill();
+                }
+            } else {
+                standardOutput.append(out);
+            }
+        }
+        const auto err = process.readAllStandardError();
+        if (!err.isEmpty()) {
+            standardError.append(err);
+            if (options.progress)
+                reportProgress(pendingProgress, err, options.progress);
+        }
+    };
+
+    while (process.state() != QProcess::NotRunning) {
+        process.waitForFinished(50);
+        drain();
+        if (options.cancel && options.cancel->load()) {
+            process.kill();
+            process.waitForFinished();
+            return std::unexpected(GitError{ operation, QStringLiteral("Cancelled") });
+        }
     }
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
-        return std::unexpected(processError(operation, process));
-    return process.readAllStandardOutput();
+    drain();
+
+    if (stoppedByReader)
+        return standardOutput;
+    if (process.exitStatus() != QProcess::NormalExit || !options.acceptedExitCodes.contains(process.exitCode()))
+        return std::unexpected(GitError{ operation, failureMessage(standardError, standardOutput), process.exitCode() });
+    return standardOutput;
 }
 
 } // namespace GitNaga

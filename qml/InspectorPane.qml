@@ -62,7 +62,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
                 Text {
-                    visible: repository.selectedOid.length > 0
+                    visible: repository.selectedOid.length > 0 && !pane.viewingWorktree
                     text: repository.selectedAuthor + "  ·  " + repository.selectedDate
                     color: NagaTheme.muted
                     font.pixelSize: 12
@@ -77,7 +77,7 @@ Rectangle {
                     Layout.fillWidth: true
                 }
                 Text {
-                    visible: repository.selectedOid.length > 0
+                    visible: repository.selectedOid.length > 0 && !pane.viewingWorktree
                     text: repository.selectedOid
                     color: "#34d399"
                     font.family: "monospace"
@@ -186,7 +186,7 @@ Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         model: repository.changedFiles
-                        currentIndex: count > 0 ? 0 : -1
+                        currentIndex: repository.selectedFile
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         ScrollBar.vertical: ScrollBar {}
@@ -223,10 +223,7 @@ Rectangle {
                             }
                             HoverHandler { id: fileHover }
                             TapHandler {
-                                onTapped: {
-                                    files.currentIndex = fileRow.index
-                                    repository.selectFile(fileRow.index)
-                                }
+                                onTapped: repository.selectFile(fileRow.index)
                             }
                             RowLayout {
                                 anchors.fill: parent

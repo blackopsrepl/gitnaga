@@ -2,6 +2,7 @@
 // so grouped property scopes on it (anchors) are reported as missing. That
 // specific category is disabled for this file only.
 // qmllint disable missing-property
+import QtCore
 import QtQuick
 import QtQuick.Layouts
 import GitNaga
@@ -9,17 +10,6 @@ import GitNaga
 Rectangle {
     id: pane
     required property var repository
-
-    readonly property string headOid: {
-        var branch = repository.currentBranch
-        var count = repository.commits.count
-        for (var i = 0; i < count; ++i) {
-            var info = repository.commits.at(i)
-            if (info.refs && info.refs.indexOf(branch) >= 0)
-                return info.oid
-        }
-        return ""
-    }
 
     function ensureVisible(row) {
         graph.ensureVisible(row)
@@ -29,6 +19,15 @@ Rectangle {
     function resetZoom() { graph.resetZoom() }
 
     color: NagaTheme.background
+
+    // Width the lanes may take before they clip behind a fade. A history with
+    // a dozen parallel lines would otherwise push every subject off screen.
+    property real graphColumn: 200
+    readonly property real laneColumn: Math.min(graph.laneWidth, graphColumn)
+    Settings {
+        category: "graph"
+        property alias column: pane.graphColumn
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -52,7 +51,7 @@ Rectangle {
                     font.letterSpacing: 0.4
                 }
                 Text {
-                    text: repository.commitCount + qsTr(" commits")
+                    text: repository.commitCount + qsTr(" commits") + (repository.historyLoading ? qsTr(" · loading…") : "")
                     color: NagaTheme.muted
                     font.pixelSize: 11
                 }
@@ -94,7 +93,8 @@ Rectangle {
                 anchors.fill: parent
                 model: repository.commits
                 selectedRow: repository.selectedRow
-                headOid: pane.headOid
+                headOid: repository.headOid
+                laneLimit: graph.laneWidth > pane.graphColumn ? pane.graphColumn : 0
                 workInProgressOid: repository.workInProgressOid
                 onCommitClicked: (row) => repository.selectCommit(row)
                 onContextRequested: (row, oid, pos) => {
@@ -110,10 +110,36 @@ Rectangle {
             CommitLabels {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                x: Math.min(parent.width - 150, graph.laneWidth + 16)
+                x: Math.min(parent.width - 150, pane.laneColumn + 12)
                 width: parent.width - x
                 repository: pane.repository
                 graph: graph
+            }
+
+            // Drag the lane column's edge to give the graph or the labels room.
+            Item {
+                x: pane.laneColumn - 4
+                width: 10
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                HoverHandler { id: columnHover; cursorShape: Qt.SplitHCursor }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 2
+                    height: parent.height
+                    color: NagaTheme.accentTint(columnDrag.active ? 0.6 : 0.3)
+                    visible: columnHover.hovered || columnDrag.active
+                }
+                DragHandler {
+                    id: columnDrag
+                    target: null
+                    xAxis.enabled: true
+                    yAxis.enabled: false
+                    property real startColumn: 0
+                    onActiveChanged: if (active) startColumn = pane.laneColumn
+                    onTranslationChanged: pane.graphColumn = Math.max(60, Math.min(pane.width - 260, startColumn + translation.x))
+                }
+                TapHandler { onDoubleTapped: pane.graphColumn = 200 }
             }
 
             GraphScrollBar {
@@ -128,9 +154,9 @@ Rectangle {
 
     Connections {
         target: pane.repository
-        function onSelectionChanged() {
-            if (graph.selectedRow >= 0)
-                graph.ensureVisible(graph.selectedRow)
+        function onRevealRow(row) {
+            if (row >= 0)
+                graph.ensureVisible(row)
         }
     }
 

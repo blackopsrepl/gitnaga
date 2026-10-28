@@ -7,6 +7,7 @@
 
 #include <QFileSystemWatcher>
 #include <QObject>
+#include <QQueue>
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
@@ -24,24 +25,42 @@ class RepositoryController final : public QObject
     Q_PROPERTY(DiffLineModel *diffLines READ diffLines CONSTANT)
     Q_PROPERTY(QString repositoryPath READ repositoryPath NOTIFY repositoryChanged)
     Q_PROPERTY(QString repositoryName READ repositoryName NOTIFY repositoryChanged)
-    Q_PROPERTY(QString currentBranch READ currentBranch NOTIFY repositoryChanged)
-    Q_PROPERTY(int commitCount READ commitCount NOTIFY repositoryChanged)
-    Q_PROPERTY(QString workInProgressOid READ workInProgressOid NOTIFY repositoryChanged)
+    Q_PROPERTY(QString currentBranch READ currentBranch NOTIFY referencesChanged)
+    Q_PROPERTY(QString headOid READ headOid NOTIFY referencesChanged)
+    Q_PROPERTY(bool detached READ detached NOTIFY referencesChanged)
+    Q_PROPERTY(int commitCount READ commitCount NOTIFY historyChanged)
+    Q_PROPERTY(bool historyLoading READ historyLoading NOTIFY historyChanged)
+    Q_PROPERTY(QString workInProgressOid READ workInProgressOid NOTIFY statusChanged)
+    Q_PROPERTY(int uncommittedCount READ uncommittedCount NOTIFY statusChanged)
+    Q_PROPERTY(QString operationInProgress READ operationInProgress NOTIFY statusChanged)
+    Q_PROPERTY(QString upstream READ upstream NOTIFY statusChanged)
+    Q_PROPERTY(int ahead READ ahead NOTIFY statusChanged)
+    Q_PROPERTY(int behind READ behind NOTIFY statusChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+    Q_PROPERTY(int pendingOperations READ pendingOperations NOTIFY busyChanged)
+    Q_PROPERTY(QString operationProgress READ operationProgress NOTIFY operationProgressChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorChanged)
     Q_PROPERTY(QString operationMessage READ operationMessage NOTIFY operationMessageChanged)
+    Q_PROPERTY(bool lastOperationOk READ lastOperationOk NOTIFY operationMessageChanged)
     Q_PROPERTY(int selectedRow READ selectedRow NOTIFY selectionChanged)
+    Q_PROPERTY(int selectedFile READ selectedFile NOTIFY fileSelectionChanged)
     Q_PROPERTY(QVariantList references READ references NOTIFY referencesChanged)
+    Q_PROPERTY(QVariantList stashes READ stashes NOTIFY referencesChanged)
+    Q_PROPERTY(bool showInternalRefs READ showInternalRefs WRITE setShowInternalRefs NOTIFY referencesChanged)
+    Q_PROPERTY(QStringList hiddenRefs READ hiddenRefs NOTIFY referencesChanged)
+    Q_PROPERTY(QString soloRef READ soloRef NOTIFY referencesChanged)
     Q_PROPERTY(QVariantList worktrees READ worktrees NOTIFY repositoryChanged)
     Q_PROPERTY(QString selectedOid READ selectedOid NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedSubject READ selectedSubject NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedAuthor READ selectedAuthor NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedDate READ selectedDate NOTIFY selectionChanged)
     Q_PROPERTY(QString selectedBody READ selectedBody NOTIFY selectionChanged)
+    Q_PROPERTY(QStringList selectedParents READ selectedParents NOTIFY selectionChanged)
 
 public:
     explicit RepositoryController(QObject *parent = nullptr);
+    ~RepositoryController() override;
 
     CommitModel *commits();
     FileChangeModel *changedFiles();
@@ -49,27 +68,52 @@ public:
     QString repositoryPath() const;
     QString repositoryName() const;
     QString currentBranch() const;
+    QString headOid() const;
+    bool detached() const;
     int commitCount() const;
+    bool historyLoading() const;
     QString workInProgressOid() const;
+    int uncommittedCount() const;
+    QString operationInProgress() const;
+    QString upstream() const;
+    int ahead() const;
+    int behind() const;
     bool loading() const;
     bool busy() const;
+    int pendingOperations() const;
+    QString operationProgress() const;
     QString errorMessage() const;
     QString operationMessage() const;
+    bool lastOperationOk() const;
     int selectedRow() const;
+    int selectedFile() const;
     QVariantList references() const;
+    QVariantList stashes() const;
+    bool showInternalRefs() const;
+    void setShowInternalRefs(bool show);
+    QStringList hiddenRefs() const;
+    QString soloRef() const;
     QVariantList worktrees() const;
     QString selectedOid() const;
     QString selectedSubject() const;
     QString selectedAuthor() const;
     QString selectedDate() const;
     QString selectedBody() const;
+    QStringList selectedParents() const;
+    const RepositorySnapshot &repository() const { return m_repository; }
 
     Q_INVOKABLE void openRepository(const QUrl &url);
     Q_INVOKABLE void openRepositoryPath(const QString &path);
+    // Everything again: refs, status and the whole history.
     Q_INVOKABLE void refresh();
+    // Refs and status; the history only when a ref moved.
+    Q_INVOKABLE void synchronize();
     Q_INVOKABLE void selectCommit(int row);
     Q_INVOKABLE void selectOid(const QString &oid);
     Q_INVOKABLE void selectFile(int row);
+    Q_INVOKABLE void cancelOperation();
+    Q_INVOKABLE void setRefHidden(const QString &fullName, bool hidden);
+    Q_INVOKABLE void setSoloRef(const QString &fullName);
     Q_INVOKABLE void copyToClipboard(const QString &text) const;
     Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description);
     Q_INVOKABLE QVariantList directories(const QString &path) const;
@@ -89,6 +133,9 @@ public:
 
     Q_INVOKABLE void checkoutCommit(const QString &oid);
     Q_INVOKABLE void checkoutBranch(const QString &name);
+    // A remote branch checks out as the local branch that tracks it, created
+    // on first use, the way a person means "work on origin/x".
+    Q_INVOKABLE void checkoutRemoteBranch(const QString &reference);
     Q_INVOKABLE void createBranch(const QString &name, const QString &oid);
     Q_INVOKABLE void deleteBranch(const QString &name);
     // Delete a branch on one remote, addressed by its remote-tracking ref short
@@ -96,56 +143,98 @@ public:
     // GitHub redirects a renamed repository and the stale URL would fail.
     Q_INVOKABLE void deleteRemoteBranch(const QString &reference);
     Q_INVOKABLE void createTag(const QString &name, const QString &oid);
+    Q_INVOKABLE void deleteTag(const QString &name);
     Q_INVOKABLE void cherryPick(const QString &oid);
     Q_INVOKABLE void revertCommit(const QString &oid);
-    Q_INVOKABLE void mergeCommit(const QString &oid);
+    // Merges a branch by name when one is given, so the merge commit says
+    // "Merge branch 'x'" rather than naming a bare hash.
+    Q_INVOKABLE void mergeCommit(const QString &oid, const QString &branch = {});
     Q_INVOKABLE void resetTo(const QString &oid, const QString &mode);
-    Q_INVOKABLE void rebaseOnto(const QString &oid);
+    Q_INVOKABLE void rebaseOnto(const QString &oid, const QString &branch = {});
+
+    // Off-thread git work: the worktree it runs in and the run options that
+    // carry the cancel token and the progress reporter.
+    using OperationWork = std::function<GitResult<QString>(const QString &worktree, const RunOptions &options)>;
+    using OperationResult = std::function<void(const QString &worktree, const GitResult<QString> &result)>;
+    // Queue git work behind whatever is running. Nothing is dropped: a second
+    // click while busy runs once the first operation lands.
+    void runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result = {});
+    void runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage);
+    void reportFailure(const QString &message);
 
 signals:
     void repositoryChanged();
+    void historyChanged();
+    void statusChanged();
     void loadingChanged();
     void busyChanged();
     void errorChanged();
     void operationMessageChanged();
+    void operationProgressChanged();
     void operationFinished(bool ok, const QString &message);
     void selectionChanged();
+    // The user asked to look at a row (a click, a ref, a search hit), as
+    // opposed to a refresh re-finding the selection: only this scrolls.
+    void revealRow(int row);
+    void fileSelectionChanged();
     void referencesChanged();
 
 private:
-    // What to run once the work of an operation is over: the worktree it ran
-    // in, and the result as a message or an error.
-    using OperationWork = std::function<GitResult<QString>(const QString &worktree)>;
-    using OperationResult = std::function<void(const QString &worktree, const GitResult<QString> &result)>;
+    struct PendingOperation {
+        QString successMessage;
+        OperationWork work;
+        OperationResult result;
+    };
+    struct SyncResult;
 
-    void runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage);
-    // Run any off-thread work with a success message, the usual busy state,
-    // error reporting, and a refresh once it lands.
-    void runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result = {});
+    void startSync(bool forceHistory);
+    void applySync(const SyncResult &result, bool forceHistory);
+    void loadHistory();
+    void pollStatus();
+    void applyStatus(WorktreeStatus status);
+    void startNextOperation();
     void setLoading(bool loading);
     void setError(QString message);
-    void setOperationMessage(QString message);
+    void setOperationMessage(QString message, bool ok = true);
+    void setOperationProgress(QString progress);
     void configureWatcher();
     void clearSelection();
+    void restoreSelection();
+    void inspect(const QString &oid, int row);
     void rebuildReferences();
+    void loadViewSettings();
+    void saveViewSettings() const;
 
     CommitModel m_commits;
     FileChangeModel m_changedFiles;
     DiffLineModel m_diffLines;
     QFileSystemWatcher m_watcher;
-    QTimer m_refreshTimer;
+    QTimer m_syncTimer;
+    QTimer m_statusTimer;
     QTimer m_messageTimer;
     RepositorySnapshot m_repository;
     CommitDetails m_selected;
+    QString m_selectedOid;
+    QString m_selectedPath;
     QString m_requestedPath;
     QString m_recordedWorktree;
     QString m_error;
     QString m_operationMessage;
+    QString m_operationProgress;
     QVariantList m_references;
+    HistoryRequest m_view;
+    QQueue<PendingOperation> m_operations;
+    CancelToken m_operationCancel;
+    CancelToken m_historyCancel;
     int m_selectedRow = -1;
+    int m_selectedFile = -1;
     bool m_loading = false;
+    bool m_historyLoading = false;
     bool m_operationActive = false;
-    quint64 m_repositoryGeneration = 0;
+    bool m_statusPolling = false;
+    bool m_lastOperationOk = true;
+    quint64 m_syncGeneration = 0;
+    quint64 m_historyGeneration = 0;
     quint64 m_selectionGeneration = 0;
     quint64 m_diffGeneration = 0;
 };

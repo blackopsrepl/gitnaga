@@ -26,6 +26,9 @@ class CommitGraphItem : public QQuickPaintedItem
     Q_PROPERTY(QString workInProgressOid READ workInProgressOid WRITE setWorkInProgressOid NOTIFY workInProgressOidChanged)
     Q_PROPERTY(qreal effectiveRowHeight READ effectiveRowHeight NOTIFY metricsChanged)
     Q_PROPERTY(qreal laneWidth READ laneWidth NOTIFY metricsChanged)
+    // Lanes are drawn up to this x; wider histories are clipped behind a fade
+    // so the labels keep their room. Zero means no limit.
+    Q_PROPERTY(qreal laneLimit READ laneLimit WRITE setLaneLimit NOTIFY laneLimitChanged)
     Q_PROPERTY(qreal contentHeight READ contentHeight NOTIFY metricsChanged)
     Q_PROPERTY(qreal maxContentY READ maxContentY NOTIFY metricsChanged)
     Q_PROPERTY(qreal minimumZoom READ minimumZoom CONSTANT)
@@ -51,6 +54,8 @@ public:
     void setWorkInProgressOid(const QString &oid);
     qreal effectiveRowHeight() const;
     qreal laneWidth() const;
+    qreal laneLimit() const { return m_laneLimit; }
+    void setLaneLimit(qreal limit);
     qreal contentHeight() const;
     qreal maxContentY() const;
     static qreal minimumZoom();
@@ -72,6 +77,7 @@ signals:
     void headOidChanged();
     void workInProgressOidChanged();
     void metricsChanged();
+    void laneLimitChanged();
     void commitClicked(int row);
     void contextRequested(int row, const QString &oid, const QPointF &globalPosition);
 
@@ -95,14 +101,18 @@ private:
     void rebuildEmphasisSpans();
     void clampContent();
     void synchronizeRows();
+    void rowsAppended(int first, int last);
+    const QVector<Commit> &rows() const;
+    const QHash<QString, int> &rowIndex() const;
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
+    void paintWorkInProgressLink(QPainter *painter, int first, const graph::GraphStyle &style) const;
     void paintNode(QPainter *painter, const Commit &commit, const graph::Node &node, qreal radius, bool isHead, bool selected, bool hovered) const;
 
     QPointer<CommitModel> m_model;
-    QVector<Commit> m_rows;
     qreal m_contentY = 0.0;
     qreal m_baseRowHeight = 36.0;
     qreal m_zoom = 1.0;
+    qreal m_laneLimit = 0.0;
     int m_selectedRow = -1;
     int m_hoveredRow = -1;
     int m_maximumLane = 0;
@@ -113,7 +123,6 @@ private:
     int m_highlightHoveredRow = -2;
     QSet<QString> m_highlight;
     QHash<int, QPair<int, int>> m_emphasisSpans;
-    QHash<QString, int> m_rowByOid;
     AvatarProvider m_avatars;
     QString m_headOid;
     QString m_workInProgressOid;

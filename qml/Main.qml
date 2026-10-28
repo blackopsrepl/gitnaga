@@ -18,7 +18,6 @@ ApplicationWindow {
 
     property bool referencesVisible: true
     property bool reviewVisible: true
-    property bool lastOperationOk: true
 
     // Every colour comes from the theme, including the interaction tokens, so
     // hover and selection cannot drift apart between surfaces.
@@ -100,10 +99,28 @@ ApplicationWindow {
                 onClicked: worktreeDialog.openManager()
             }
             Label {
-                visible: repository.currentBranch.length > 0
-                text: "⎇ " + repository.currentBranch
-                color: NagaTheme.accent
+                visible: repository.currentBranch.length > 0 || repository.detached
+                text: repository.detached ? qsTr("HEAD detached at ") + repository.headOid.substring(0, 8)
+                                          : "⎇ " + repository.currentBranch
+                color: repository.detached ? "#e6b45a" : NagaTheme.accent
                 font.pixelSize: 12
+            }
+            Label {
+                visible: text.length > 0
+                text: {
+                    var parts = []
+                    if (repository.ahead > 0)
+                        parts.push("↑" + repository.ahead)
+                    if (repository.behind > 0)
+                        parts.push("↓" + repository.behind)
+                    return parts.join(" ")
+                }
+                color: "#e6b45a"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                ToolTip.visible: trackHover.hovered
+                ToolTip.text: qsTr("Ahead / behind ") + repository.upstream
+                HoverHandler { id: trackHover }
             }
             Label {
                 id: wipBadge
@@ -193,11 +210,27 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
             Label {
-                visible: repository.operationMessage.length > 0
-                text: repository.operationMessage
-                color: root.lastOperationOk ? "#4ade80" : "#ff7d8b"
+                visible: repository.busy
+                text: (repository.operationProgress.length > 0 ? repository.operationProgress : qsTr("Working…"))
+                      + (repository.pendingOperations > 1 ? qsTr("  (+%1 queued)").arg(repository.pendingOperations - 1) : "")
+                color: "#9fc2ff"
                 font.pixelSize: 11
                 elide: Text.ElideRight
+                Layout.maximumWidth: 420
+            }
+            NagaButton {
+                visible: repository.busy
+                text: qsTr("Cancel")
+                implicitHeight: 20
+                onClicked: repository.cancelOperation()
+            }
+            Label {
+                visible: !repository.busy && repository.operationMessage.length > 0
+                text: repository.operationMessage
+                color: repository.lastOperationOk ? "#4ade80" : "#ff7d8b"
+                font.pixelSize: 11
+                elide: Text.ElideRight
+                Layout.maximumWidth: 520
             }
             Label {
                 text: repository.commitCount + qsTr(" commits")
@@ -208,12 +241,6 @@ ApplicationWindow {
         }
     }
 
-    Connections {
-        target: root.repository
-        function onOperationFinished(ok, message) {
-            root.lastOperationOk = ok
-        }
-    }
 
     Rectangle {
         visible: repository.errorMessage.length > 0 && repository.repositoryPath.length > 0

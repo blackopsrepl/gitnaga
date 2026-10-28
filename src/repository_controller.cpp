@@ -1,56 +1,91 @@
 #include "repository_controller.hpp"
 
-#include "recent_projects.hpp"
-
-#include "git_client.hpp"
-
 #include <QDir>
-#include <QDirIterator>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QGuiApplication>
 #include <QLocale>
+#include <QThreadPool>
 #include <QtConcurrentRun>
-
 
 namespace GitNaga {
 
 RepositoryController::RepositoryController(QObject *parent)
     : QObject(parent)
 {
-    m_refreshTimer.setSingleShot(true);
-    m_refreshTimer.setInterval(150);
+    m_syncTimer.setSingleShot(true);
+    m_syncTimer.setInterval(150);
     m_messageTimer.setSingleShot(true);
     m_messageTimer.setInterval(6000);
-    connect(&m_refreshTimer, &QTimer::timeout, this, &RepositoryController::refresh);
-    connect(&m_messageTimer, &QTimer::timeout, this, [this] { setOperationMessage({}); });
-    connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_refreshTimer.start(); });
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_refreshTimer.start(); });
+    // Editing a file touches nothing under .git, so the worktree is polled
+    // while the window is in use; `git status` with optional locks off is
+    // read-only and cheap enough for that.
+    m_statusTimer.setInterval(2000);
+    connect(&m_syncTimer, &QTimer::timeout, this, &RepositoryController::synchronize);
+    connect(&m_statusTimer, &QTimer::timeout, this, &RepositoryController::pollStatus);
+    connect(&m_messageTimer, &QTimer::timeout, this, [this] { setOperationMessage({}, m_lastOperationOk); });
+    connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_syncTimer.start(); });
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_syncTimer.start(); });
+    if (auto *application = qobject_cast<QGuiApplication *>(QCoreApplication::instance())) {
+        connect(application, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
+            if (state == Qt::ApplicationActive)
+                pollStatus();
+        });
+    }
+    m_statusTimer.start();
+}
+
+RepositoryController::~RepositoryController()
+{
+    // Workers post their results back to this object, so none may outlive it.
+    if (m_historyCancel)
+        m_historyCancel->store(true);
+    if (m_operationCancel)
+        m_operationCancel->store(true);
+    QThreadPool::globalInstance()->waitForDone();
 }
 
 CommitModel *RepositoryController::commits() { return &m_commits; }
 FileChangeModel *RepositoryController::changedFiles() { return &m_changedFiles; }
 DiffLineModel *RepositoryController::diffLines() { return &m_diffLines; }
-QString RepositoryController::repositoryPath() const { return m_repository.worktree; }
-QString RepositoryController::repositoryName() const { return QFileInfo(m_repository.worktree).fileName(); }
-QString RepositoryController::currentBranch() const { return m_repository.currentBranch; }
+QString RepositoryController::repositoryPath() const { return m_repository.location.worktree; }
+QString RepositoryController::repositoryName() const { return QFileInfo(m_repository.location.worktree).fileName(); }
+QString RepositoryController::currentBranch() const { return m_repository.refs.currentBranch; }
+QString RepositoryController::headOid() const { return m_repository.refs.headOid; }
+bool RepositoryController::detached() const { return m_repository.refs.detached && !m_repository.refs.headOid.isEmpty(); }
 
 int RepositoryController::commitCount() const
 {
-    return m_commits.count() - (m_repository.workInProgressOid.isEmpty() ? 0 : 1);
+    return m_commits.count() - (m_commits.hasWorkInProgress() ? 1 : 0);
 }
 
-QString RepositoryController::workInProgressOid() const { return m_repository.workInProgressOid; }
+bool RepositoryController::historyLoading() const { return m_historyLoading; }
+QString RepositoryController::workInProgressOid() const { return m_commits.hasWorkInProgress() ? worktreeOid() : QString(); }
+int RepositoryController::uncommittedCount() const { return static_cast<int>(m_repository.status.files.size()); }
+QString RepositoryController::operationInProgress() const { return m_repository.status.operation; }
+QString RepositoryController::upstream() const { return m_repository.status.upstream; }
+int RepositoryController::ahead() const { return m_repository.status.ahead; }
+int RepositoryController::behind() const { return m_repository.status.behind; }
 bool RepositoryController::loading() const { return m_loading; }
-bool RepositoryController::busy() const { return m_loading || m_operationActive; }
+bool RepositoryController::busy() const { return m_operationActive || !m_operations.isEmpty(); }
+int RepositoryController::pendingOperations() const { return static_cast<int>(m_operations.size()) + (m_operationActive ? 1 : 0); }
+QString RepositoryController::operationProgress() const { return m_operationProgress; }
 QString RepositoryController::errorMessage() const { return m_error; }
 QString RepositoryController::operationMessage() const { return m_operationMessage; }
+bool RepositoryController::lastOperationOk() const { return m_lastOperationOk; }
 int RepositoryController::selectedRow() const { return m_selectedRow; }
+int RepositoryController::selectedFile() const { return m_selectedFile; }
 QVariantList RepositoryController::references() const { return m_references; }
-QString RepositoryController::selectedOid() const { return m_selected.oid; }
+QString RepositoryController::selectedOid() const { return m_selectedOid; }
 QString RepositoryController::selectedSubject() const { return m_selected.subject; }
 QString RepositoryController::selectedAuthor() const { return m_selected.author; }
-QString RepositoryController::selectedDate() const { return QLocale().toString(m_selected.authoredAt, QLocale::LongFormat); }
 QString RepositoryController::selectedBody() const { return m_selected.body; }
+QStringList RepositoryController::selectedParents() const { return m_selected.parents; }
+
+QString RepositoryController::selectedDate() const
+{
+    return m_selected.authoredAt.isValid() ? QLocale().toString(m_selected.authoredAt, QLocale::LongFormat) : QString();
+}
 
 void RepositoryController::openRepository(const QUrl &url)
 {
@@ -60,156 +95,93 @@ void RepositoryController::openRepository(const QUrl &url)
 void RepositoryController::openRepositoryPath(const QString &path)
 {
     m_requestedPath = QDir::cleanPath(path);
-    refresh();
+    startSync(true);
 }
 
 void RepositoryController::refresh()
 {
-    // The requested path is the user's latest intent, so it wins over the
-    // worktree left over from the previously open repository; otherwise
-    // opening a second repository would simply reload the first one. The
-    // generation counter already discards stale snapshots, so a request
-    // issued while a load is in flight supersedes it instead of being
-    // silently dropped by a loading guard.
-    const QString path = m_requestedPath.isEmpty() ? m_repository.worktree : m_requestedPath;
-    if (path.isEmpty())
-        return;
-
-    const auto generation = ++m_repositoryGeneration;
-    setLoading(true);
-    setError({});
-
-    auto *watcher = new QFutureWatcher<GitResult<RepositorySnapshot>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-        if (generation != m_repositoryGeneration)
-            return;
-        setLoading(false);
-        if (!result) {
-            setError(result.error().message);
-            return;
-        }
-        m_repository = *result;
-        m_requestedPath = m_repository.worktree;
-        if (m_repository.worktree != m_recordedWorktree) {
-            m_recordedWorktree = m_repository.worktree;
-            RecentProjects::record(m_repository.worktree);
-        }
-        m_commits.replace(m_repository.commits);
-        clearSelection();
-        configureWatcher();
-        rebuildReferences();
-        emit repositoryChanged();
-    });
-    watcher->setFuture(QtConcurrent::run([path] { return GitClient::loadRepository(path); }));
+    startSync(true);
 }
 
-void RepositoryController::selectCommit(int row)
+void RepositoryController::synchronize()
 {
-    const auto *commit = m_commits.commitAt(row);
-    if (!commit || m_repository.worktree.isEmpty())
-        return;
-
-    m_selectedRow = row;
-    emit selectionChanged();
-
-    const auto generation = ++m_selectionGeneration;
-    ++m_diffGeneration;
-    const auto worktree = m_repository.worktree;
-    const auto oid = commit->oid;
-    m_diffLines.clear();
-
-    auto *watcher = new QFutureWatcher<GitResult<CommitInspection>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-        if (generation != m_selectionGeneration)
-            return;
-        if (!result) {
-            setError(result.error().message);
-            return;
-        }
-        m_selected = result->details;
-        m_changedFiles.replace(result->files);
-        emit selectionChanged();
-        if (!result->files.isEmpty())
-            selectFile(0);
-    });
-    // The uncommitted row is inspected from the status output so each file
-    // carries its staged state, which drives the commit selection.
-    const bool snapshot = !m_repository.workInProgressOid.isEmpty() && oid == m_repository.workInProgressOid;
-    watcher->setFuture(QtConcurrent::run([worktree, oid, snapshot] {
-        return snapshot ? GitClient::inspectWorktree(worktree) : GitClient::inspectCommit(worktree, oid);
-    }));
+    startSync(false);
 }
 
-void RepositoryController::selectFile(int row)
+void RepositoryController::cancelOperation()
 {
-    const auto *file = m_changedFiles.fileAt(row);
-    if (!file || m_selected.oid.isEmpty())
-        return;
-    const auto generation = ++m_diffGeneration;
-    const auto worktree = m_repository.worktree;
-    const auto oid = m_selected.oid;
-    const auto path = file->path;
-    const auto oldPath = file->oldPath;
-
-    auto *watcher = new QFutureWatcher<GitResult<QVector<DiffLine>>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-        if (generation != m_diffGeneration)
-            return;
-        if (!result) {
-            setError(result.error().message);
-            return;
-        }
-        m_diffLines.replace(*result);
-    });
-    watcher->setFuture(QtConcurrent::run([worktree, oid, path, oldPath] {
-        return GitClient::loadDiff(worktree, oid, path, oldPath);
-    }));
+    if (m_operationCancel)
+        m_operationCancel->store(true);
+    // Queued work has not started; cancelling means it never will.
+    if (!m_operations.isEmpty()) {
+        m_operations.clear();
+        emit busyChanged();
+    }
 }
 
 void RepositoryController::runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage)
 {
-    runAsyncOperation(successMessage,
-                      [arguments, operation](const QString &worktree) {
-                          return GitClient::mutate(worktree, arguments, operation);
-                      });
+    runAsyncOperation(successMessage, [arguments, operation](const QString &worktree, const RunOptions &options) {
+        return GitClient::mutate(worktree, arguments, operation, options);
+    });
 }
 
 void RepositoryController::runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result)
 {
-    if (m_repository.worktree.isEmpty() || m_operationActive)
+    if (m_repository.location.worktree.isEmpty())
         return;
+    m_operations.enqueue({ successMessage, std::move(work), std::move(result) });
+    emit busyChanged();
+    startNextOperation();
+}
+
+void RepositoryController::startNextOperation()
+{
+    if (m_operationActive || m_operations.isEmpty())
+        return;
+    auto operation = m_operations.dequeue();
     m_operationActive = true;
+    m_operationCancel = std::make_shared<std::atomic_bool>(false);
     emit busyChanged();
 
-    const auto worktree = m_repository.worktree;
+    RunOptions options;
+    options.cancel = m_operationCancel;
+    options.progress = [this](const QString &line) {
+        QMetaObject::invokeMethod(this, [this, line] { setOperationProgress(line); }, Qt::QueuedConnection);
+    };
+
+    const auto worktree = m_repository.location.worktree;
     auto *watcher = new QFutureWatcher<GitResult<QString>>(this);
     connect(watcher, &QFutureWatcherBase::finished, this,
-            [this, watcher, worktree, successMessage, result] {
+            [this, watcher, worktree, successMessage = operation.successMessage, result = operation.result] {
         const auto outcome = watcher->result();
         watcher->deleteLater();
         m_operationActive = false;
-        emit busyChanged();
+        m_operationCancel.reset();
+        setOperationProgress({});
         if (result)
             result(worktree, outcome);
         if (!outcome) {
             const auto message = outcome.error().message.isEmpty() ? outcome.error().operation : outcome.error().message;
-            setOperationMessage(message);
+            setOperationMessage(message, false);
             emit operationFinished(false, message);
-            return;
+        } else {
+            setOperationMessage(successMessage, true);
+            emit operationFinished(true, successMessage);
         }
-        setOperationMessage(successMessage);
-        emit operationFinished(true, successMessage);
-        refresh();
+        emit busyChanged();
+        synchronize();
+        startNextOperation();
     });
-    watcher->setFuture(QtConcurrent::run([worktree, work = std::move(work)] {
-        return work(worktree);
+    watcher->setFuture(QtConcurrent::run([worktree, options, work = std::move(operation.work)] {
+        return work(worktree, options);
     }));
+}
+
+void RepositoryController::reportFailure(const QString &message)
+{
+    setOperationMessage(message, false);
+    emit operationFinished(false, message);
 }
 
 void RepositoryController::setLoading(bool loading)
@@ -218,76 +190,33 @@ void RepositoryController::setLoading(bool loading)
         return;
     m_loading = loading;
     emit loadingChanged();
-    emit busyChanged();
 }
 
 void RepositoryController::setError(QString message)
 {
-    if (errorMessage() == message)
+    if (m_error == message)
         return;
     m_error = std::move(message);
     emit errorChanged();
 }
 
-void RepositoryController::setOperationMessage(QString message)
+void RepositoryController::setOperationMessage(QString message, bool ok)
 {
-    if (m_operationMessage == message)
+    if (m_operationMessage == message && m_lastOperationOk == ok)
         return;
     m_operationMessage = std::move(message);
+    m_lastOperationOk = ok;
     if (!m_operationMessage.isEmpty())
         m_messageTimer.start();
     emit operationMessageChanged();
 }
 
-void RepositoryController::configureWatcher()
+void RepositoryController::setOperationProgress(QString progress)
 {
-    if (!m_watcher.files().isEmpty())
-        m_watcher.removePaths(m_watcher.files());
-    if (!m_watcher.directories().isEmpty())
-        m_watcher.removePaths(m_watcher.directories());
-
-    QStringList paths;
-    const QStringList files = {
-        QDir(m_repository.gitDirectory).filePath(QStringLiteral("HEAD")),
-        QDir(m_repository.gitDirectory).filePath(QStringLiteral("index")),
-        QDir(m_repository.commonDirectory).filePath(QStringLiteral("packed-refs")),
-    };
-    for (const auto &file : files) {
-        if (QFileInfo::exists(file))
-            paths.append(file);
-    }
-
-    const auto common = m_repository.commonDirectory;
-    if (QFileInfo::exists(common))
-        paths.append(common);
-    const auto worktrees = QDir(common).filePath(QStringLiteral("worktrees"));
-    if (QFileInfo::exists(worktrees)) {
-        paths.append(worktrees);
-        QDirIterator iterator(worktrees, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-        while (iterator.hasNext())
-            paths.append(iterator.next());
-    }
-
-    const auto refs = QDir(m_repository.commonDirectory).filePath(QStringLiteral("refs"));
-    if (QFileInfo::exists(refs)) {
-        paths.append(refs);
-        QDirIterator iterator(refs, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-        while (iterator.hasNext())
-            paths.append(iterator.next());
-    }
-    if (!paths.isEmpty())
-        m_watcher.addPaths(paths);
-}
-
-void RepositoryController::clearSelection()
-{
-    ++m_selectionGeneration;
-    ++m_diffGeneration;
-    m_selected = {};
-    m_selectedRow = -1;
-    m_changedFiles.replace({});
-    m_diffLines.clear();
-    emit selectionChanged();
+    if (m_operationProgress == progress)
+        return;
+    m_operationProgress = std::move(progress);
+    emit operationProgressChanged();
 }
 
 } // namespace GitNaga

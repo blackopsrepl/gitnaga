@@ -12,29 +12,45 @@ Rectangle {
 
     color: NagaTheme.panel
 
-    readonly property var sections: [
-        { kind: "local", label: qsTr("Branches") },
-        { kind: "remote", label: qsTr("Remotes") },
-        { kind: "tag", label: qsTr("Tags") }
-    ]
+    // Internal refs (tool checkpoints, backups, a remote's HEAD) only appear
+    // when asked for, in a section of their own.
+    readonly property var sections: {
+        var list = [
+            { kind: "local", label: qsTr("Branches") },
+            { kind: "remote", label: qsTr("Remotes") },
+            { kind: "tag", label: qsTr("Tags") },
+            { kind: "stash", label: qsTr("Stashes") }
+        ]
+        if (repository.showInternalRefs)
+            list.push({ kind: "other", label: qsTr("Internal") })
+        return list
+    }
 
     function filtered(kind) {
-        var out = []
-        var refs = pane.repository.references
         var needle = filterField.text.toLowerCase()
+        var out = []
+        if (kind === "stash") {
+            var stashes = pane.repository.stashes
+            for (var s = 0; s < stashes.length; ++s) {
+                var label = stashes[s].selector + "  " + stashes[s].message
+                if (needle.length > 0 && label.toLowerCase().indexOf(needle) < 0)
+                    continue
+                out.push({ kind: "stash", name: label, selector: stashes[s].selector, oid: stashes[s].oid,
+                           shortOid: stashes[s].shortOid, color: "#7c8698" })
+            }
+            return out
+        }
+        var refs = pane.repository.references
         for (var i = 0; i < refs.length; ++i) {
             var reference = refs[i]
-            if (reference.kind !== kind)
+            var matchesKind = kind === "other" ? (reference.kind === "other" || reference.internal) : (reference.kind === kind && !reference.internal)
+            if (!matchesKind)
                 continue
             if (needle.length > 0 && reference.name.toLowerCase().indexOf(needle) < 0)
                 continue
             out.push(reference)
         }
         return out
-    }
-
-    function countOf(kind) {
-        return filtered(kind).length
     }
 
     ColumnLayout {
@@ -58,6 +74,14 @@ Rectangle {
                     font.letterSpacing: 0.4
                 }
                 Item { Layout.fillWidth: true }
+                NagaButton {
+                    text: qsTr("Internal")
+                    active: pane.repository.showInternalRefs
+                    implicitHeight: 22
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Show refs that tools keep for themselves")
+                    onClicked: pane.repository.showInternalRefs = !pane.repository.showInternalRefs
+                }
                 NagaIconButton {
                     text: "✕"
                     tooltip: qsTr("Close references")
@@ -80,6 +104,31 @@ Rectangle {
             }
         }
 
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 26
+            visible: pane.repository.soloRef.length > 0
+            color: NagaTheme.accentTint(0.12)
+            Text {
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Graph shows only ") + pane.repository.soloRef.replace(/^refs\/(heads|remotes|tags)\//, "")
+                color: NagaTheme.accentContent
+                font.pixelSize: 11
+                elide: Text.ElideMiddle
+                width: parent.width - 80
+            }
+            NagaButton {
+                anchors.right: parent.right
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                implicitHeight: 20
+                text: qsTr("Show all")
+                onClicked: pane.repository.setSoloRef(pane.repository.soloRef)
+            }
+        }
+
         Flickable {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -96,26 +145,31 @@ Rectangle {
                     delegate: Column {
                         id: sectionColumn
                         required property var modelData
+                        readonly property var entries: pane.filtered(modelData.kind)
+                        property bool collapsed: modelData.kind === "tag" && entries.length > 12
                         width: sectionsColumn.width
+                        visible: entries.length > 0 || modelData.kind === "local"
 
                         Rectangle {
                             width: parent.width
                             height: 24
-                            color: NagaTheme.panel
+                            color: sectionHover.hovered ? NagaTheme.hoverFill : NagaTheme.panel
+                            HoverHandler { id: sectionHover }
+                            TapHandler { onTapped: sectionColumn.collapsed = !sectionColumn.collapsed }
                             Row {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 10
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 6
                                 Text {
-                                    text: sectionColumn.modelData.label
+                                    text: (sectionColumn.collapsed ? "▸ " : "▾ ") + sectionColumn.modelData.label
                                     color: NagaTheme.muted
                                     font.pixelSize: 10
                                     font.weight: Font.Bold
                                     font.letterSpacing: 0.8
                                 }
                                 Text {
-                                    text: pane.countOf(sectionColumn.modelData.kind)
+                                    text: sectionColumn.entries.length
                                     color: NagaTheme.muted
                                     font.pixelSize: 10
                                 }
@@ -123,62 +177,13 @@ Rectangle {
                         }
 
                         Repeater {
-                            model: pane.filtered(sectionColumn.modelData.kind)
-                            delegate: Rectangle {
-                                id: refRow
+                            model: sectionColumn.collapsed ? [] : sectionColumn.entries
+                            delegate: RefRow {
                                 required property var modelData
-                                // The branch HEAD points at, mirroring the
-                                // toolbar's ⎇ label, so it reads at a glance.
-                                readonly property bool checkedOut: modelData.kind === "local"
-                                                                   && modelData.name === pane.repository.currentBranch
+                                reference: modelData
+                                repository: pane.repository
                                 width: sectionColumn.width
-                                height: 26
-                                color: refHover.hovered ? NagaTheme.hoverFill : "transparent"
-
-                                HoverHandler { id: refHover }
-                                TapHandler {
-                                    acceptedButtons: Qt.LeftButton
-                                    onTapped: pane.repository.selectOid(refRow.modelData.oid)
-                                    onDoubleTapped: {
-                                        if (refRow.modelData.kind !== "local" || refRow.checkedOut)
-                                            return
-                                        pane.repository.checkoutBranch(refRow.modelData.name)
-                                    }
-                                }
-                                TapHandler {
-                                    acceptedButtons: Qt.RightButton
-                                    onTapped: pane.openMenu(refRow.modelData)
-                                }
-
-                                Rectangle {
-                                    width: 8
-                                    height: 8
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 12
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    color: refRow.modelData.color
-                                }
-                                Text {
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 28
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 64
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: refRow.checkedOut ? "⎇ " + refRow.modelData.name : refRow.modelData.name
-                                    color: refRow.checkedOut ? NagaTheme.accent : NagaTheme.text
-                                    font.pixelSize: 12
-                                    font.weight: refRow.checkedOut ? Font.DemiBold : Font.Normal
-                                    elide: Text.ElideRight
-                                }
-                                Text {
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 10
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: refRow.modelData.shortOid
-                                    color: NagaTheme.muted
-                                    font.family: "monospace"
-                                    font.pixelSize: 10
-                                }
+                                onMenuRequested: (reference) => pane.openMenu(reference)
                             }
                         }
                     }
@@ -187,51 +192,16 @@ Rectangle {
         }
     }
 
-    NagaMenu {
+    ReferenceMenu {
         id: refMenu
-
-        NagaMenuItem {
-            visible: pane.target !== null && pane.target.kind === "local"
-            text: qsTr("Checkout ") + (pane.target ? pane.target.name : "")
-            onTriggered: pane.repository.checkoutBranch(pane.target.name)
-        }
-        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
-        NagaMenuItem {
-            visible: pane.target !== null && pane.target.kind === "local"
-            text: qsTr("Delete branch ") + (pane.target ? pane.target.name : "") + qsTr("…")
-            onTriggered: confirm.ask(qsTr("Force delete branch ") + pane.target.name + qsTr("?"),
-                                     function() { pane.repository.deleteBranch(pane.target.name) })
-        }
-        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "local" }
-        NagaMenuItem {
-            visible: pane.target !== null && pane.target.kind === "remote"
-            // The remote branch is not this repository's to lose, but it is not
-            // recoverable from here either, so it is confirmed like any other
-            // destructive action.
-            text: qsTr("Delete remote branch ") + (pane.target ? pane.target.name : "") + qsTr("…")
-            onTriggered: confirm.ask(qsTr("Delete branch ") + pane.target.name
-                                     + qsTr(" on its remote? This cannot be undone from here."),
-                                     function() { pane.repository.deleteRemoteBranch(pane.target.name) })
-        }
-        NagaMenuSeparator { visible: pane.target !== null && pane.target.kind === "remote" }
-        NagaMenuItem {
-            text: qsTr("Show commit ") + (pane.target ? pane.target.shortOid : "")
-            onTriggered: pane.repository.selectOid(pane.target.oid)
-        }
-        NagaMenuItem {
-            text: qsTr("Checkout commit")
-            onTriggered: pane.repository.checkoutCommit(pane.target.oid)
-        }
-        NagaMenuItem {
-            text: qsTr("Copy name")
-            onTriggered: pane.repository.copyToClipboard(pane.target.name)
-        }
+        repository: pane.repository
+        confirm: confirm
     }
 
     function openMenu(reference) {
         if (!reference)
             return
-        target = reference
+        refMenu.target = reference
         refMenu.popup()
     }
 

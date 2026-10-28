@@ -45,3 +45,9 @@ qt_add_executable(gitnaga_worktree_test
 )
 target_link_libraries(gitnaga_worktree_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
 add_test(NAME gitnaga_worktree_test COMMAND gitnaga_worktree_test)
+
+qt_add_executable(gitnaga_controller_test
+    controller_test.cpp
+)
+target_link_libraries(gitnaga_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_controller_test COMMAND gitnaga_controller_test)

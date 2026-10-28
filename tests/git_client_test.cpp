@@ -36,11 +36,13 @@ private slots:
 
         const auto snapshot = GitClient::loadRepository(root);
         QVERIFY(snapshot.has_value());
-        QCOMPARE(snapshot->currentBranch, QStringLiteral("main"));
+        QCOMPARE(snapshot->refs.currentBranch, QStringLiteral("main"));
         QCOMPARE(snapshot->commits.size(), 4);
         QCOMPARE(snapshot->commits.first().parents.size(), 2);
         QVERIFY(snapshot->commits.first().laneCount >= 2);
-        QVERIFY(snapshot->commits.first().refs.contains(QStringLiteral("main")));
+        QVERIFY(std::ranges::any_of(snapshot->commits.first().refs, [](const Ref &ref) {
+            return ref.kind == RefKind::Local && ref.name == QStringLiteral("main") && ref.isHead;
+        }));
 
         const auto inspection = GitClient::inspectCommit(root, snapshot->commits.first().oid);
         QVERIFY(inspection.has_value());
@@ -72,21 +74,24 @@ private slots:
 
         const auto snapshot = GitClient::loadRepository(root);
         QVERIFY(snapshot.has_value());
-        QVERIFY(!snapshot->workInProgressOid.isEmpty());
-
-        const auto inspection = GitClient::inspectCommit(root, snapshot->workInProgressOid);
-        QVERIFY(inspection.has_value());
-        QCOMPARE(inspection->files.size(), 1);
-        QCOMPARE(inspection->files.first().status, QStringLiteral("R"));
-        QCOMPARE(inspection->files.first().oldPath, QStringLiteral("old-name.txt"));
-        QCOMPARE(inspection->files.first().path, QStringLiteral("new-name.txt"));
+        // A staged rename is uncommitted work, read from status, never from
+        // an object written for the purpose.
+        QCOMPARE(snapshot->status.files.size(), 1);
+        const auto &file = snapshot->status.files.first();
+        QCOMPARE(file.status, QStringLiteral("R"));
+        QVERIFY(file.staged);
+        QCOMPARE(file.oldPath, QStringLiteral("old-name.txt"));
+        QCOMPARE(file.path, QStringLiteral("new-name.txt"));
 
         // Naming both sides keeps the diff a rename instead of an add.
-        const auto diff = GitClient::loadDiff(root, snapshot->workInProgressOid,
-                                              QStringLiteral("new-name.txt"), QStringLiteral("old-name.txt"));
+        const auto diff = GitClient::loadDiff(root, snapshot->refs.headOid, QStringLiteral("new-name.txt"),
+                                              QStringLiteral("old-name.txt"), DiffSide::Worktree);
         QVERIFY(diff.has_value());
         QVERIFY(std::ranges::none_of(*diff, [](const DiffLine &line) {
             return line.kind == DiffLine::Kind::Deletion;
+        }));
+        QVERIFY(std::ranges::any_of(*diff, [](const DiffLine &line) {
+            return line.text.startsWith(QStringLiteral("rename from"));
         }));
     }
 
@@ -122,7 +127,7 @@ private slots:
                                   QStringLiteral("switch branch")).has_value());
         auto snapshot = GitClient::loadRepository(root);
         QVERIFY(snapshot.has_value());
-        QCOMPARE(snapshot->currentBranch, QStringLiteral("feature"));
+        QCOMPARE(snapshot->refs.currentBranch, QStringLiteral("feature"));
 
         writeFile(root + QStringLiteral("/readme.txt"), QByteArrayLiteral("hello\nfeature\n"));
         runGit(root, { QStringLiteral("commit"), QStringLiteral("-am"), QStringLiteral("feature work") });

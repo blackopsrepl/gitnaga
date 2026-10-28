@@ -4,6 +4,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -16,7 +17,7 @@ class WorkInProgressTest final : public QObject
     Q_OBJECT
 
 private slots:
-    void snapshotsWorkInProgress()
+    void readsWorkInProgressWithoutWritingObjects()
     {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
@@ -29,10 +30,10 @@ private slots:
         runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
         runGit(root, { QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial"), QStringLiteral("tracked.txt") });
 
-        // A clean worktree produces no snapshot at all.
+        // A clean worktree has no uncommitted work.
         auto clean = GitClient::loadRepository(root);
         QVERIFY(clean.has_value());
-        QVERIFY(clean->workInProgressOid.isEmpty());
+        QVERIFY(clean->status.files.isEmpty());
         QCOMPARE(clean->commits.size(), 1);
 
         // Stage an edit, edit the same file again, and add an untracked file.
@@ -40,50 +41,56 @@ private slots:
         runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
         writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("three\n"));
         writeFile(root + QStringLiteral("/scratch.txt"), QByteArrayLiteral("scratch\n"));
-
-        const auto head = GitClient::mutate(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") },
-                                            QStringLiteral("read HEAD"));
-        QVERIFY(head.has_value());
+        const auto objectsBefore = GitClient::mutate(root, { QStringLiteral("count-objects") }, QStringLiteral("count"));
+        const auto indexBefore = QFileInfo(root + QStringLiteral("/.git/index")).lastModified();
 
         auto dirty = GitClient::loadRepository(root);
         QVERIFY(dirty.has_value());
-        QVERIFY(!dirty->workInProgressOid.isEmpty());
-        QCOMPARE(dirty->commits.size(), 2);
+        QCOMPARE(dirty->commits.size(), 1);
+        QCOMPARE(dirty->status.files.size(), 2);
+        const auto tracked = std::ranges::find_if(dirty->status.files, [](const FileChange &file) {
+            return file.path == QStringLiteral("tracked.txt");
+        });
+        QVERIFY(tracked != dirty->status.files.end());
+        QVERIFY(tracked->staged && tracked->unstaged && !tracked->untracked);
+        const auto scratch = std::ranges::find_if(dirty->status.files, [](const FileChange &file) {
+            return file.path == QStringLiteral("scratch.txt");
+        });
+        QVERIFY(scratch != dirty->status.files.end());
+        QVERIFY(scratch->untracked);
 
-        // The snapshot is a real, resolvable commit whose parent is HEAD.
-        const auto &snapshotCommit = dirty->commits.first();
-        QCOMPARE(snapshotCommit.oid, dirty->workInProgressOid);
-        QCOMPARE(snapshotCommit.parents.size(), 1);
-        QCOMPARE(snapshotCommit.parents.first(), head->trimmed());
-        QCOMPARE(snapshotCommit.author, QStringLiteral("GitNaga Test"));
-        QVERIFY(GitClient::mutate(root, { QStringLiteral("cat-file"), QStringLiteral("-e"),
-                                          snapshotCommit.oid }, QStringLiteral("verify snapshot")).has_value());
-
-        // Inspection and diffs run through the ordinary commit path, including
-        // for the untracked file.
-        const auto inspection = GitClient::inspectCommit(root, snapshotCommit.oid);
-        QVERIFY(inspection.has_value());
-        QCOMPARE(inspection->details.subject, QStringLiteral("Work in progress"));
-        QCOMPARE(inspection->files.size(), 2);
-        QVERIFY(std::ranges::any_of(inspection->files, [](const FileChange &file) {
-            return file.path == QStringLiteral("scratch.txt") && file.status == QStringLiteral("A");
-        }));
-
-        const auto trackedDiff = GitClient::loadDiff(root, snapshotCommit.oid, QStringLiteral("tracked.txt"));
+        // The worktree diff is the working change against HEAD, not HEAD's
+        // own diff: "one" goes, "three" arrives, the staged "two" is between.
+        const auto trackedDiff = GitClient::loadDiff(root, dirty->refs.headOid, QStringLiteral("tracked.txt"), {},
+                                                     DiffSide::Worktree);
         QVERIFY(trackedDiff.has_value());
         QVERIFY(std::ranges::any_of(*trackedDiff, [](const DiffLine &line) {
-            return line.kind == DiffLine::Kind::Addition && line.text.contains(QStringLiteral("three"));
+            return line.kind == DiffLine::Kind::Addition && line.text == QStringLiteral("+three");
         }));
+        QVERIFY(std::ranges::any_of(*trackedDiff, [](const DiffLine &line) {
+            return line.kind == DiffLine::Kind::Deletion && line.text == QStringLiteral("-one");
+        }));
+        const auto staged = GitClient::loadDiff(root, dirty->refs.headOid, QStringLiteral("tracked.txt"), {},
+                                                DiffSide::Staged);
+        QVERIFY(staged.has_value());
+        QVERIFY(std::ranges::any_of(*staged, [](const DiffLine &line) { return line.text == QStringLiteral("+two"); }));
+        const auto unstaged = GitClient::loadDiff(root, dirty->refs.headOid, QStringLiteral("tracked.txt"), {},
+                                                  DiffSide::Unstaged);
+        QVERIFY(unstaged.has_value());
+        QVERIFY(std::ranges::any_of(*unstaged, [](const DiffLine &line) { return line.text == QStringLiteral("-two"); }));
 
-        const auto untrackedDiff = GitClient::loadDiff(root, snapshotCommit.oid, QStringLiteral("scratch.txt"));
+        const auto untrackedDiff = GitClient::loadDiff(root, dirty->refs.headOid, QStringLiteral("scratch.txt"), {},
+                                                       DiffSide::Worktree, true);
         QVERIFY(untrackedDiff.has_value());
         QVERIFY(std::ranges::any_of(*untrackedDiff, [](const DiffLine &line) {
-            return line.kind == DiffLine::Kind::Addition && line.text.contains(QStringLiteral("scratch"));
+            return line.kind == DiffLine::Kind::Addition && line.text == QStringLiteral("+scratch");
         }));
 
-        // Taking the snapshot must leave the repository's own index and
-        // worktree untouched: the staged edit is still staged (MM) and the
-        // untracked file is still untracked.
+        // Reading the worktree writes nothing: no objects, no index refresh,
+        // and the staged edit and untracked file keep their state.
+        const auto objectsAfter = GitClient::mutate(root, { QStringLiteral("count-objects") }, QStringLiteral("count"));
+        QCOMPARE(*objectsAfter, *objectsBefore);
+        QCOMPARE(QFileInfo(root + QStringLiteral("/.git/index")).lastModified(), indexBefore);
         const auto status = GitClient::mutate(root, { QStringLiteral("status"), QStringLiteral("--porcelain") },
                                               QStringLiteral("read status"));
         QVERIFY(status.has_value());

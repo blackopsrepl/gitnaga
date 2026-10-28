@@ -17,7 +17,7 @@ GitError remoteError(const QString &operation, const QString &message)
 // remote-tracking ref itself once the server accepts the deletion.
 
 GitResult<QString> GitClient::deleteRemoteBranch(const QString &worktree, const QString &remote,
-                                                 const QString &branch)
+                                                 const QString &branch, const RunOptions &options)
 {
     const auto operation = QStringLiteral("delete remote branch");
     if (remote.trimmed().isEmpty())
@@ -32,7 +32,7 @@ GitResult<QString> GitClient::deleteRemoteBranch(const QString &worktree, const 
     const auto ref = QStringLiteral("refs/heads/%1").arg(branch);
     auto result = run(worktree,
                       { QStringLiteral("push"), remote, QStringLiteral("--delete"), ref },
-                      operation);
+                      operation, options);
     if (result)
         return QString();
     // Surface git's own message: it names the cause (authentication, a server

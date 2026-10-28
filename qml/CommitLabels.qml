@@ -34,9 +34,13 @@ ListView {
         width: labels.width
         height: graph.effectiveRowHeight
         readonly property bool current: index === repository.selectedRow
-        // The uncommitted snapshot is a real commit, so it renders through the
+        // The uncommitted-work row renders through the same path as a commit;
         // same path and only its identity differs.
         readonly property bool snapshot: oid.length > 0 && oid === repository.workInProgressOid
+        readonly property string title: snapshot
+            ? qsTr("Uncommitted changes") + "  ·  " + repository.uncommittedCount
+              + (repository.uncommittedCount === 1 ? qsTr(" file") : qsTr(" files"))
+            : subject
         // Below ~26 px per row a two-line layout cannot fit without colliding
         // with its neighbours, so collapse to one line.
         readonly property bool compact: graph.effectiveRowHeight < 26
@@ -47,7 +51,7 @@ ListView {
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            text: rowItem.subject
+            text: rowItem.title
             color: rowItem.snapshot ? "#e6b45a" : rowItem.current ? "#ffffff" : "#b9c2d2"
             elide: Text.ElideRight
             font.pixelSize: 10
@@ -67,7 +71,7 @@ ListView {
                 spacing: 8
                 Text {
                     width: Math.max(60, parent.width - chipRow.width - 8)
-                    text: rowItem.subject
+                    text: rowItem.title
                     color: rowItem.snapshot ? "#e6b45a" : rowItem.current ? "#ffffff" : "#dbe1ec"
                     elide: Text.ElideRight
                     font.pixelSize: 11
@@ -80,23 +84,22 @@ ListView {
                         model: rowItem.refs.slice(0, 3)
                         delegate: Rectangle {
                             id: chip
-                            required property string modelData
-                            // Local branches carry no prefix; remotes start with
-                            // "⇄ ", tags with "# ".
-                            readonly property bool isBranch: modelData.indexOf("# ") !== 0
-                                                             && modelData.indexOf("⇄ ") !== 0
+                            required property var modelData
+                            readonly property bool isBranch: modelData.kind === "local"
+                            readonly property bool isTag: modelData.kind === "tag"
                             // The chip wears its branch's colour, so the badge,
-                            // its node, and its line agree.
-                            readonly property color branchColor: rowItem.color
+                            // its node, and its line agree; tags stay neutral.
+                            readonly property color branchColor: isTag ? "#9aa3b5" : rowItem.color
                             height: 14
                             width: chipText.implicitWidth + 12
-                            radius: 3
+                            radius: isTag ? 7 : 3
                             // Hover raises the fill and the text; the border
                             // keeps the branch colour, so hover never introduces
                             // a hue of its own.
                             color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b,
-                                           chipMouse.containsMouse ? 0.38 : 0.22)
-                            border.color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b, 0.7)
+                                           chipMouse.containsMouse ? 0.38 : (modelData.kind === "remote" ? 0.08 : 0.22))
+                            border.color: Qt.rgba(branchColor.r, branchColor.g, branchColor.b, modelData.isHead ? 1.0 : 0.7)
+                            border.width: modelData.isHead ? 1.5 : 1
                             Behavior on color {
                                 ColorAnimation { duration: 90 }
                             }
@@ -107,18 +110,19 @@ ListView {
                                 cursorShape: chip.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onClicked: repository.selectCommit(rowItem.index)
                                 onDoubleClicked: {
-                                    if (!chip.isBranch || chip.modelData === repository.currentBranch)
+                                    if (!chip.isBranch || chip.modelData.isHead)
                                         return
-                                    repository.checkoutBranch(chip.modelData)
+                                    repository.checkoutBranch(chip.modelData.name)
                                 }
                             }
                             Accessible.role: Accessible.PushButton
-                            Accessible.name: chip.modelData
+                            Accessible.name: chip.modelData.name
                             Accessible.onPressAction: repository.selectCommit(rowItem.index)
                             Text {
                                 id: chipText
                                 anchors.centerIn: parent
-                                text: parent.modelData
+                                text: chip.modelData.name
+                                font.bold: chip.modelData.isHead
                                 color: chipMouse.containsMouse ? NagaTheme.hoverContent : "#f2f4fa"
                                 font.pixelSize: 9
                             }
@@ -126,12 +130,16 @@ ListView {
                     }
                 }
             }
-            Row {
-                spacing: 8
-                Text { text: rowItem.shortOid; color: "#a78bfa"; font.family: "monospace"; font.pixelSize: 9 }
-                Text { text: rowItem.author; color: "#78839a"; font.pixelSize: 9 }
-                Text { text: "·"; color: "#78839a" }
-                Text { text: rowItem.relativeDate; color: "#78839a"; font.pixelSize: 9 }
+            Text {
+                width: parent.width
+                visible: !rowItem.snapshot
+                textFormat: Text.StyledText
+                text: "<font color=\"#a78bfa\">" + rowItem.shortOid + "</font>&nbsp;&nbsp;"
+                      + rowItem.author.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                      + "&nbsp;·&nbsp;" + rowItem.relativeDate
+                color: "#78839a"
+                elide: Text.ElideRight
+                font.pixelSize: 9
             }
         }
     }

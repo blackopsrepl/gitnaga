@@ -6,6 +6,31 @@ namespace GitNaga {
 
 using detail::decode;
 
+namespace {
+
+// A generated file or a vendored blob can produce a diff of hundreds of
+// megabytes; nobody reads that line by line, and the view should not stall
+// trying to. Show the head and say what was left out.
+constexpr qsizetype kDiffByteLimit = 4 * 1024 * 1024;
+
+QVector<DiffLine> boundedDiff(const QByteArray &output)
+{
+    if (output.size() <= kDiffByteLimit)
+        return detail::parseDiff(output);
+    auto cut = output.lastIndexOf('\n', kDiffByteLimit);
+    if (cut < 0)
+        cut = kDiffByteLimit;
+    auto lines = detail::parseDiff(output.left(cut));
+    DiffLine notice;
+    notice.kind = DiffLine::Kind::Hunk;
+    notice.text = QStringLiteral("… diff truncated: %1 MB not shown")
+                      .arg(static_cast<double>(output.size() - cut) / (1024.0 * 1024.0), 0, 'f', 1);
+    lines.append(notice);
+    return lines;
+}
+
+} // namespace
+
 GitResult<CommitInspection> GitClient::inspectCommit(const QString &worktree, const QString &oid)
 {
     auto metadata = run(worktree,
@@ -60,64 +85,47 @@ GitResult<CommitInspection> GitClient::inspectCommit(const QString &worktree, co
     return inspection;
 }
 
-GitResult<CommitInspection> GitClient::inspectWorktree(const QString &worktree)
-{
-    auto output = run(worktree,
-                      { QStringLiteral("status"), QStringLiteral("--porcelain=v1"), QStringLiteral("-z"),
-                        QStringLiteral("--untracked-files=all") },
-                      QStringLiteral("list worktree changes"));
-    if (!output)
-        return std::unexpected(output.error());
-
-    CommitInspection inspection;
-    inspection.details.subject = QStringLiteral("Work in progress");
-    inspection.details.oid = QStringLiteral("HEAD");
-
-    const auto fields = output->split('\0');
-    for (qsizetype index = 0; index < fields.size(); ++index) {
-        const auto entry = decode(fields.at(index));
-        if (entry.size() < 3)
-            continue;
-        const QChar stagedCode = entry.at(0);
-        const QChar unstagedCode = entry.at(1);
-        FileChange file;
-        file.path = entry.mid(3);
-        if (stagedCode == QLatin1Char('?') && unstagedCode == QLatin1Char('?')) {
-            file.status = QStringLiteral("A");
-            inspection.files.append(std::move(file));
-            continue;
-        }
-        file.staged = stagedCode != QLatin1Char(' ');
-        if (stagedCode == QLatin1Char('R') || stagedCode == QLatin1Char('C')) {
-            file.status = stagedCode;
-            if (index + 1 < fields.size())
-                file.oldPath = decode(fields.at(++index));
-        } else if (stagedCode == QLatin1Char('A') || stagedCode == QLatin1Char('D')) {
-            file.status = stagedCode;
-        } else if (unstagedCode == QLatin1Char('D')) {
-            file.status = QStringLiteral("D");
-        } else {
-            file.status = QStringLiteral("M");
-        }
-        inspection.files.append(std::move(file));
-    }
-    return inspection;
-}
-
 GitResult<QVector<DiffLine>> GitClient::loadDiff(const QString &worktree, const QString &oid, const QString &path,
-                                                 const QString &oldPath)
+                                                 const QString &oldPath, DiffSide side, bool untracked)
 {
-    // A rename only diffs as a rename when both sides are named.
-    QStringList arguments{ QStringLiteral("show"), QStringLiteral("--format="), QStringLiteral("--no-color"),
-                           QStringLiteral("--no-ext-diff"), QStringLiteral("--first-parent"), oid,
-                           QStringLiteral("--") };
-    if (!oldPath.isEmpty())
-        arguments.append(oldPath);
-    arguments.append(path);
-    auto diff = run(worktree, arguments, QStringLiteral("load diff"));
+    RunOptions options;
+    QStringList arguments;
+    if (untracked && side != DiffSide::Commit && side != DiffSide::Staged) {
+        // Git has no blob for an untracked file yet; --no-index diffs it
+        // against nothing and exits 1 to say "they differ".
+        options.acceptedExitCodes = { 0, 1 };
+        arguments = { QStringLiteral("diff"), QStringLiteral("--no-color"), QStringLiteral("--no-ext-diff"),
+                      QStringLiteral("--no-index"), QStringLiteral("--"), QStringLiteral("/dev/null"), path };
+    } else {
+        switch (side) {
+        case DiffSide::Commit:
+            arguments = { QStringLiteral("show"), QStringLiteral("--format="), QStringLiteral("--no-color"),
+                          QStringLiteral("--no-ext-diff"), QStringLiteral("-M"), QStringLiteral("--first-parent"), oid };
+            break;
+        case DiffSide::Worktree:
+            // Against HEAD, or the empty tree on an unborn branch.
+            arguments = { QStringLiteral("diff"), QStringLiteral("--no-color"), QStringLiteral("--no-ext-diff"),
+                          QStringLiteral("-M"),
+                          oid.isEmpty() ? QStringLiteral("4b825dc642cb6eb9a060e54bf8d69288fbee4904") : oid };
+            break;
+        case DiffSide::Unstaged:
+            arguments = { QStringLiteral("diff"), QStringLiteral("--no-color"), QStringLiteral("--no-ext-diff") };
+            break;
+        case DiffSide::Staged:
+            arguments = { QStringLiteral("diff"), QStringLiteral("--cached"), QStringLiteral("--no-color"),
+                          QStringLiteral("--no-ext-diff"), QStringLiteral("-M") };
+            break;
+        }
+        // A rename only diffs as a rename when both sides are named.
+        arguments.append(QStringLiteral("--"));
+        if (!oldPath.isEmpty())
+            arguments.append(oldPath);
+        arguments.append(path);
+    }
+    auto diff = run(worktree, arguments, QStringLiteral("load diff"), options);
     if (!diff)
         return std::unexpected(diff.error());
-    return detail::parseDiff(*diff);
+    return boundedDiff(*diff);
 }
 
 } // namespace GitNaga

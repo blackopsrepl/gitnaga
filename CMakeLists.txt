@@ -25,8 +25,9 @@ add_library(gitnaga_core STATIC
     src/git_client.hpp
     src/git_refs.cpp
     src/git_refs.hpp
-    src/git_remote.cpp
     src/git_worktrees.cpp
+    src/git_history.cpp
+    src/git_status.cpp
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
@@ -40,7 +41,9 @@ add_library(gitnaga_core STATIC
     src/repository_controller.cpp
     src/repository_controller.hpp
     src/repository_worktrees.cpp
+    src/repository_loading.cpp
     src/repository_operations.cpp
+    src/repository_selection.cpp
     src/repository_references.cpp
 )
 
@@ -86,6 +89,8 @@ qt_add_qml_module(gitnaga
         qml/NagaTheme.qml
         qml/PromptDialog.qml
         qml/ReferencesPane.qml
+        qml/ReferenceMenu.qml
+        qml/RefRow.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

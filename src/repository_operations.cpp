@@ -3,9 +3,6 @@
 #include "git_client.hpp"
 #include "git_refs.hpp"
 
-#include <QFutureWatcher>
-#include <QtConcurrent/QtConcurrent>
-
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -45,6 +42,23 @@ void RepositoryController::checkoutBranch(const QString &name)
                  tr("Switched to %1").arg(name));
 }
 
+void RepositoryController::checkoutRemoteBranch(const QString &reference)
+{
+    QString remote;
+    QString branch;
+    if (!gitrefs::splitRemoteRef(reference, &remote, &branch))
+        return;
+    for (const auto &ref : m_repository.refs.refs) {
+        if (ref.kind == RefKind::Local && ref.name == branch) {
+            checkoutBranch(branch);
+            return;
+        }
+    }
+    runOperation(QStringLiteral("track remote branch"),
+                 { QStringLiteral("switch"), QStringLiteral("--track"), reference },
+                 tr("Switched to new branch %1 tracking %2").arg(branch, reference));
+}
+
 void RepositoryController::createBranch(const QString &name, const QString &oid)
 {
     if (name.isEmpty() || oid.isEmpty())
@@ -56,38 +70,16 @@ void RepositoryController::createBranch(const QString &name, const QString &oid)
 
 void RepositoryController::commitWorktree(const QString &summary, const QString &description)
 {
-    if (m_repository.worktree.isEmpty() || m_operationActive)
-        return;
-    const auto worktree = m_repository.worktree;
     const auto include = m_changedFiles.selectedPaths();
     const auto unstage = m_changedFiles.stagedUnselectedPaths();
     if (include.isEmpty()) {
-        setOperationMessage(tr("Select at least one file to commit"));
-        emit operationFinished(false, tr("Select at least one file to commit"));
+        reportFailure(tr("Select at least one file to commit"));
         return;
     }
-    m_operationActive = true;
-    emit busyChanged();
-
-    auto *watcher = new QFutureWatcher<GitResult<QString>>(this);
-    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher] {
-        const auto result = watcher->result();
-        watcher->deleteLater();
-        m_operationActive = false;
-        emit busyChanged();
-        if (!result) {
-            const auto message = result.error().message.isEmpty() ? result.error().operation : result.error().message;
-            setOperationMessage(message);
-            emit operationFinished(false, message);
-            return;
-        }
-        setOperationMessage(tr("Committed %1").arg(result->left(8)));
-        emit operationFinished(true, tr("Committed %1").arg(result->left(8)));
-        refresh();
-    });
-    watcher->setFuture(QtConcurrent::run([worktree, include, unstage, summary, description] {
-        return GitClient::commitWorktree(worktree, include, unstage, summary, description);
-    }));
+    runAsyncOperation(tr("Committed %1").arg(summary.left(48)),
+                      [include, unstage, summary, description](const QString &worktree, const RunOptions &) {
+                          return GitClient::commitWorktree(worktree, include, unstage, summary, description);
+                      });
 }
 
 void RepositoryController::deleteBranch(const QString &name)
@@ -108,8 +100,8 @@ void RepositoryController::deleteRemoteBranch(const QString &reference)
     // The push runs against the remote's own transport and prunes the local
     // remote-tracking ref itself, so there is nothing to reconcile afterwards.
     runAsyncOperation(tr("Deleted %1 on %2").arg(branch, remote),
-                      [remote, branch](const QString &repository) {
-                          return GitClient::deleteRemoteBranch(repository, remote, branch);
+                      [remote, branch](const QString &repository, const RunOptions &options) {
+                          return GitClient::deleteRemoteBranch(repository, remote, branch, options);
                       });
 }
 
@@ -120,6 +112,14 @@ void RepositoryController::createTag(const QString &name, const QString &oid)
     runOperation(QStringLiteral("create tag"),
                  { QStringLiteral("tag"), name, oid },
                  tr("Tagged %1 as %2").arg(shortOid(oid), name));
+}
+
+void RepositoryController::deleteTag(const QString &name)
+{
+    if (name.isEmpty())
+        return;
+    runOperation(QStringLiteral("delete tag"), { QStringLiteral("tag"), QStringLiteral("-d"), name },
+                 tr("Deleted tag %1").arg(name));
 }
 
 void RepositoryController::cherryPick(const QString &oid)
@@ -140,13 +140,14 @@ void RepositoryController::revertCommit(const QString &oid)
                  tr("Reverted %1").arg(shortOid(oid)));
 }
 
-void RepositoryController::mergeCommit(const QString &oid)
+void RepositoryController::mergeCommit(const QString &oid, const QString &branch)
 {
     if (oid.isEmpty())
         return;
-    runOperation(QStringLiteral("merge commit"),
-                 { QStringLiteral("merge"), QStringLiteral("--no-edit"), oid },
-                 tr("Merged %1").arg(shortOid(oid)));
+    const auto target = branch.isEmpty() ? oid : branch;
+    runOperation(QStringLiteral("merge"),
+                 { QStringLiteral("merge"), QStringLiteral("--no-edit"), target },
+                 tr("Merged %1").arg(branch.isEmpty() ? shortOid(oid) : branch));
 }
 
 void RepositoryController::resetTo(const QString &oid, const QString &mode)
@@ -158,13 +159,14 @@ void RepositoryController::resetTo(const QString &oid, const QString &mode)
                  tr("Reset %1 to %2").arg(mode, shortOid(oid)));
 }
 
-void RepositoryController::rebaseOnto(const QString &oid)
+void RepositoryController::rebaseOnto(const QString &oid, const QString &branch)
 {
     if (oid.isEmpty())
         return;
-    runOperation(QStringLiteral("rebase branch"),
-                 { QStringLiteral("rebase"), oid },
-                 tr("Rebased onto %1").arg(shortOid(oid)));
+    const auto target = branch.isEmpty() ? oid : branch;
+    runOperation(QStringLiteral("rebase"),
+                 { QStringLiteral("rebase"), target },
+                 tr("Rebased onto %1").arg(branch.isEmpty() ? shortOid(oid) : branch));
 }
 
 } // namespace GitNaga
