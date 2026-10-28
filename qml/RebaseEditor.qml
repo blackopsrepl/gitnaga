@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import GitNaga
 
 // Interactive rebase: the commits from one commit up to HEAD, oldest first.
