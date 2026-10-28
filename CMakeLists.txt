@@ -30,6 +30,8 @@ add_library(gitnaga_core STATIC
     src/syntax_highlight.hpp
     src/syntax_languages.cpp
     src/file_change_model.cpp
+    src/split_diff_model.cpp
+    src/split_diff_model.hpp
     src/file_change_model.hpp
     src/git_client.cpp
     src/git_client.hpp
@@ -69,6 +71,11 @@ qt_add_executable(gitnaga
     src/commit_graph_item.cpp
     src/commit_graph_item.hpp
     src/commit_graph_paint.cpp
+    src/diff_blob_provider.cpp
+    src/diff_blob_provider.hpp
+    src/diff_palette.hpp
+    src/diff_text_item.cpp
+    src/diff_text_item.hpp
     src/main.cpp
     src/ui_driver.cpp
     src/ui_driver.hpp
@@ -84,6 +91,16 @@ qt_add_qml_module(gitnaga
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
+        qml/DiffChip.qml
+        qml/DiffFileHeader.qml
+        qml/DiffFormat.js
+        qml/DiffHunkBar.qml
+        qml/DiffImageCompare.qml
+        qml/DiffLineText.qml
+        qml/DiffSpecialCard.qml
+        qml/DiffSplitRow.qml
+        qml/DiffUnifiedRow.qml
+        qml/DiffView.qml
         qml/EmptyState.qml
         qml/GraphPane.qml
         qml/GraphScrollBar.qml

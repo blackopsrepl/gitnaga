@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QString>
 
+#include "diff_blob_provider.hpp"
 #include "repository_controller.hpp"
 #include "ui_driver.hpp"
 
@@ -16,6 +17,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationDomain(QStringLiteral("gitnaga.io"));
 
     QQmlApplicationEngine engine;
+    engine.addImageProvider(QStringLiteral("diffblob"), new GitNaga::DiffBlobProvider);
     GitNaga::RepositoryController repository;
     engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) } });
     QObject::connect(

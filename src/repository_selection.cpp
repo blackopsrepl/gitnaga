@@ -77,12 +77,11 @@ void RepositoryController::selectFile(int row)
     const bool worktree = m_selectedOid == worktreeOid();
     const auto repository = m_repository.location.worktree;
     const auto oid = worktree ? m_repository.refs.headOid : m_selected.oid;
-    const auto path = file->path;
-    const auto oldPath = file->oldPath;
-    const auto side = worktree ? DiffSide::Worktree : DiffSide::Commit;
-    const bool untracked = file->untracked;
+    const DiffRequest request{ repository, oid, file->path, file->oldPath,
+                               worktree ? DiffSide::Worktree : DiffSide::Commit, file->untracked };
+    const auto options = m_diffLines.options();
 
-    auto *watcher = new QFutureWatcher<GitResult<QVector<DiffLine>>>(this);
+    auto *watcher = new QFutureWatcher<GitResult<FileDiff>>(this);
     connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation] {
         const auto result = watcher->result();
         watcher->deleteLater();
@@ -94,9 +93,7 @@ void RepositoryController::selectFile(int row)
         }
         m_diffLines.replace(*result);
     });
-    watcher->setFuture(QtConcurrent::run([repository, oid, path, oldPath, side, untracked] {
-        return GitClient::loadDiff(repository, oid, path, oldPath, side, untracked);
-    }));
+    watcher->setFuture(QtConcurrent::run([request, options] { return GitClient::loadFileDiff(request, options); }));
 }
 
 void RepositoryController::restoreSelection()
