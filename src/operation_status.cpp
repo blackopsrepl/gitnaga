@@ -123,7 +123,7 @@ OperationText describeOperation(const OperationFacts &facts, const QString &curr
         text.title = QObject::tr("Rebasing %1 onto %2").arg(head, onto) + progress(facts);
         text.detail = targetLine(facts, QObject::tr("Stopped at"));
         text.ours = onto;
-        text.theirs = facts.target.isEmpty() ? head : facts.target.left(8);
+        text.theirs = facts.target.isEmpty() ? head : target;
     } else if (facts.kind == QStringLiteral("am")) {
         text.title = QObject::tr("Applying patches onto %1").arg(facts.headName.isEmpty() ? branch : facts.headName)
                    + progress(facts);
@@ -150,7 +150,8 @@ OperationText describeOperation(const OperationFacts &facts, const QString &curr
     } else if (facts.kind == QStringLiteral("bisect")) {
         text.title = facts.bisectStart.isEmpty() ? QObject::tr("Bisecting")
                                                  : QObject::tr("Bisecting from %1").arg(shortBranch(facts.bisectStart));
-        text.detail = targetLine(facts, QObject::tr("Testing"));
+        text.detail = facts.target.isEmpty() ? QObject::tr("Mark a good and a bad commit to start narrowing down")
+                                             : targetLine(facts, QObject::tr("Testing"));
     }
     return text;
 }

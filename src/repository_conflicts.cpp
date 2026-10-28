@@ -58,7 +58,8 @@ void RepositoryController::continueOperation()
     const auto remaining = std::count_if(m_repository.status.files.cbegin(), m_repository.status.files.cend(),
                                          [](const FileChange &file) { return file.conflicted; });
     if (remaining > 0) {
-        reportFailure(tr("Resolve %n conflicted file(s) first", nullptr, static_cast<int>(remaining)));
+        reportFailure(remaining == 1 ? tr("Resolve the conflicted file first")
+                                     : tr("Resolve the %1 conflicted files first").arg(remaining));
         return;
     }
     if (operation == QStringLiteral("merge")) {
@@ -167,6 +168,7 @@ QVariantMap RepositoryController::conflictDocument(const QString &path) const
         entry.insert(QStringLiteral("hasBase"), block.hasBase);
         entry.insert(QStringLiteral("oursLabel"), block.oursLabel);
         entry.insert(QStringLiteral("theirsLabel"), block.theirsLabel);
+        entry.insert(QStringLiteral("baseLabel"), block.baseLabel);
         entry.insert(QStringLiteral("index"), block.conflict ? ordinal++ : -1);
         blocks.append(entry);
     }
