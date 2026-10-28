@@ -196,6 +196,12 @@ Rectangle {
         id: refMenu
         repository: pane.repository
         confirm: confirm
+        upstreamDialog: upstreamDialog
+    }
+
+    UpstreamDialog {
+        id: upstreamDialog
+        repository: pane.repository
     }
 
     function openMenu(reference) {

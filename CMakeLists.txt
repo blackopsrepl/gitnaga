@@ -101,6 +101,10 @@ qt_add_qml_module(gitnaga
         qml/ReferencesPane.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
+        qml/RemoteChoiceDialog.qml
+        qml/SyncButton.qml
+        qml/SyncToolbar.qml
+        qml/UpstreamDialog.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE
