@@ -7,6 +7,7 @@ import GitNaga
 Item {
     id: wip
     required property var repository
+    signal fileMenuRequested(string path, point scenePosition)
 
     function rowIn(side) {
         if (repository.wipSide !== side)
@@ -62,6 +63,7 @@ Item {
             currentRow: wip.rowIn("unstaged")
             onFileAction: (row, action) => wip.fileAction("unstaged", row, action)
             onBulkAction: (action) => wip.bulkAction(action)
+            onFileMenuRequested: (path, position) => wip.fileMenuRequested(path, position)
         }
         WipFileSection {
             Layout.fillWidth: true
@@ -73,6 +75,7 @@ Item {
             currentRow: wip.rowIn("staged")
             onFileAction: (row, action) => wip.fileAction("staged", row, action)
             onBulkAction: (action) => wip.bulkAction(action)
+            onFileMenuRequested: (path, position) => wip.fileMenuRequested(path, position)
         }
         Item { Layout.fillHeight: true }
     }

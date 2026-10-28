@@ -5,6 +5,7 @@
 #include "askpass.hpp"
 #include "remote_sync.hpp"
 #include "diff_blob_provider.hpp"
+#include "navigation_controller.hpp"
 #include "repository_controller.hpp"
 #include "ui_driver.hpp"
 
@@ -23,10 +24,14 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationDomain(QStringLiteral("gitnaga.io"));
     GitNaga::RemoteSync::setAskpassProgram(QCoreApplication::applicationFilePath());
 
+    // The controllers outlive the engine: a scene torn down after them would
+    // re-evaluate every binding against a dead object on the way out.
+    GitNaga::RepositoryController repository;
+    GitNaga::NavigationController navigation(&repository);
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("diffblob"), new GitNaga::DiffBlobProvider);
-    GitNaga::RepositoryController repository;
-    engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) } });
+    engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) },
+                                  { QStringLiteral("navigation"), QVariant::fromValue(&navigation) } });
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,

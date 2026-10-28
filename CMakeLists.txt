@@ -14,6 +14,8 @@ qt_standard_project_setup(REQUIRES 6.9.1)
 add_library(gitnaga_core STATIC
     src/avatar_provider.cpp
     src/avatar_provider.hpp
+    src/blame_model.cpp
+    src/blame_model.hpp
     src/commit_model.cpp
     src/commit_model.hpp
     src/conflict_parser.cpp
@@ -22,6 +24,10 @@ add_library(gitnaga_core STATIC
     src/project_browser.hpp
     src/diff_document.cpp
     src/diff_document.hpp
+    src/commit_search.cpp
+    src/commit_search.hpp
+    src/file_history_model.cpp
+    src/file_history_model.hpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
     src/file_diff.hpp
@@ -46,6 +52,8 @@ add_library(gitnaga_core STATIC
     src/git_staging.cpp
     src/git_staging.hpp
     src/git_inspect.cpp
+    src/git_navigation.cpp
+    src/git_navigation.hpp
     src/git_parse.cpp
     src/git_parse.hpp
     src/git_rebase.cpp
@@ -65,6 +73,8 @@ add_library(gitnaga_core STATIC
     src/rebase_todo.hpp
     src/patch_builder.cpp
     src/patch_builder.hpp
+    src/navigation_controller.cpp
+    src/navigation_controller.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
     src/operation_controller.cpp
@@ -88,6 +98,8 @@ add_library(gitnaga_core STATIC
     src/undo_capture.cpp
     src/undo_stack.cpp
     src/undo_stack.hpp
+    src/search_controller.cpp
+    src/search_controller.hpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
@@ -124,6 +136,8 @@ qt_add_qml_module(gitnaga
         qml/Askpass.qml
         qml/BranchDragLayer.qml
         qml/BranchDropMenu.qml
+        qml/BlamePanel.qml
+        qml/CommandPalette.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
@@ -141,6 +155,8 @@ qt_add_qml_module(gitnaga
         qml/DiffUnifiedRow.qml
         qml/DiffView.qml
         qml/EmptyState.qml
+        qml/FileHistoryPanel.qml
+        qml/GraphKeys.qml
         qml/GraphPane.qml
         qml/GraphScrollBar.qml
         qml/InspectorPane.qml
@@ -149,6 +165,7 @@ qt_add_qml_module(gitnaga
         qml/NagaMenuItem.qml
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
+        qml/NavigationLayer.qml
         qml/OpenRepositoryDialog.qml
         qml/OperationBanner.qml
         qml/AddWorktreeDialog.qml
@@ -177,6 +194,8 @@ qt_add_qml_module(gitnaga
         qml/WipFileRow.qml
         qml/WipFileSection.qml
         qml/WipFiles.qml
+        qml/SearchField.qml
+        qml/SheetPanel.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

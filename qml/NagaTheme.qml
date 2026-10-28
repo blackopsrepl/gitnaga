@@ -81,6 +81,12 @@ QtObject {
     readonly property color syntaxComment: "#67748c"
     readonly property color syntaxMeta: "#e8c27a"
 
+    // Search hits: a warm marker that cannot be mistaken for selection.
+    readonly property color searchHit: "#f5c04a"
+    function searchHitTint(strength) {
+        return Qt.rgba(searchHit.r, searchHit.g, searchHit.b, strength)
+    }
+
     // Accent tints for selected/active surfaces, so no component has to invent
     // its own green.
     function accentTint(strength) {

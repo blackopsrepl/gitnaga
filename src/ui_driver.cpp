@@ -129,6 +129,27 @@ void UiDriver::type(const QString &text)
     }
 }
 
+QVariant UiDriver::readProperty(const QString &path) const
+{
+    // "commitCount" reads the repository; "navigation.search.count" walks
+    // object properties, so any QML-facing object can be asserted on.
+    const auto parts = path.split(QLatin1Char('.'));
+    if (parts.size() == 1)
+        return m_repository->property(path.toUtf8());
+    // "sync.ahead" names a repository part; anything else starts at the window.
+    QObject *object = m_repository->property(parts.first().toUtf8()).isValid() ? m_repository
+                                                                              : static_cast<QObject *>(m_window);
+    // Each step is an object property or, like "selectedCommit.subject", a map key.
+    QVariant value = QVariant::fromValue(object);
+    for (const auto &part : parts) {
+        if (auto *step = value.value<QObject *>())
+            value = step->property(part.toUtf8());
+        else
+            value = value.toMap().value(part);
+    }
+    return value;
+}
+
 void UiDriver::next()
 {
     if (!m_window || !m_repository)
@@ -147,6 +168,14 @@ void UiDriver::next()
             return;
         }
         delay = 400;
+    } else if (step.contains(QStringLiteral("until"))) {
+        // Poll a property until it reads `equals`, for work the repository's
+        // own idle state does not cover (a search, a blame).
+        if (readProperty(step.value(QStringLiteral("until")).toString()).toString()
+            != step.value(QStringLiteral("equals")).toVariant().toString()) {
+            QTimer::singleShot(50, this, &UiDriver::next);
+            return;
+        }
     } else if (step.contains(QStringLiteral("wait"))) {
         delay = step.value(QStringLiteral("wait")).toInt();
     } else if (step.contains(QStringLiteral("open"))) {
@@ -209,9 +238,7 @@ void UiDriver::next()
         resolve(m_repository, &member)->setProperty(member.constData(), step.value(QStringLiteral("value")).toVariant());
     } else if (step.contains(QStringLiteral("print"))) {
         const auto name = step.value(QStringLiteral("print")).toString();
-        auto member = name.toUtf8();
-        auto *target = resolve(m_repository, &member);
-        const auto value = target->property(member.constData());
+        const auto value = readProperty(name);
         // Lists print joined, so a scenario can expect them as one string.
         const auto text = value.typeId() == QMetaType::QStringList ? value.toStringList().join(QLatin1Char(','))
                                                                    : value.toString();

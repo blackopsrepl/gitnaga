@@ -132,6 +132,18 @@ qt_add_executable(gitnaga_file_diff_test
 target_link_libraries(gitnaga_file_diff_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_file_diff_test COMMAND gitnaga_file_diff_test)
 
+qt_add_executable(gitnaga_navigation_parse_test
+    navigation_parse_test.cpp
+)
+target_link_libraries(gitnaga_navigation_parse_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_navigation_parse_test COMMAND gitnaga_navigation_parse_test)
+
+qt_add_executable(gitnaga_navigation_git_test
+    navigation_git_test.cpp
+)
+target_link_libraries(gitnaga_navigation_git_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_navigation_git_test COMMAND gitnaga_navigation_git_test)
+
 # Every test runs headless with no desktop theme plugin: the GTK theme tries
 # to open a display and the run dies before a single test executes.
 get_property(gitnaga_tests DIRECTORY PROPERTY TESTS)

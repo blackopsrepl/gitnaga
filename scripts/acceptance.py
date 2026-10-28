@@ -19,10 +19,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+from acceptance_navigation import navigation_scenarios
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def scenarios(zoo: Path, out: Path):
+def scenarios(zoo: Path, out: Path, big_count: int):
     """name -> steps. `expect` steps are checked here, not by the app."""
     def shot(name):
         return {"shot": str(out / f"{name}.png")}
@@ -187,6 +189,7 @@ def scenarios(zoo: Path, out: Path):
             {"open": str(zoo / "lfs")}, {"idle": True}, {"select": 0}, {"idle": True}, shot("lfs"),
         ],
         **sync_scenarios(zoo, shot, sandbox),
+        **navigation_scenarios(zoo, shot, big_count),
         "big": [
             {"open": str(zoo / "big")}, {"idle": True}, shot("big"),
             {"print": "commitCount"},
@@ -287,12 +290,13 @@ def run(binary: Path, name: str, steps, env) -> bool:
                                 capture_output=True, text=True, timeout=300)
     finally:
         os.unlink(path)
-    printed = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+    lines = [line for line in result.stdout.splitlines() if "=" in line]
+    printed = dict(line.split("=", 1) for line in lines)
     failures = [f"{key}: expected {value!r}, got {printed.get(key)!r}"
                 for key, value in expectations.items() if printed.get(key) != value]
     ok = result.returncode == 0 and not failures
     mark = "✓" if ok else "✗"
-    detail = ", ".join(f"{k}={v}" for k, v in printed.items())
+    detail = ", ".join(lines)
     print(f"{mark} {name:18} {detail}")
     for failure in failures:
         print(f"    {failure}")
@@ -326,7 +330,7 @@ def main() -> int:
     binary = Path(args.build) / "gitnaga"
     env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_QUICK_BACKEND": "software",
            "QT_QPA_PLATFORMTHEME": "", "XDG_CONFIG_HOME": str(out / "config")}
-    selected = scenarios(zoo, out)
+    selected = scenarios(zoo, out, args.big)
     if args.huge:
         selected["huge"] = huge_scenario(zoo, out)
     names = args.only or list(selected)

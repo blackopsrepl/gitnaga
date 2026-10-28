@@ -17,6 +17,7 @@ Item {
     property bool current: false
     signal chosen()
     signal action(string name)
+    signal menuRequested(point scenePosition)
 
     height: 34
     readonly property bool showActions: hover.hovered || row.current
@@ -32,7 +33,14 @@ Item {
         visible: row.current
     }
     HoverHandler { id: hover }
-    TapHandler { onTapped: row.chosen() }
+    TapHandler {
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onTapped: (point, button) => {
+            row.chosen()
+            if (button === Qt.RightButton)
+                row.menuRequested(point.scenePosition)
+        }
+    }
 
     RowLayout {
         anchors.fill: parent

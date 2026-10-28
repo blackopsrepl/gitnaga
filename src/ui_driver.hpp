@@ -3,6 +3,7 @@
 #include <QJsonArray>
 #include <QObject>
 #include <QPointer>
+#include <QVariant>
 #include <QQuickWindow>
 
 namespace GitNaga {
@@ -16,12 +17,13 @@ class RepositoryController;
 //
 // GITNAGA_DRIVE=<script.json> gitnaga
 //
-// Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
+// Steps: {"open": path} {"idle": true} {"wait": ms} {"until": property, "equals": v}
+// {"select": row|oid}
 // {"file": row} {"click": [x, y], "modifiers": "Shift"} {"doubleClick": [x, y]} {"rightClick": [x, y]}
 // {"hover": [x, y]} {"wheel": [x, y, angleDelta]} {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}  (names may be "sync.<member>")
 // {"drag": [x1, y1, x2, y2], "release": false} {"release": [x, y]}
-// {"shot": path} {"print": property} {"quit": true}
+// {"shot": path} {"print": property | "object.property"} {"quit": true}
 class UiDriver final : public QObject
 {
     Q_OBJECT
@@ -41,6 +43,7 @@ private:
     void wheel(const QPointF &point, int delta);
     void key(const QString &sequence);
     void type(const QString &text);
+    QVariant readProperty(const QString &path) const;
 
     QJsonArray m_steps;
     qsizetype m_index = 0;

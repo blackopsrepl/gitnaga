@@ -15,6 +15,7 @@ ColumnLayout {
     property int currentRow: -1
     signal fileAction(int row, string action)
     signal bulkAction(string action)
+    signal fileMenuRequested(string path, point scenePosition)
 
     visible: files.count > 0
     spacing: 0
@@ -76,6 +77,7 @@ ColumnLayout {
             current: index === section.currentRow
             onChosen: section.repository.selectWorktreeFile(section.side, index)
             onAction: (name) => section.fileAction(index, name)
+            onMenuRequested: (position) => section.fileMenuRequested(path, position)
         }
     }
 }

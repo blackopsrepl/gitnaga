@@ -6,6 +6,7 @@ import GitNaga
 ApplicationWindow {
     id: root
     required property var repository
+    required property var navigation
 
     width: 1480
     height: 900
@@ -168,6 +169,8 @@ ApplicationWindow {
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
             repository: root.repository
+            navigation: root.navigation
+            onFocusReviewRequested: if (root.reviewVisible) reviewPane.focusFiles()
         }
         InspectorPane {
             id: reviewPane
@@ -176,7 +179,16 @@ ApplicationWindow {
             SplitView.minimumWidth: 320
             repository: root.repository
             onCloseRequested: root.reviewVisible = false
+            onFileMenuRequested: (path, position) => navigationLayer.showFileMenu(path, position)
         }
+    }
+
+    NavigationLayer {
+        id: navigationLayer
+        repository: root.repository
+        navigation: root.navigation
+        window: root
+        graphPane: graphPane
     }
 
     footer: Rectangle {
