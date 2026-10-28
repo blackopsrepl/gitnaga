@@ -11,6 +11,7 @@
 #include <QMouseEvent>
 #include <QMetaObject>
 #include <QTimer>
+#include <QWheelEvent>
 
 #include <cstdio>
 
@@ -53,6 +54,19 @@ void UiDriver::click(const QPointF &point, Qt::MouseButton button, bool twice)
         send(QEvent::MouseButtonDblClick, button);
         send(QEvent::MouseButtonRelease, Qt::NoButton);
     }
+}
+
+void UiDriver::hover(const QPointF &point)
+{
+    QMouseEvent move(QEvent::MouseMove, point, m_window->mapToGlobal(point), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(m_window, &move);
+}
+
+void UiDriver::wheel(const QPointF &point, int delta)
+{
+    QWheelEvent event(point, m_window->mapToGlobal(point), {}, QPoint(0, delta), Qt::NoButton, Qt::NoModifier,
+                      Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(m_window, &event);
 }
 
 void UiDriver::key(const QString &sequence)
@@ -111,6 +125,12 @@ void UiDriver::next()
         const auto point = step.value(twice ? QStringLiteral("doubleClick")
                                             : right ? QStringLiteral("rightClick") : QStringLiteral("click")).toArray();
         click(QPointF(point.at(0).toDouble(), point.at(1).toDouble()), right ? Qt::RightButton : Qt::LeftButton, twice);
+    } else if (step.contains(QStringLiteral("hover"))) {
+        const auto point = step.value(QStringLiteral("hover")).toArray();
+        hover(QPointF(point.at(0).toDouble(), point.at(1).toDouble()));
+    } else if (step.contains(QStringLiteral("wheel"))) {
+        const auto args = step.value(QStringLiteral("wheel")).toArray();
+        wheel(QPointF(args.at(0).toDouble(), args.at(1).toDouble()), args.at(2).toInt());
     } else if (step.contains(QStringLiteral("key"))) {
         key(step.value(QStringLiteral("key")).toString());
     } else if (step.contains(QStringLiteral("type"))) {

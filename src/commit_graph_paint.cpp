@@ -1,6 +1,7 @@
 #include "commit_graph_item.hpp"
 
 #include "graph_palette.hpp"
+#include "perf_trace.hpp"
 
 #include <QBrush>
 #include <QLinearGradient>
@@ -164,6 +165,8 @@ void CommitGraphItem::paint(QPainter *painter)
 {
     if (rows().isEmpty() || effectiveRowHeight() <= 0.0)
         return;
+    const perf::Scope scope("graph paint");
+    perf::markOnce("graph: first rows painted");
     painter->setRenderHint(QPainter::Antialiasing, true);
 
     const auto st = style();

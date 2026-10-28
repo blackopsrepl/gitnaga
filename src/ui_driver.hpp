@@ -18,7 +18,7 @@ class RepositoryController;
 //
 // Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
 // {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
-// {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
+// {"hover": [x, y]} {"wheel": [x, y, angleDelta]} {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}
 // {"shot": path} {"print": property} {"quit": true}
 class UiDriver final : public QObject
@@ -34,6 +34,8 @@ private:
     void next();
     bool settled() const;
     void click(const QPointF &point, Qt::MouseButton button, bool twice);
+    void hover(const QPointF &point);
+    void wheel(const QPointF &point, int delta);
     void key(const QString &sequence);
     void type(const QString &text);
 

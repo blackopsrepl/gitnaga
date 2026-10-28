@@ -1,5 +1,7 @@
 #include "repository_controller.hpp"
 
+#include "perf_trace.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
@@ -94,6 +96,8 @@ void RepositoryController::openRepository(const QUrl &url)
 
 void RepositoryController::openRepositoryPath(const QString &path)
 {
+    perf::restart();
+    perf::mark("open requested");
     m_requestedPath = QDir::cleanPath(path);
     startSync(true);
 }

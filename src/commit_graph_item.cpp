@@ -1,6 +1,6 @@
 #include "commit_graph_item.hpp"
 
-
+#include "perf_trace.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -157,6 +157,7 @@ void CommitGraphItem::recomputeHighlight()
     // ancestry (which would dim the selected node and hide its selection ring).
     if (m_selectedRow == m_highlightSelectedRow && m_hoveredRow == m_highlightHoveredRow)
         return;
+    const perf::Scope scope("emphasis");
     m_highlightSelectedRow = m_selectedRow;
     m_highlightHoveredRow = m_hoveredRow;
     m_highlight = graph::emphasisOids(rows(), rowIndex(), m_selectedRow, m_hoveredRow);

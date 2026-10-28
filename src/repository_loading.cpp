@@ -1,6 +1,7 @@
 #include "repository_controller.hpp"
 
 #include "git_refs.hpp"
+#include "perf_trace.hpp"
 #include "recent_projects.hpp"
 
 #include <QDir>
@@ -160,10 +161,12 @@ void RepositoryController::loadHistory()
                 QMetaObject::invokeMethod(this, [this, generation, shared] {
                     if (generation != m_historyGeneration)
                         return;
+                    const perf::Scope scope("append chunk");
                     m_commits.append(std::move(*shared));
                     m_commits.setWorkInProgress(m_commits.hasWorkInProgress(), m_repository.refs.headOid);
                     restoreSelection();
                     emit historyChanged();
+                    perf::markOnce("history: first rows in model");
                 }, Qt::QueuedConnection);
             },
             cancel);
@@ -173,6 +176,7 @@ void RepositoryController::loadHistory()
         QMetaObject::invokeMethod(this, [this, generation, shared, ok, error, progressive] {
             if (generation != m_historyGeneration)
                 return;
+            const perf::Scope scope("history swap", 0);
             if (ok && !progressive) {
                 const bool workInProgress = m_commits.hasWorkInProgress();
                 m_commits.replace(std::move(*shared));
@@ -184,6 +188,7 @@ void RepositoryController::loadHistory()
             restoreSelection();
             rebuildReferences();
             emit historyChanged();
+            perf::mark("history: loaded");
         }, Qt::QueuedConnection);
     });
 }
