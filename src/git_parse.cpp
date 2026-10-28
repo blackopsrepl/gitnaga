@@ -76,6 +76,7 @@ QVector<DiffLine> parseDiff(const QByteArray &data)
     QVector<DiffLine> result;
     int oldLine = 0;
     int newLine = 0;
+    bool inHeader = false;
     const QRegularExpression hunkExpression(QStringLiteral(R"(^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@)"));
 
     auto rawLines = data.split('\n');
@@ -89,16 +90,20 @@ QVector<DiffLine> parseDiff(const QByteArray &data)
         line.text = text;
 
         if (text.startsWith(QStringLiteral("@@"))) {
+            inHeader = false;
             line.kind = DiffLine::Kind::Hunk;
             const auto match = hunkExpression.match(text);
             if (match.hasMatch()) {
                 oldLine = match.captured(1).toInt();
                 newLine = match.captured(2).toInt();
             }
-        } else if (text.startsWith(QStringLiteral("diff --git"))
-                   || text.startsWith(QStringLiteral("index "))
-                   || text.startsWith(QStringLiteral("--- "))
-                   || text.startsWith(QStringLiteral("+++ "))) {
+        } else if (text.startsWith(QStringLiteral("diff "))) {
+            // Everything from here to the first hunk is patch header: mode,
+            // rename, index and ---/+++ lines. Inside a hunk a deleted
+            // "-- x" reads "--- x" and is content, not a header.
+            inHeader = true;
+            line.kind = DiffLine::Kind::Header;
+        } else if (inHeader) {
             line.kind = DiffLine::Kind::Header;
         } else if (text.startsWith(QLatin1Char('+'))) {
             line.kind = DiffLine::Kind::Addition;
