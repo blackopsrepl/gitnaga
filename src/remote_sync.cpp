@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QSettings>
 
+#include <algorithm>
 #include <memory>
 
 namespace GitNaga {
@@ -62,7 +63,17 @@ RemoteSync::RemoteSync(RepositoryController *repository)
     // The clock starts when a repository opens: opening one is not a reason
     // to reach the network, ten minutes of looking at it is.
     m_sinceFetch.start();
-    connect(repository, &RepositoryController::repositoryChanged, this, [this] { m_sinceFetch.restart(); });
+    // A freshly opened repository is fetched as soon as the window is in use,
+    // so its ahead/behind counts are true from the start rather than after
+    // the first interval. An invalid clock means "due now".
+    connect(repository, &RepositoryController::repositoryChanged, this, [this] {
+        m_sinceFetch.invalidate();
+        QTimer::singleShot(0, this, &RemoteSync::autoFetchTick);
+    });
+    connect(repository, &RepositoryController::busyChanged, this, [this] {
+        if (!m_sinceFetch.isValid())
+            autoFetchTick();
+    });
     connect(&m_autoFetchTimer, &QTimer::timeout, this, &RemoteSync::autoFetchTick);
     setAutoFetchInterval(m_interval);
 }
@@ -105,7 +116,11 @@ void RemoteSync::autoFetchTick()
 {
     if (!m_autoFetch || m_repository->repositoryPath().isEmpty() || m_repository->busy() || !m_active())
         return;
-    if (m_sinceFetch.elapsed() < m_interval)
+    // Nothing to fetch from: no remote has ever been fetched here.
+    const auto &refs = m_repository->repository().refs.refs;
+    if (std::none_of(refs.cbegin(), refs.cend(), [](const Ref &ref) { return ref.kind == RefKind::Remote; }))
+        return;
+    if (m_sinceFetch.isValid() && m_sinceFetch.elapsed() < m_interval)
         return;
     fetchQuietly(true);
 }

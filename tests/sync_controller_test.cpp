@@ -168,6 +168,19 @@ private slots:
         QCOMPARE(QSettings().value(QStringLiteral("sync/autoFetch")).toBool(), false);
     }
 
+    // Opening a repository fetches it at once, so the counts are true from the start.
+    void autoFetchRunsOnOpen()
+    {
+        Remotes remotes;
+        remotes.theyPush();
+        RepositoryController controller;
+        controller.sync()->setActivityProbe([] { return true; });
+        controller.sync()->setAutoFetch(true);
+        open(controller, remotes.mine);
+        QTRY_COMPARE_WITH_TIMEOUT(controller.behind(), 1, 5000);
+        QVERIFY(controller.operationMessage().isEmpty());
+    }
+
     void pullWithoutUpstreamSaysWhy()
     {
         Remotes remotes;
