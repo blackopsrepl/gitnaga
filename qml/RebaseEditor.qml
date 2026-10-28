@@ -212,6 +212,9 @@ Popup {
             ++editor.revision
             Qt.callLater(editor.focusRow, 0)
         }
+    }
+    Connections {
+        target: editor.repository
         function onOperationFinished(ok, message) {
             if (!editor.running)
                 return
