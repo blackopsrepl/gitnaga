@@ -7,6 +7,7 @@
 # Each repository is created from scratch; the directory is wiped first.
 set -euo pipefail
 
+here=$(cd "$(dirname "$0")" && pwd)
 root=${1:?usage: fixture-zoo.sh <dir> [--big N]}
 big=0
 if [[ ${2:-} == --big ]]; then big=${3:?--big needs a commit count}; fi
@@ -167,6 +168,13 @@ commit submodule/lib extra.txt "extra" "move submodule"
 new_repo lfs
 printf 'version https://git-lfs.github.com/spec/v1\noid sha256:%064d\nsize 1048576\n' 0 >lfs/asset.bin
 git -C lfs add asset.bin && git -C lfs commit -qm "add asset"
+
+# media: one commit changing every kind of file the diff view handles.
+new_repo media
+python3 "$here/fixture_media.py" media before
+git -C media add -A && git -C media commit -qm "media: before"
+python3 "$here/fixture_media.py" media after
+git -C media add -A && git -C media commit -qm "media: after"
 
 # history: a file written by two people over two years, renamed into a
 # directory on the way, plus a pickaxe-able word; file history and blame.
