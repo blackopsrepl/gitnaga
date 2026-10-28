@@ -3,6 +3,9 @@
 #include <QString>
 
 #include "repository_controller.hpp"
+#include "ui_driver.hpp"
+
+#include <QQuickWindow>
 
 int main(int argc, char *argv[])
 {
@@ -26,6 +29,13 @@ int main(int argc, char *argv[])
     const auto arguments = application.arguments();
     if (arguments.size() > 1)
         repository.openRepositoryPath(arguments.at(1));
+
+    // Scripted acceptance runs: see ui_driver.hpp.
+    if (const auto script = qEnvironmentVariable("GITNAGA_DRIVE"); !script.isEmpty() && !engine.rootObjects().isEmpty()) {
+        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+        auto *driver = new GitNaga::UiDriver(script, window, &repository, &application);
+        driver->start();
+    }
 
     return application.exec();
 }

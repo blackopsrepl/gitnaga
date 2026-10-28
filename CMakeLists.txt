@@ -60,6 +60,8 @@ qt_add_executable(gitnaga
     src/commit_graph_item.hpp
     src/commit_graph_paint.cpp
     src/main.cpp
+    src/ui_driver.cpp
+    src/ui_driver.hpp
 )
 
 set_source_files_properties(qml/NagaTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
