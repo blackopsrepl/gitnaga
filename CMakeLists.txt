@@ -36,6 +36,8 @@ add_library(gitnaga_core STATIC
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
+    src/patch_builder.cpp
+    src/patch_builder.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
     src/repository_controller.cpp
