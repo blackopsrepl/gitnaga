@@ -33,6 +33,7 @@ RowLayout {
         tooltip: qsTr("Fetch all remotes and prune deleted branches")
                  + (bar.sync.autoFetch ? qsTr(" (automatic every 10 minutes)") : "")
         onClicked: bar.sync.fetch()
+        menuOpen: fetchMenu.visible
         onMenuRequested: (anchor) => fetchMenu.popup(anchor, 0, anchor.height)
     }
     SyncButton {
@@ -43,6 +44,7 @@ RowLayout {
                : !bar.hasUpstream ? qsTr("%1 tracks no upstream branch: set one from its menu").arg(bar.repository.currentBranch)
                : qsTr("Pull %1 · %2").arg(bar.repository.upstream).arg(bar.modeLabel(bar.sync.pullMode))
         onClicked: bar.sync.pull()
+        menuOpen: pullMenu.visible
         onMenuRequested: (anchor) => pullMenu.popup(anchor, 0, anchor.height)
     }
     SyncButton {

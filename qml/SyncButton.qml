@@ -36,8 +36,12 @@ Item {
         }
     }
 
+    // Set by the owner while this button's menu is open: the tooltip would
+    // otherwise sit on top of the menu it describes.
+    property bool menuOpen: false
+
     HoverHandler { id: hover }
-    ToolTip.visible: hover.hovered && control.tooltip.length > 0
+    ToolTip.visible: hover.hovered && !control.menuOpen && control.tooltip.length > 0
     ToolTip.delay: 500
     ToolTip.text: control.tooltip
 }

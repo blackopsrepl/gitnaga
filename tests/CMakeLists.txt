@@ -65,3 +65,8 @@ target_link_libraries(gitnaga_sync_controller_test PRIVATE gitnaga_core Qt6::Cor
 add_test(NAME gitnaga_sync_controller_test COMMAND gitnaga_sync_controller_test)
 
 add_test(NAME gitnaga_askpass_test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/askpass_test.sh $<TARGET_FILE:gitnaga>)
+
+# Every test runs headless with no desktop theme plugin: the GTK theme tries
+# to open a display and the run dies before a single test executes.
+get_property(gitnaga_tests DIRECTORY PROPERTY TESTS)
+set_tests_properties(${gitnaga_tests} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=")
