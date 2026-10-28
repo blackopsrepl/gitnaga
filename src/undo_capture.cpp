@@ -126,6 +126,20 @@ UndoCapture finishRebase(const QString &label)
     };
 }
 
+UndoCapture finishSequence(const QString &label)
+{
+    return [label](const QString &worktree) {
+        const auto directory = gitPath(worktree, QStringLiteral("sequencer"));
+        const auto oid = directory.isEmpty() ? QString() : readFirstLine(directory + QStringLiteral("/head"));
+        if (oid.isEmpty())
+            return resetHead(label, QStringLiteral("--keep"))(worktree);
+        UndoEntry entry{ label, { { QStringLiteral("reset"), QStringLiteral("--keep"), oid } }, {} };
+        // Stopping again on a later commit leaves the sequence unfinished.
+        entry.requireGone = directory;
+        return entry;
+    };
+}
+
 UndoCapture never(const QString &label)
 {
     return [label](const QString &) { return UndoEntry{ label, {}, {} }; };

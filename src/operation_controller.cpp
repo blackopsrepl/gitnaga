@@ -78,7 +78,7 @@ void OperationController::continueOperation()
                     tr("Continued %1").arg(operation), undo::finishRebase(operation));
     } else {
         m_repository->runUndoable(QStringLiteral("continue ") + operation, { operation, QStringLiteral("--continue") },
-                    tr("Continued %1").arg(operation), undo::resetHead(operation, QStringLiteral("--keep")));
+                    tr("Continued %1").arg(operation), undo::finishSequence(operation));
     }
 }
 

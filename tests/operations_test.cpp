@@ -228,6 +228,44 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!controller.undoStack()->available(), 5000);
     }
 
+    // A cherry-pick of several commits stopped on the middle one, from a
+    // terminal; continuing it in GitNaga is undone back past all of them.
+    void cherryPickSequenceUndoesAsAWhole()
+    {
+        QTemporaryDir directory;
+        const auto root = directory.path();
+        makeDivergent(root);
+        runGit(root, { QStringLiteral("switch"), QStringLiteral("-q"), QStringLiteral("other") });
+        writeFile(root + QStringLiteral("/a.txt"), "a\n");
+        runGit(root, { QStringLiteral("add"), QStringLiteral("a.txt") });
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-qm"), QStringLiteral("add a") });
+        writeFile(root + QStringLiteral("/b.txt"), "b\n");
+        runGit(root, { QStringLiteral("add"), QStringLiteral("b.txt") });
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-qm"), QStringLiteral("add b") });
+        runGit(root, { QStringLiteral("switch"), QStringLiteral("-q"), QStringLiteral("main") });
+        const auto before = git(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") });
+        // "theirs" conflicts with main's "ours"; "add a" lands first, "add b" waits.
+        git(root, { QStringLiteral("cherry-pick"), QStringLiteral("other~1"), QStringLiteral("other~2"), QStringLiteral("other") });
+        RepositoryController controller;
+        open(controller, root);
+        QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QStringLiteral("cherry-pick"), 5000);
+        QVERIFY(git(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") }) != before);
+
+        controller.operation()->resolveConflict(QStringLiteral("f.txt"), QStringLiteral("theirs"));
+        QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 0, 5000);
+        settle(controller);
+        controller.operation()->continueOperation();
+        QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QString(), 5000);
+        settle(controller);
+        QCOMPARE(git(root, { QStringLiteral("rev-list"), QStringLiteral("--count"), before + QStringLiteral("..HEAD") }),
+                 QStringLiteral("3"));
+        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo cherry-pick"));
+
+        controller.undo();
+        QTRY_COMPARE_WITH_TIMEOUT(controller.headOid(), before, 5000);
+        QCOMPARE(contents(root), QStringLiteral("ours\n"));
+    }
+
     void remoteDeletionIsNotUndoable()
     {
         UndoStack stack;

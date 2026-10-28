@@ -39,6 +39,10 @@ UndoCapture recreateRef(const QString &label, const QString &fullName, const QVe
 UndoCapture restoreStash(const QString &label, const QString &selector, const QString &message);
 // Finishing a rebase is undone by returning the branch to its pre-rebase tip.
 UndoCapture finishRebase(const QString &label);
+// Continuing a cherry-pick or revert: a sequence of several commits is undone
+// back to where HEAD was before its first one (git's sequencer/head), a
+// single commit back to where HEAD is now.
+UndoCapture finishSequence(const QString &label);
 // An operation that cannot be taken back (a push, a remote deletion).
 UndoCapture never(const QString &label);
 } // namespace undo
