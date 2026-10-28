@@ -74,7 +74,7 @@ repository is open.
 | Repository name label | `Layout.maximumWidth: 240`, elide middle | `repositoryName` or `No repository open` |
 | `Worktrees` button | `NagaButton`, `implicitHeight: 26` | Enabled when a repository is open and not busy; opens the linked-worktree manager; Ctrl+3 |
 | Branch label | implicit | Visible only when `currentBranch` is non-empty, text `⎇ <branch>`, color `#34d399` |
-| WIP badge | implicit | Visible only when `workInProgressOid` is non-empty, text `● Work in progress`, color `#e6b45a`; clicking selects the snapshot row (row 0) |
+| WIP badge | implicit | Visible only when `workInProgressOid` is non-empty, text `● Work in progress`, color `#e6b45a`; clicking selects the uncommitted row (row 0) |
 | Spacer | `Layout.fillWidth: true` | Pushes the rest right |
 | `References` toggle | `implicitHeight: 26` | `active` when the pane is visible |
 | `Review` toggle | `implicitHeight: 26` | `active` when the pane is visible |
@@ -256,7 +256,7 @@ nothing is dimmed, so hover tracing still works on its own.
 
 Commits outside the set are drawn at 50% alpha; everything inside stays fully
 opaque, the selected row band keeps its stronger alpha, and the selected node
-keeps its white ring and its band colour regardless of what the pointer is over. Nodes are drawn flat: there is no radial glow behind the selection or the uncommitted snapshot, so the ring, the band, and the branch colour carry the state instead.
+keeps its white ring and its band colour regardless of what the pointer is over. Nodes are drawn flat: there is no radial glow behind the selection or the uncommitted row, so the ring, the band, and the branch colour carry the state instead.
 
 The pointer cue is deliberately **neutral** (`#cfd9e8`, `graph::pointerColor()`): the
 hovered node's ring widens to `2.2 * scale`, the hovered row takes a neutral
@@ -348,51 +348,32 @@ thumb on the click; dragging scrolls by writing `graph.contentY`, which the
 label overlay follows through its existing binding. Wheel events over the
 strip still reach the graph.
 
-### 5.7 Work in progress (ephemeral snapshot commit)
+### 5.7 Work in progress (the uncommitted row)
 
-Uncommitted work is presented as an ordinary commit, not a special row.
-`GitClient::loadRepository` copies the repository index into a temporary
-directory, stages the whole worktree against that copy (`git add --all` with
-`GIT_INDEX_FILE` pointing at it), writes the tree, and creates a throwaway
-commit whose parent is HEAD:
+Uncommitted work is a row above HEAD, not a commit: its id is the constant
+`WORKTREE` (`worktreeOid()`), and nothing is ever written to the repository to
+show it. Its contents come from `git status --porcelain=v2 -z --branch`
+(`src/git_status.cpp`), read with optional locks off so the read cannot
+rewrite `.git/index` and retrigger the watcher. The row appears whenever
+status lists a file and disappears when it lists none; row positions are kept
+relative to the history, so its coming and going renumbers nothing.
 
-```
-cp .git/index <tmp>/index
-GIT_INDEX_FILE=<tmp>/index git add --all
-GIT_INDEX_FILE=<tmp>/index git write-tree
-git commit-tree <tree> -p HEAD -m "Work in progress"
-```
-
-The repository's own index, refs, and objects the user can reach are never
-modified; the commit and its tree/blobs are unreferenced and git's automatic
-gc reclaims them. Tree equality decides whether a snapshot exists at all: a
-worktree that differs from HEAD only in stat data collapses to HEAD's tree,
-so a clean repository produces no snapshot and no row. Author and committer
-come from `user.name`/`user.email`, falling back to `Work in progress
-<uncommitted@gitnaga.invalid>`. Bare repositories are skipped, and if the
-snapshot cannot be created (read-only repository, no space) the failure is
-logged and the repository still opens without a WIP row.
-
-Because the snapshot is a real commit, every other layer treats it normally —
-inspection (`inspectCommit`), per-file diffs (`loadDiff`, which names both
-paths so a staged rename stays a rename), the review pane, and the operations
-menu. Only four things distinguish it, all keyed on
-`repository.workInProgressOid`:
+Selecting it shows the review as two sections, **Unstaged** (worktree against
+the index, untracked and conflicted files included) and **Staged** (index
+against HEAD); a file can sit in both. Each side's diff is loaded against its
+own base. The commit composer commits the index.
 
 - Node: hollow dashed disc in `#97a1b4` with a small centre dot; no avatar,
   no branch colour, no head ring (`commit_graph_paint.cpp`).
-- Label overlay: subject in `#e6b45a`; oid, author, and date are the real
-  values from the snapshot commit.
-- Toolbar: the `● Work in progress` badge appears and clicking it selects
-  row 0. The footer appends `· work in progress`.
-- Counts and the operations menu: `repository.commitCount` excludes the
-  snapshot, and right-clicking it opens the blank-space refresh menu.
+- Label overlay: subject `Uncommitted changes · n files` in `#e6b45a`.
+- Toolbar: the `● Work in progress` badge appears; clicking it selects the
+  row. The footer appends `· work in progress`.
+- Counts and the operations menu: `repository.commitCount` excludes the row,
+  and right-clicking it opens the blank-space menu.
 
-The row refreshes with the repository snapshot. The `.git` watcher fires on
-index and HEAD changes, so staging, committing, and resetting update it
-immediately; plain edits to tracked files show up on the next refresh
-(Refresh button, Ctrl+R, or any git operation) rather than on save. Snapshot
-objects are not watched, so creating one cannot retrigger the watcher.
+Refresh: the `.git` watcher fires on index, HEAD and ref changes; the
+worktree itself is polled every 2 s with `git status` while the window is in
+use, and once more whenever it becomes active.
 
 ### 5.8 Pointer model
 
@@ -530,38 +511,45 @@ stop showing the branch.
 
 ## 7. Review pane (right)
 
-Header `34` px. A details block, then a horizontal splitter of file list and
-diff.
-
-```
-+----------------------------------------------------------------------+
-| Review                                                            ✕  |  34
-+----------------------------------------------------------------------+
-| feat(history): render the interactive commit graph                   |  details
-| Vittorio Distefano  ·  Sunday, 20 September 2026 ...                 |  block
-| <body, up to 3 lines>                                                |
-| c653e391c36be16209e8ab783a2da4143a10de6d                            |
-+----------------------------------------------------------------------+
-| Changed files        | old new | diff                                 |
-| M CMakeLists.txt     |  31  31 | ...                                  |
-| A EmptyState.qml     |  34  34 | +qt_add_executable(gitnaga           |
-| ...                  |         | ...                                  |
-+----------------------------------------------------------------------+
-```
+Header `34` px, then the subject of the selection: a commit's details block,
+or, for the uncommitted row, the commit composer (summary with a soft 72
+character counter, description, Amend, Stash…, Commit; Ctrl+Enter commits).
+Below it a horizontal splitter of file list and diff.
 
 | Element | Size |
 |---------|------|
 | Details block | `min(150, implicitHeight + 20)` when selected, else `62`; margins `10`, spacing `5` |
-| Details title | `font.pixelSize: 15`, `Font.DemiBold`, wrap |
-| Files column | `SplitView.preferredWidth: 200`, `minimumWidth: 150`, header `28` |
-| Diff column | `SplitView.fillWidth`, `minimumWidth: 240` |
-| Diff line row | `height: 22` |
-| Diff line-number columns | two columns of `40` px, monospace `11`, colour `#5b6577`, `1` px divider |
+| Files column | `SplitView.preferredWidth: 200` (`250` for uncommitted work), `minimumWidth: 150` |
+| Diff column | `SplitView.fillWidth`, `minimumWidth: 240`; hidden while the diff is in the centre |
+| Section header (Unstaged/Staged) | count, then Discard all / Stage all or Unstage all |
+| File row | `height: 34`; status letter, name, muted directory; Discard / Stage / Unstage on hover |
 
-Diff row background: addition `#12291f`, deletion `#331a20`, hunk `#182b3f`,
-context transparent. Code colour: addition `#8fe6b8`, deletion `#ffadb6`, hunk
-`#9fc2ff`, header `#77839a`, context `#cbd0dc`. File status letter colour:
-added `#4ade80`, deleted `#ff7d8b`, otherwise `#fbbf24`.
+**Choosing a file** (click, or Enter in the list) moves its diff into the
+centre pane in place of the graph, with a `← Graph` bar above it (Escape,
+choosing another commit, Ctrl+F or Ctrl+G return to the graph); the review
+pane then gives the file list its full width. Selecting a commit alone shows
+its first file in the review's own diff column without leaving the graph.
+
+### 7.1 Diff view (`qml/DiffView.qml`)
+
+- File header: status badge, file name in full, directory muted beside it,
+  `+adds −dels`, Copy path; rename, copy and mode changes on a second line.
+- Options (wrap to a second line in a narrow pane): Unified / Split
+  (remembered), Wrap (remembered), Ignore whitespace (this session only, as it
+  disables partial staging), Context 3 / 10 / File (remembered).
+- Rows: two line-number gutters, a `+`/`−` marker, text painted by one C++
+  item (`DiffTextItem`) with syntax spans and word-level changes; a line whose
+  only change is whitespace draws it (`→` tab, `·` space).
+- Cards instead of lines: binary (old → new size), image (old and new side by
+  side over a checkerboard), submodule (old → new commit and the commits
+  between), LFS pointer (object id and size), empty file, and "No content
+  changes" when only whitespace changed and it is ignored.
+- Staging (uncommitted work only): hunk bars carry Stage hunk / Discard hunk,
+  or Unstage hunk on the staged side; clicking a change line's gutter picks it,
+  Shift extends; picked lines get a floating bar with Discard / Stage or
+  Unstage, and Clear. Off for conflict diffs and whitespace-blind diffs.
+
+Status letter colour: added `#4ade80`, deleted `#ff7d8b`, otherwise `#fbbf24`.
 
 ## 8. Dialogs
 
@@ -677,11 +665,21 @@ interaction language: diff add/delete/hunk fills, the error bar, and the
 | `Ctrl+Q` | Quit |
 | `Ctrl+1` | Toggle References sidebar |
 | `Ctrl+2` | Toggle Review sidebar |
-| `Ctrl+=` | Zoom graph in |
-| `Ctrl+-` | Zoom graph out |
-| `Ctrl+0` | Reset graph zoom |
-| `Alt+Up` | Select previous commit |
-| `Alt+Down` | Select next commit |
+| `Ctrl+K` / `Ctrl+Shift+P` | Command palette |
+| `Ctrl+F` | Search commits (`path:`, `content:`, `author:` prefixes) |
+| `F3` / `Shift+F3` | Next / previous search match |
+| `Ctrl+G` | Focus the commit graph |
+| `Ctrl+Shift+H` | File history of the selected file |
+| `Ctrl+Shift+B` | Blame the selected file |
+| `Ctrl+Z` | Undo the last operation (the footer names it) |
+| `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom graph in / out / reset |
+| `Alt+Up` / `Alt+Down` | Select previous / next commit |
+| `Up` `Down` (`k` `j`), `PageUp` `PageDown`, `Home` `End` | Move through the graph |
+| `Left` / `Right` | Parent / child commit |
+| `Enter` | From the graph: to the review's files; in the files: open the diff in the centre |
+| `Escape` | Close the centred diff; end a search |
+| `Ctrl+Enter` | Commit, from the composer |
+| `p r e s f d`, `Alt+Up/Down` | Rebase editor: set a step's action; move it |
 
 ## 12. State matrix
 
@@ -740,8 +738,8 @@ verification loop uses to confirm state changes after an action.
 
 ## 15. Not implemented (explicit)
 
-- Remote avatars (Gravatar, GitHub). Avatars are local or generated; the application makes no network calls of its own.
-- Staging, committing, and a working-copy view. GitNaga is a history and review
-  tool.
-- Merge conflict resolution, interactive rebase editing, and stash management.
+- Remote avatars (Gravatar, GitHub). Avatars are local or generated; the
+  application makes no network calls of its own beyond the git commands it
+  runs.
+- Team, account and cloud features: forges, pull requests, shared workspaces.
 - Rounded corners, by design rule.
