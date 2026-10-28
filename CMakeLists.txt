@@ -16,6 +16,8 @@ add_library(gitnaga_core STATIC
     src/avatar_provider.hpp
     src/commit_model.cpp
     src/commit_model.hpp
+    src/conflict_parser.cpp
+    src/conflict_parser.hpp
     src/filesystem_operations.cpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
