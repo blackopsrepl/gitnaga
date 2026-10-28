@@ -57,3 +57,9 @@ qt_add_executable(gitnaga_conflict_parser_test
 )
 target_link_libraries(gitnaga_conflict_parser_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
 add_test(NAME gitnaga_conflict_parser_test COMMAND gitnaga_conflict_parser_test)
+
+qt_add_executable(gitnaga_operations_test
+    operations_test.cpp
+)
+target_link_libraries(gitnaga_operations_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_operations_test COMMAND gitnaga_operations_test)

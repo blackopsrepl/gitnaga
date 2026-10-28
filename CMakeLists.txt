@@ -38,8 +38,11 @@ add_library(gitnaga_core STATIC
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
+    src/operation_status.cpp
+    src/operation_status.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
+    src/repository_conflicts.cpp
     src/repository_controller.cpp
     src/repository_controller.hpp
     src/repository_worktrees.cpp
@@ -47,6 +50,10 @@ add_library(gitnaga_core STATIC
     src/repository_operations.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
+    src/repository_undo.cpp
+    src/undo_capture.cpp
+    src/undo_stack.cpp
+    src/undo_stack.hpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)

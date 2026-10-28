@@ -114,6 +114,7 @@ void RepositoryController::applySync(const SyncResult &result, bool forceHistory
         configureWatcher();
     if (opened)
         emit repositoryChanged();
+    m_undo.observe(m_repository.location.worktree, m_repository.refs.fingerprint);
     rebuildReferences();
     applyStatus(result.status);
     if (refsMoved)
@@ -235,6 +236,7 @@ void RepositoryController::applyStatus(WorktreeStatus status)
         }
     }
     restoreSelection();
+    m_inProgress.update(m_repository);
     emit statusChanged();
 }
 
