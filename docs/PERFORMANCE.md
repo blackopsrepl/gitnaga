@@ -7,7 +7,8 @@ five long-lived branches), Release build, offscreen, with `scripts/perf_bench.py
 | Case | First rows painted | Fully loaded | Peak RSS | Slowest GUI block |
 |------|-------------------:|-------------:|---------:|------------------:|
 | Foundation, no commit-graph file | 3 906 | 7 804 | 835 MB | 42 ms |
-| With commit-graph file | 133 | 8 099 | 822 MB | 57 ms (see below) |
+| With commit-graph file | 133 | 8 099 | 822 MB | 57 ms |
+| 64-bit row index (current) | 152 | 8 022 | 901 MB | 14 ms |
 
 What decides the numbers:
 
@@ -16,14 +17,19 @@ What decides the numbers:
   writes one in the background (`git commit-graph write --reachable`, the cache
   `git gc` maintains anyway) after loading a history of 20 000 commits or more
   that lacks it. The first open of such a repository waits ~4 s; every later
-  open paints in ~130 ms.
+  open paints in ~150 ms.
+- **Streaming.** History arrives in 4 000-commit chunks. The row index is
+  keyed by the first 64 bits of each object id, so growing it to a million
+  entries rehashes integers rather than strings; no chunk blocks the GUI
+  thread for longer than a frame. (A full-id check on lookup keeps the
+  vanishingly rare prefix collision correct.)
 - **Hover and selection.** Emphasis sweeps ancestry only as far as the
   viewport (`src/graph_emphasis.cpp`), so hovering the top row of a million
   commits costs the visible rows, not the history.
+- **The lane column** follows the widest row on screen, computed from the
+  visible rows only.
 - **The uncommitted row.** Row positions are stored relative to the history,
   so the uncommitted row appearing or disappearing renumbers nothing.
-- **Known gap: growth stalls.** While a long history streams in, the row
-  storage doubles a handful of times (five or six over a million rows); each
-  doubling relocates every row loaded so far and blocks the GUI thread for
-  25–55 ms. All other appends stay under 10 ms. Removing it needs chunked
-  storage or a size estimate up front.
+
+`scripts/acceptance.py --huge` opens the million-commit fixture in the real
+window, then selects, hovers and scrolls deep into it.

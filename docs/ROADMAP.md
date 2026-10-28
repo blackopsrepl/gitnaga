@@ -39,6 +39,12 @@ handling anywhere in `src/` or `qml/`.
 | 13 | Merge uses the oid, not the branch, which gives "Merge commit 'abc…'" messages. With a detached HEAD the menu labels read "onto " with an empty name | code |
 | 14 | Graph column is mostly empty while commit subjects truncate at about 40 characters. The meta line reads "Name  , 1h ago" | screenshot |
 
+## Status
+
+Everything below has shipped; each of the 14 defects was re-checked on the
+same solverforge copy against the finished build and is fixed. What remains
+is daily use: friction found on solverforge is filed and fixed the same way.
+
 ## Plan
 
 ### 0.2 — Foundation (a feature freeze until this lands)
@@ -91,7 +97,10 @@ handling anywhere in `src/` or `qml/`.
   stash, tool refs, detached HEAD, mid-rebase, conflicts, bare repo,
   submodule, 100k commits. A 30-line probe found defects 4, 6 and 7, which
   the existing suite does not catch.
-- **Visual acceptance per release**: headless sway + grim screenshots of the
-  zoo, inspected before the tag.
+- **Visual acceptance per release**: `scripts/acceptance.py` drives the real
+  window offscreen through the zoo (`src/ui_driver.hpp`) and its screenshots
+  are inspected before the tag. Fetch, push and the password dialog run
+  against real authenticating HTTP and ssh remotes
+  (`tests/transport_askpass_test.sh`).
 - **Dogfood**: GitNaga is the daily client on solverforge. Usage friction is
   filed as an issue the same day.
