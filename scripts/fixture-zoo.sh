@@ -104,6 +104,28 @@ printf 'main\n' >rebase/f.txt && git -C rebase commit -qam "main change"
 git -C rebase switch -q topic
 git -C rebase rebase main >/dev/null 2>&1 || true
 
+# conflict-blocks: a merge stopped with two conflict blocks (diff3 style, so
+# the common ancestor shows) in one file, and a second conflicted file.
+new_repo conflict-blocks
+git -C conflict-blocks config merge.conflictStyle diff3
+printf 'title\nalpha\nshared 1\nshared 2\nshared 3\nshared 4\nshared 5\nomega\n' >conflict-blocks/notes.txt
+printf 'port = 80\n' >conflict-blocks/config.ini
+git -C conflict-blocks add . && git -C conflict-blocks commit -qm "base"
+git -C conflict-blocks switch -qc feature/notes
+sed -i 's/alpha/alpha from feature/; s/omega/omega from feature/' conflict-blocks/notes.txt
+printf 'port = 8080\n' >conflict-blocks/config.ini
+git -C conflict-blocks commit -qam "feat: feature edits"
+git -C conflict-blocks switch -q main
+sed -i 's/alpha/alpha from main/; s/omega/omega from main/' conflict-blocks/notes.txt
+printf 'port = 443\n' >conflict-blocks/config.ini
+git -C conflict-blocks commit -qam "fix: main edits"
+git -C conflict-blocks merge feature/notes >/dev/null 2>&1 || true
+
+# bisect: a bisect session under way, one good and one bad commit marked.
+new_repo bisect
+for i in 1 2 3 4 5 6; do commit bisect f.txt "$i" "change $i"; done
+git -C bisect bisect start HEAD HEAD~5 >/dev/null
+
 # submodule: a repository with one submodule, its pointer moved.
 new_repo submodule
 commit submodule root.txt "root" "init"
