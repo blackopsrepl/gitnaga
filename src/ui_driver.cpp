@@ -55,6 +55,28 @@ void UiDriver::click(const QPointF &point, Qt::MouseButton button, bool twice)
     }
 }
 
+void UiDriver::send(QEvent::Type type, const QPointF &point, Qt::MouseButton button, Qt::MouseButtons buttons)
+{
+    QMouseEvent event(type, point, m_window->mapToGlobal(point), button, buttons, Qt::NoModifier);
+    QCoreApplication::sendEvent(m_window, &event);
+}
+
+// A drag moves in small steps, as a hand does, so drag thresholds and
+// per-move handlers see every position in between. Without the release the
+// drag stays in flight for a screenshot.
+void UiDriver::drag(const QPointF &from, const QPointF &to, bool release)
+{
+    send(QEvent::MouseMove, from, Qt::NoButton, Qt::NoButton);
+    send(QEvent::MouseButtonPress, from, Qt::LeftButton, Qt::LeftButton);
+    constexpr int steps = 16;
+    for (int index = 1; index <= steps; ++index) {
+        const auto point = from + (to - from) * (static_cast<qreal>(index) / steps);
+        send(QEvent::MouseMove, point, Qt::NoButton, Qt::LeftButton);
+    }
+    if (release)
+        send(QEvent::MouseButtonRelease, to, Qt::LeftButton, Qt::NoButton);
+}
+
 void UiDriver::key(const QString &sequence)
 {
     const auto combination = QKeySequence(sequence)[0];
@@ -111,6 +133,13 @@ void UiDriver::next()
         const auto point = step.value(twice ? QStringLiteral("doubleClick")
                                             : right ? QStringLiteral("rightClick") : QStringLiteral("click")).toArray();
         click(QPointF(point.at(0).toDouble(), point.at(1).toDouble()), right ? Qt::RightButton : Qt::LeftButton, twice);
+    } else if (step.contains(QStringLiteral("drag"))) {
+        const auto points = step.value(QStringLiteral("drag")).toArray();
+        drag(QPointF(points.at(0).toDouble(), points.at(1).toDouble()),
+             QPointF(points.at(2).toDouble(), points.at(3).toDouble()), step.value(QStringLiteral("release")).toBool(true));
+    } else if (step.contains(QStringLiteral("release"))) {
+        const auto point = step.value(QStringLiteral("release")).toArray();
+        send(QEvent::MouseButtonRelease, QPointF(point.at(0).toDouble(), point.at(1).toDouble()), Qt::LeftButton, Qt::NoButton);
     } else if (step.contains(QStringLiteral("key"))) {
         key(step.value(QStringLiteral("key")).toString());
     } else if (step.contains(QStringLiteral("type"))) {

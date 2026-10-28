@@ -166,6 +166,16 @@ Rectangle {
         branchPrompt: branchPrompt
         tagPrompt: tagPrompt
         confirm: confirm
+        rebaseEditor: rebaseEditor
+        rewordDialog: rewordDialog
+    }
+    RebaseEditor {
+        id: rebaseEditor
+        repository: pane.repository
+    }
+    RewordDialog {
+        id: rewordDialog
+        repository: pane.repository
     }
     PromptDialog {
         id: branchPrompt

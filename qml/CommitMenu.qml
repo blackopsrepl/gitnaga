@@ -8,6 +8,8 @@ Popup {
     property var branchPrompt
     property var tagPrompt
     property var confirm
+    property var rebaseEditor
+    property var rewordDialog
 
     property var actions: []
     property string promptOid: ""
@@ -148,6 +150,22 @@ Popup {
         entries.push({ label: qsTr("Cherry-pick ") + shortOid + qsTr(" onto ") + branch, run: function() { repository.cherryPick(target) } })
         entries.push({ label: qsTr("Merge ") + label + qsTr(" into ") + branch, run: function() { repository.mergeCommit(target, mergeName) } })
         entries.push({ label: qsTr("Revert ") + shortOid, run: function() { repository.revertCommit(target) } })
+
+        // History editing only reaches commits HEAD contains: anything else
+        // would not be rewritten by a rebase of the current line.
+        if (repository.reachableFromHead(target)) {
+            var parents = info.parents || []
+            entries.push({ separator: true })
+            entries.push({ label: qsTr("Interactive rebase from here…"), run: function() { menu.rebaseEditor.openFor(target) } })
+            entries.push({ label: qsTr("Edit message…"), run: function() { menu.rewordDialog.openFor(target) } })
+            entries.push({ label: qsTr("Squash into parent"), enabled: parents.length === 1,
+                           run: function() { repository.squashIntoParent(target) } })
+            entries.push({ label: qsTr("Drop commit…"), destructive: true, run: function() {
+                menu.confirm.ask(qsTr("Drop ") + shortOid + qsTr(" from ") + branch
+                                 + qsTr("? The commits above it are replayed without it."),
+                                 function() { repository.dropCommit(target) })
+            } })
+        }
 
         entries.push({ separator: true })
         entries.push({ label: qsTr("Reset ") + branch + qsTr(" to ") + shortOid + qsTr(" (soft)"), run: function() { repository.resetTo(target, "soft") } })

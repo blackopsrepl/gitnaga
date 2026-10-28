@@ -95,7 +95,12 @@ qt_add_qml_module(gitnaga
         qml/NagaIcon.qml
         qml/NagaTheme.qml
         qml/PromptDialog.qml
+        qml/RebaseActionMenu.qml
+        qml/RebaseEditor.qml
+        qml/RebaseEditorBody.qml
+        qml/RebaseStepRow.qml
         qml/ReferencesPane.qml
+        qml/RewordDialog.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
 )
