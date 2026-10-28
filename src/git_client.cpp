@@ -1,5 +1,7 @@
 #include "git_client.hpp"
 
+#include <algorithm>
+
 #include "git_parse.hpp"
 
 #include <QProcess>
@@ -40,6 +42,42 @@ void reportProgress(QByteArray &pending, const QByteArray &chunk, const std::fun
     }
 }
 
+// One line names the failure, and the footer shows the first one: put git's
+// own verdict first, ahead of chatter such as ssh's known-hosts notice, and
+// say plainly when a remote refused the credentials. The rest follows.
+QString leadWithVerdict(const QString &text)
+{
+    QStringList lines;
+    for (auto line : text.split(QLatin1Char('\n'))) {
+        line = line.trimmed();
+        if (line.startsWith(QStringLiteral("Warning: Permanently added")))
+            continue;
+        lines.append(line);
+    }
+    while (!lines.isEmpty() && lines.constFirst().isEmpty())
+        lines.removeFirst();
+    const auto refused = std::find_if(lines.cbegin(), lines.cend(), [](const QString &line) {
+        return line.contains(QStringLiteral("Authentication failed"))
+            || line.contains(QStringLiteral("Permission denied (publickey"))
+            || line.contains(QStringLiteral("Invalid username or password"));
+    });
+    if (refused != lines.cend()) {
+        lines.prepend(refused->contains(QStringLiteral("publickey"))
+                          ? QStringLiteral("The remote refused the ssh key: wrong passphrase, or the key is not authorized there")
+                          : QStringLiteral("The remote refused the username or password"));
+        return lines.join(QLatin1Char('\n'));
+    }
+    const auto verdict = std::find_if(lines.cbegin(), lines.cend(), [](const QString &line) {
+        return line.startsWith(QStringLiteral("fatal:")) || line.startsWith(QStringLiteral("error:"));
+    });
+    if (verdict != lines.cend() && verdict != lines.cbegin()) {
+        const auto first = *verdict;
+        lines.erase(verdict);
+        lines.prepend(first);
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
 QString failureMessage(const QByteArray &standardError, const QByteArray &standardOutput)
 {
     // Conflicts and refusals often land on stdout (merge, cherry-pick), so a
@@ -47,7 +85,7 @@ QString failureMessage(const QByteArray &standardError, const QByteArray &standa
     auto message = decode(standardError).trimmed();
     if (message.isEmpty())
         message = decode(standardOutput).trimmed();
-    return message;
+    return leadWithVerdict(message);
 }
 
 } // namespace
