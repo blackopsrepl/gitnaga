@@ -60,7 +60,7 @@ Rectangle {
     // or pulling. A gone upstream is said, not hidden.
     Text {
         id: trackText
-        anchors.right: oidText.left
+        anchors.right: eyeButton.visible ? eyeButton.left : oidText.left
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         visible: text.length > 0
@@ -79,6 +79,37 @@ Rectangle {
         color: row.reference.upstreamGone ? "#ff8f9c" : "#e6b45a"
         font.pixelSize: 10
         font.weight: Font.DemiBold
+    }
+    // Hide/show in the graph, one click from the row. It shows on hover, and
+    // stays while the ref is hidden so the state can be read at a glance.
+    Item {
+        id: eyeButton
+        readonly property bool available: row.reference.kind !== "stash" && (row.reference.oid || "").length > 0
+        visible: available && (hover.hovered || row.hiddenInGraph)
+        anchors.right: oidText.left
+        anchors.rightMargin: 6
+        anchors.verticalCenter: parent.verticalCenter
+        width: 18
+        height: 18
+        Rectangle {
+            anchors.fill: parent
+            radius: 3
+            color: eyeHover.hovered ? NagaTheme.pressedFill : "transparent"
+        }
+        NagaIcon {
+            anchors.centerIn: parent
+            width: 14
+            height: 14
+            name: row.hiddenInGraph ? "eye-off" : "eye"
+            color: eyeHover.hovered ? NagaTheme.hoverContent : NagaTheme.muted
+        }
+        HoverHandler { id: eyeHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler {
+            onTapped: row.repository.setRefHidden(row.reference.fullName, !row.hiddenInGraph)
+        }
+        ToolTip.visible: eyeHover.hovered
+        ToolTip.delay: 400
+        ToolTip.text: row.hiddenInGraph ? qsTr("Show in graph") : qsTr("Hide in graph")
     }
     Text {
         id: oidText

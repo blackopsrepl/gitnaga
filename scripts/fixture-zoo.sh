@@ -126,6 +126,22 @@ new_repo bisect
 for i in 1 2 3 4 5 6; do commit bisect f.txt "$i" "change $i"; done
 git -C bisect bisect start HEAD HEAD~5 >/dev/null
 
+# linear: a five-commit feature branch to rebase interactively, a side
+# branch to drag onto, each commit touching its own file so any order applies.
+new_repo linear
+commit linear readme.md "skeleton" "chore: project skeleton"
+commit linear readme.md "describe" "docs: describe the project"
+git -C linear switch -qc experiment
+commit linear experiment.txt "try" "feat: try a different approach"
+git -C linear switch -qc feature/parser main
+commit linear tokens.txt "tokens" "feat(parser): tokenize input"
+commit linear parse.txt "parse" "feat(parser): parse expressions"
+commit linear empty.txt "empty" "fix(parser): handle empty input"
+commit linear tests.txt "tests" "test(parser): cover precedence"
+commit linear grammar.txt "grammar" "docs(parser): explain the grammar"
+cp -a linear drag
+cp -a linear quick
+
 # submodule: a repository with one submodule, its pointer moved.
 new_repo submodule
 commit submodule root.txt "root" "init"

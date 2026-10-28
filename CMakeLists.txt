@@ -33,6 +33,8 @@ add_library(gitnaga_core STATIC
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
+    src/git_rebase.cpp
+    src/git_rebase.hpp
     src/git_remote.cpp
     src/git_repository.cpp
     src/git_sync.cpp
@@ -42,6 +44,8 @@ add_library(gitnaga_core STATIC
     src/graph_palette.hpp
     src/operation_status.cpp
     src/operation_status.hpp
+    src/rebase_todo.cpp
+    src/rebase_todo.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
     src/repository_conflicts.cpp
@@ -50,6 +54,7 @@ add_library(gitnaga_core STATIC
     src/repository_worktrees.cpp
     src/repository_loading.cpp
     src/repository_operations.cpp
+    src/repository_rebase.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
     src/remote_sync.cpp
@@ -88,6 +93,8 @@ qt_add_qml_module(gitnaga
     NO_IMPORT_SCAN
     QML_FILES
         qml/Askpass.qml
+        qml/BranchDragLayer.qml
+        qml/BranchDropMenu.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
@@ -111,7 +118,12 @@ qt_add_qml_module(gitnaga
         qml/NagaIcon.qml
         qml/NagaTheme.qml
         qml/PromptDialog.qml
+        qml/RebaseActionMenu.qml
+        qml/RebaseEditor.qml
+        qml/RebaseEditorBody.qml
+        qml/RebaseStepRow.qml
         qml/ReferencesPane.qml
+        qml/RewordDialog.qml
         qml/ReferenceMenu.qml
         qml/RefRow.qml
         qml/RemoteChoiceDialog.qml

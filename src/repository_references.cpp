@@ -132,6 +132,16 @@ void RepositoryController::setRefHidden(const QString &fullName, bool hidden)
     loadHistory();
 }
 
+void RepositoryController::showAllRefs()
+{
+    if (m_view.hidden.isEmpty())
+        return;
+    m_view.hidden.clear();
+    saveViewSettings();
+    rebuildReferences();
+    loadHistory();
+}
+
 void RepositoryController::setSoloRef(const QString &fullName)
 {
     // Soloing the soloed ref again turns solo off.

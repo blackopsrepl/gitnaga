@@ -119,11 +119,13 @@ QVector<StashEntry> parseStashes(const QByteArray &output)
     return stashes;
 }
 
-QHash<QString, QVector<Ref>> decorations(const QVector<Ref> &refs, bool showInternal)
+QHash<QString, QVector<Ref>> decorations(const QVector<Ref> &refs, bool showInternal, const QSet<QString> &hidden)
 {
     QHash<QString, QVector<Ref>> byOid;
     for (const auto &ref : refs) {
         if (ref.target.isEmpty() || ref.kind == RefKind::Stash || (ref.internal && !showInternal))
+            continue;
+        if (!ref.isHead && hidden.contains(ref.fullName))
             continue;
         byOid[ref.target].append(ref);
     }

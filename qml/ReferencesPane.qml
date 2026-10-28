@@ -190,6 +190,42 @@ Rectangle {
                 }
             }
         }
+
+        // Hidden refs are easy to forget about; say how many there are and
+        // offer them all back in one click. It sits below the list so hiding a
+        // ref never shifts the rows under the pointer.
+        Rectangle {
+            readonly property int count: {
+                var refs = pane.repository.references
+                var total = 0
+                for (var i = 0; i < refs.length; ++i) {
+                    if (refs[i].hidden)
+                        ++total
+                }
+                return total
+            }
+            Layout.fillWidth: true
+            Layout.preferredHeight: 30
+            visible: count > 0
+            color: NagaTheme.raised
+            border.color: NagaTheme.border
+            Text {
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Hidden from the graph")
+                color: NagaTheme.muted
+                font.pixelSize: 11
+            }
+            NagaButton {
+                anchors.right: parent.right
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                implicitHeight: 20
+                text: qsTr("Show all hidden (") + parent.count + ")"
+                onClicked: pane.repository.showAllRefs()
+            }
+        }
     }
 
     ReferenceMenu {

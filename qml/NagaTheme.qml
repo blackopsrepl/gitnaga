@@ -46,6 +46,11 @@ QtObject {
     readonly property color accentContent: "#7cf0bd"
     readonly property color accentContentHover: "#a7f8d3"
 
+    // Status hues the history editors share: what a rebase step will do to a
+    // commit. Warning and danger are declared with the surfaces above.
+    readonly property color info: "#7fb2ff"
+    readonly property color violet: "#a78bfa"
+
     // Accent tints for selected/active surfaces, so no component has to invent
     // its own green.
     function accentTint(strength) {
