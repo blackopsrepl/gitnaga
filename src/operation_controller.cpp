@@ -7,7 +7,6 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
-#include <QProcess>
 #include <QSaveFile>
 #include <QStringDecoder>
 
@@ -143,15 +142,19 @@ void OperationController::markResolved(const QString &path)
 
 void OperationController::openInEditor(const QString &path) const
 {
-    QDesktopServices::openUrl(QUrl::fromLocalFile(QDir(m_repository->repository().location.worktree).filePath(path)));
+    const auto file = QDir(m_repository->repository().location.worktree).filePath(path);
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(file)))
+        m_repository->reportFailure(tr("No application is set to open %1").arg(path));
 }
 
 void OperationController::openMergetool(const QString &path) const
 {
-    // Detached: the tool is the person's own window and outlives nothing of ours.
-    QProcess::startDetached(QStringLiteral("git"),
-                            { QStringLiteral("mergetool"), QStringLiteral("--no-prompt"), QStringLiteral("--"), path },
-                            m_repository->repository().location.worktree);
+    // Queued like any operation: the tool edits the index, and nothing else
+    // should while it is open. Its exit status says whether it resolved the
+    // file, and the refresh after it shows the result.
+    m_repository->runOperation(QStringLiteral("merge tool"),
+                               { QStringLiteral("mergetool"), QStringLiteral("--no-prompt"), QStringLiteral("--"), path },
+                               tr("Resolved %1 with the merge tool").arg(path));
 }
 
 QVariantMap OperationController::conflictDocument(const QString &path) const

@@ -1,69 +1,22 @@
 #include "git_client.hpp"
-#include "git_test_helpers.hpp"
 #include "operation_controller.hpp"
-#include "repository_controller.hpp"
+#include "operation_fixtures.hpp"
+#include "undo_stack.hpp"
 
+#include <QDir>
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
 using namespace GitNaga;
+using namespace OperationFixtures;
 
-// Half-done operations and undo, driven through the controller against real
-// repositories: the flows a person reaches from the banner and Ctrl+Z.
+// Half-done operations driven through the controller against real
+// repositories: the flows a person reaches from the banner.
 class OperationsTest final : public QObject
 {
     Q_OBJECT
-
-    static QString git(const QString &root, const QStringList &arguments)
-    {
-        QProcess process;
-        process.setWorkingDirectory(root);
-        process.start(QStringLiteral("git"), arguments);
-        process.waitForFinished();
-        return QString::fromUtf8(process.readAllStandardOutput()).trimmed();
-    }
-
-    static void commitFile(const QString &root, const QByteArray &contents, const QString &message)
-    {
-        writeFile(root + QStringLiteral("/f.txt"), contents);
-        runGit(root, { QStringLiteral("add"), QStringLiteral("f.txt") });
-        runGit(root, { QStringLiteral("commit"), QStringLiteral("-qm"), message });
-    }
-
-    // main and other both rewrote f.txt; main is checked out.
-    static void makeDivergent(const QString &root)
-    {
-        runGit(root, { QStringLiteral("init"), QStringLiteral("-q"), QStringLiteral("-b"), QStringLiteral("main") });
-        runGit(root, { QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("GitNaga Test") });
-        runGit(root, { QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("test@gitnaga.invalid") });
-        commitFile(root, "base\n", QStringLiteral("base"));
-        runGit(root, { QStringLiteral("switch"), QStringLiteral("-qc"), QStringLiteral("other") });
-        commitFile(root, "theirs\n", QStringLiteral("theirs"));
-        runGit(root, { QStringLiteral("switch"), QStringLiteral("-q"), QStringLiteral("main") });
-        commitFile(root, "ours\n", QStringLiteral("ours"));
-    }
-
-    static void open(RepositoryController &controller, const QString &root)
-    {
-        controller.openRepositoryPath(root);
-        QTRY_VERIFY_WITH_TIMEOUT(!controller.headOid().isEmpty(), 5000);
-        settle(controller);
-    }
-
-    static void settle(RepositoryController &controller)
-    {
-        QTRY_VERIFY_WITH_TIMEOUT(!controller.busy() && !controller.loading() && !controller.historyLoading(), 10000);
-        QTest::qWait(200);
-        QTRY_VERIFY_WITH_TIMEOUT(!controller.busy() && !controller.loading(), 10000);
-    }
-
-    static QString contents(const QString &root)
-    {
-        QFile file(root + QStringLiteral("/f.txt"));
-        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
-    }
 
 private slots:
     void mergeConflictTakesTheirsAndCommits()
@@ -139,143 +92,57 @@ private slots:
         QCOMPARE(contents(root), QStringLiteral("theirs\n"));
     }
 
-    void undoCommitReturnsChangesStaged()
+    void mergetoolResolvesTheFile()
     {
         QTemporaryDir directory;
         const auto root = directory.path();
         makeDivergent(root);
-        const auto before = git(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") });
-        writeFile(root + QStringLiteral("/f.txt"), "edited\n");
-        runGit(root, { QStringLiteral("add"), QStringLiteral("f.txt") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("merge.tool"), QStringLiteral("takeTheirs") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("mergetool.takeTheirs.cmd"),
+                       QStringLiteral("cp \"$REMOTE\" \"$MERGED\"") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("mergetool.takeTheirs.trustExitCode"), QStringLiteral("true") });
+        runGit(root, { QStringLiteral("config"), QStringLiteral("mergetool.keepBackup"), QStringLiteral("false") });
         RepositoryController controller;
         open(controller, root);
-        controller.selectOid(worktreeOid());
-        controller.commitWorktree(QStringLiteral("edit"), {});
-        QTRY_VERIFY_WITH_TIMEOUT(controller.headOid() != before, 5000);
+        controller.mergeCommit(git(root, { QStringLiteral("rev-parse"), QStringLiteral("other") }), QStringLiteral("other"));
+        QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 1, 5000);
         settle(controller);
-        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo commit"));
 
-        controller.undo();
-        QTRY_COMPARE_WITH_TIMEOUT(controller.headOid(), before, 5000);
+        controller.operation()->openMergetool(QStringLiteral("f.txt"));
+        QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 0, 10000);
         settle(controller);
-        QCOMPARE(git(root, { QStringLiteral("diff"), QStringLiteral("--cached"), QStringLiteral("--name-only") }),
-                 QStringLiteral("f.txt"));
-        QVERIFY(!controller.undoStack()->available());
+        QVERIFY2(controller.lastOperationOk(), qPrintable(controller.operationMessage()));
+        QCOMPARE(contents(root), QStringLiteral("theirs\n"));
     }
 
-    void undoBranchDeleteAndCheckout()
+    // The editor is whatever opens the file on this desktop; when nothing
+    // does, the footer says so instead of the click doing nothing.
+    void openInEditorHandsTheFileToTheDesktop()
     {
         QTemporaryDir directory;
         const auto root = directory.path();
         makeDivergent(root);
-        const auto other = git(root, { QStringLiteral("rev-parse"), QStringLiteral("other") });
-        runGit(root, { QStringLiteral("branch"), QStringLiteral("spare"), QStringLiteral("other") });
+        const auto bin = root + QStringLiteral("/bin");
+        QDir().mkpath(bin);
+        writeFile(bin + QStringLiteral("/xdg-open"), "#!/bin/sh\nprintf '%s' \"$1\" > \"$(dirname \"$0\")/opened\"\n");
+        QFile::setPermissions(bin + QStringLiteral("/xdg-open"), QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+        const auto path = qgetenv("PATH");
+        qputenv("PATH", bin.toUtf8() + ':' + path);
         RepositoryController controller;
         open(controller, root);
-
-        controller.checkoutBranch(QStringLiteral("other"));
-        QTRY_COMPARE_WITH_TIMEOUT(controller.currentBranch(), QStringLiteral("other"), 5000);
-        settle(controller);
-        controller.deleteBranch(QStringLiteral("spare"));
-        QTRY_COMPARE_WITH_TIMEOUT(git(root, { QStringLiteral("branch"), QStringLiteral("--list"), QStringLiteral("spare") }),
-                                  QString(), 5000);
-        settle(controller);
-        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo delete branch spare"));
-
-        controller.undo();
-        QTRY_COMPARE_WITH_TIMEOUT(git(root, { QStringLiteral("rev-parse"), QStringLiteral("refs/heads/spare") }), other, 5000);
-        settle(controller);
-        // The stack holds the checkout below the deletion.
-        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo checkout"));
-        controller.undo();
-        QTRY_COMPARE_WITH_TIMEOUT(controller.currentBranch(), QStringLiteral("main"), 5000);
-    }
-
-    void undoAnnotatedTagDeleteKeepsTagObject()
-    {
-        QTemporaryDir directory;
-        const auto root = directory.path();
-        makeDivergent(root);
-        runGit(root, { QStringLiteral("tag"), QStringLiteral("-a"), QStringLiteral("v1"), QStringLiteral("-m"),
-                       QStringLiteral("release") });
-        const auto tagObject = git(root, { QStringLiteral("rev-parse"), QStringLiteral("refs/tags/v1") });
-        RepositoryController controller;
-        open(controller, root);
-
-        controller.deleteTag(QStringLiteral("v1"));
-        QTRY_COMPARE_WITH_TIMEOUT(git(root, { QStringLiteral("tag"), QStringLiteral("--list"), QStringLiteral("v1") }),
-                                  QString(), 5000);
-        settle(controller);
-        controller.undo();
-        QTRY_COMPARE_WITH_TIMEOUT(git(root, { QStringLiteral("rev-parse"), QStringLiteral("refs/tags/v1") }), tagObject, 5000);
-        QCOMPARE(git(root, { QStringLiteral("cat-file"), QStringLiteral("-t"), QStringLiteral("v1") }), QStringLiteral("tag"));
-    }
-
-    void externalRefChangeClearsUndo()
-    {
-        QTemporaryDir directory;
-        const auto root = directory.path();
-        makeDivergent(root);
-        RepositoryController controller;
-        open(controller, root);
-        controller.createTag(QStringLiteral("mine"), controller.headOid());
-        QTRY_VERIFY_WITH_TIMEOUT(controller.undoStack()->available(), 5000);
-        settle(controller);
-
-        // Someone else moved the refs: the recorded inverse no longer applies.
-        runGit(root, { QStringLiteral("branch"), QStringLiteral("elsewhere") });
-        controller.synchronize();
-        QTRY_VERIFY_WITH_TIMEOUT(!controller.undoStack()->available(), 5000);
-    }
-
-    // A cherry-pick of several commits stopped on the middle one, from a
-    // terminal; continuing it in GitNaga is undone back past all of them.
-    void cherryPickSequenceUndoesAsAWhole()
-    {
-        QTemporaryDir directory;
-        const auto root = directory.path();
-        makeDivergent(root);
-        runGit(root, { QStringLiteral("switch"), QStringLiteral("-q"), QStringLiteral("other") });
-        writeFile(root + QStringLiteral("/a.txt"), "a\n");
-        runGit(root, { QStringLiteral("add"), QStringLiteral("a.txt") });
-        runGit(root, { QStringLiteral("commit"), QStringLiteral("-qm"), QStringLiteral("add a") });
-        writeFile(root + QStringLiteral("/b.txt"), "b\n");
-        runGit(root, { QStringLiteral("add"), QStringLiteral("b.txt") });
-        runGit(root, { QStringLiteral("commit"), QStringLiteral("-qm"), QStringLiteral("add b") });
-        runGit(root, { QStringLiteral("switch"), QStringLiteral("-q"), QStringLiteral("main") });
-        const auto before = git(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") });
-        // "theirs" conflicts with main's "ours"; "add a" lands first, "add b" waits.
-        git(root, { QStringLiteral("cherry-pick"), QStringLiteral("other~1"), QStringLiteral("other~2"), QStringLiteral("other") });
-        RepositoryController controller;
-        open(controller, root);
-        QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QStringLiteral("cherry-pick"), 5000);
-        QVERIFY(git(root, { QStringLiteral("rev-parse"), QStringLiteral("HEAD") }) != before);
-
-        controller.operation()->resolveConflict(QStringLiteral("f.txt"), QStringLiteral("theirs"));
-        QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 0, 5000);
-        settle(controller);
-        controller.operation()->continueOperation();
-        QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QString(), 5000);
-        settle(controller);
-        QCOMPARE(git(root, { QStringLiteral("rev-list"), QStringLiteral("--count"), before + QStringLiteral("..HEAD") }),
-                 QStringLiteral("3"));
-        QCOMPARE(controller.undoStack()->label(), QStringLiteral("Undo cherry-pick"));
-
-        controller.undo();
-        QTRY_COMPARE_WITH_TIMEOUT(controller.headOid(), before, 5000);
-        QCOMPARE(contents(root), QStringLiteral("ours\n"));
-    }
-
-    void remoteDeletionIsNotUndoable()
-    {
-        UndoStack stack;
-        stack.observe(QStringLiteral("/r"), "a");
-        stack.block(QStringLiteral("delete remote branch"), QStringLiteral("/r"));
-        stack.observe(QStringLiteral("/r"), "b");
-        QVERIFY(!stack.available());
-        QCOMPARE(stack.label(), QStringLiteral("Can't undo delete remote branch"));
-        stack.observe(QStringLiteral("/r"), "c");
-        QCOMPARE(stack.label(), QString());
+        controller.operation()->openInEditor(QStringLiteral("f.txt"));
+        qputenv("PATH", path);
+        QFile opened(bin + QStringLiteral("/opened"));
+        QTRY_VERIFY_WITH_TIMEOUT(opened.exists() || !controller.operationMessage().isEmpty(), 5000);
+        if (opened.exists()) {
+            QVERIFY(opened.open(QIODevice::ReadOnly));
+            QVERIFY2(opened.readAll().endsWith("/f.txt"), "xdg-open got another file");
+            qInfo("handed to xdg-open");
+        } else {
+            QVERIFY(!controller.lastOperationOk());
+            QCOMPARE(controller.operationMessage(), QStringLiteral("No application is set to open f.txt"));
+            qInfo("no desktop services: reported");
+        }
     }
 };
 

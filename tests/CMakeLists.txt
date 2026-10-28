@@ -79,6 +79,12 @@ qt_add_executable(gitnaga_operations_test
 target_link_libraries(gitnaga_operations_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_operations_test COMMAND gitnaga_operations_test)
 
+qt_add_executable(gitnaga_undo_test
+    undo_test.cpp
+)
+target_link_libraries(gitnaga_undo_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_undo_test COMMAND gitnaga_undo_test)
+
 qt_add_executable(gitnaga_rebase_todo_test
     rebase_todo_test.cpp
 )
