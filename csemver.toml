@@ -1,0 +1,61 @@
+# csemver — native release configuration, replacing the retired .versionrc.js
+# (commit-and-tag-version) and its JavaScript updaters.
+#
+# Surfaces:
+#   1. cmake/GitNagaVersion.cmake   the build and application version (regex)
+#   2. packaging/..metainfo.xml     the AppStream release history: a release
+#                                   prepends an element, so the prebump script
+#                                   scripts/appstream-release.sh opens a dated
+#                                   slot that the regex bump below then moves
+#   3. CHANGELOG.md                 generated
+#
+# Never hand-edit CHANGELOG.md or either surface. Run `make release`.
+#
+# Top-level keys stay above the first [[bumpFiles]] table: TOML scopes every
+# key after a table header into that table.
+
+header = """
+# Changelog
+
+All notable changes to this project are documented here. Entries are
+generated from conventional commits by csemver; do not edit
+this file by hand.
+"""
+tagPrefix = "v"
+releaseCommitMessageFormat = "chore(release): {{currentTag}}"
+commitUrlFormat = "https://github.com/blackopsrepl/gitnaga/commit/{{hash}}"
+compareUrlFormat = "https://github.com/blackopsrepl/gitnaga/compare/{{previousTag}}...{{currentTag}}"
+
+types = [
+  { type = "feat", section = "Features" },
+  { type = "fix", section = "Bug Fixes" },
+  { type = "perf", section = "Performance" },
+  { type = "revert", section = "Reverts" },
+  { type = "refactor", section = "Code Refactoring" },
+  { type = "docs", section = "Documentation" },
+  { type = "build", section = "Build System" },
+  { type = "test", section = "Tests" },
+  { type = "ci", section = "Continuous Integration" },
+  { type = "chore", effect = "hidden" },
+  { type = "style", effect = "hidden" },
+]
+
+packageFiles = [
+  { filename = "cmake/GitNagaVersion.cmake", type = "regex", pattern = '^set\(GITNAGA_VERSION "([0-9]+\.[0-9]+\.[0-9]+)', versionGroup = 1 },
+]
+
+[[bumpFiles]]
+filename = "cmake/GitNagaVersion.cmake"
+type = "regex"
+pattern = '^set\(GITNAGA_VERSION "([0-9]+\.[0-9]+\.[0-9]+)'
+versionGroup = 1
+
+# The first <release> element: the slot the prebump script just opened.
+[[bumpFiles]]
+filename = "packaging/io.gitnaga.GitNaga.metainfo.xml"
+type = "regex"
+pattern = '^    <release version="([0-9]+\.[0-9]+\.[0-9]+)"'
+versionGroup = 1
+
+[scripts]
+prebump = "scripts/appstream-release.sh"

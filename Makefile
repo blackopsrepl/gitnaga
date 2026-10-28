@@ -124,23 +124,23 @@ pre-release: banner
 	@$(QML_LINT) -W 0 -I build/dev -I "$(QT_QML_DIR)" qml/*.qml >/dev/null && printf "$(GREEN)$(CHECK) QML clean$(RESET)\n"
 	@printf "\n$(GREEN)$(BOLD)$(CHECK) Ready for release v$(VERSION)$(RESET)\n\n"
 
-# ============== Release (commit-and-tag-version) ==============
+# ============== Release (csemver) ==============
 #
 # The version surface and the AppStream release history are owned by
-# commit-and-tag-version through .versionrc.js. Never hand-edit them.
+# csemver through csemver.toml. Never hand-edit them.
 
 release-check:
 	@scripts/release-config-check.sh
 
 release-dry: banner
 	@printf "$(ARROW) Previewing the next release...\n\n"
-	@npx commit-and-tag-version --dry-run
+	@csemver --dry-run
 
 release: banner
 	@$(MAKE) pre-release --no-print-directory
 	@scripts/release-config-check.sh
 	@printf "$(ARROW) Bumping the version, changelog, and tag...\n\n"
-	@npx commit-and-tag-version
+	@csemver
 	@printf "\n$(GREEN)$(CHECK) Released $$(git describe --tags --abbrev=0)$(RESET)\n"
 	@printf "$(GRAY)Push it with: make release-push$(RESET)\n\n"
 
@@ -162,21 +162,21 @@ version:
 
 bump-patch: banner
 	@printf "$(ARROW) Bumping patch version...\n"
-	@npx commit-and-tag-version --release-as patch
+	@csemver --release-as patch
 	@printf "$(GREEN)$(CHECK) Version bumped$(RESET)\n"
 
 bump-minor: banner
 	@printf "$(ARROW) Bumping minor version...\n"
-	@npx commit-and-tag-version --release-as minor
+	@csemver --release-as minor
 	@printf "$(GREEN)$(CHECK) Version bumped$(RESET)\n"
 
 bump-major: banner
 	@printf "$(ARROW) Bumping major version...\n"
-	@npx commit-and-tag-version --release-as major
+	@csemver --release-as major
 	@printf "$(GREEN)$(CHECK) Version bumped$(RESET)\n"
 
 bump-dry:
-	@npx commit-and-tag-version --dry-run
+	@csemver --dry-run
 
 # ============== Install ==============
 #

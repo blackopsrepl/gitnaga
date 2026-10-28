@@ -11,16 +11,13 @@ fail() {
   exit 1
 }
 
-[ -f .versionrc.js ] || fail ".versionrc.js is missing"
+[ -f csemver.toml ] || fail "csemver.toml is missing"
+command -v csemver >/dev/null || fail "csemver is not installed"
 
-surfaces=(
-  cmake/GitNagaVersion.cmake
-  packaging/io.gitnaga.GitNaga.metainfo.xml
-)
-for surface in "${surfaces[@]}"; do
-  [ -f "$surface" ] || fail "surface file is missing: $surface"
-  grep -q "$surface" .versionrc.js || fail "$surface is not declared in .versionrc.js"
-done
+[ -f cmake/GitNagaVersion.cmake ] || fail "surface file is missing: cmake/GitNagaVersion.cmake"
+grep -q 'cmake/GitNagaVersion.cmake' csemver.toml || fail "cmake/GitNagaVersion.cmake is not declared in csemver.toml"
+[ -f packaging/io.gitnaga.GitNaga.metainfo.xml ] || fail "surface file is missing: the AppStream metainfo"
+grep -q 'scripts/appstream-release.sh' csemver.toml || fail "the AppStream postbump script is not wired in csemver.toml"
 
 version=$(sed -n 's/^set(GITNAGA_VERSION "\([^"]*\)")/\1/p' cmake/GitNagaVersion.cmake)
 [ -n "$version" ] || fail "cannot read GITNAGA_VERSION from cmake/GitNagaVersion.cmake"
@@ -40,4 +37,4 @@ fi
 
 printf 'version %s, surfaces coherent, tree clean\n\n' "$version"
 printf 'next release preview:\n'
-npx --yes commit-and-tag-version --dry-run 2>&1 | sed 's/^/  /'
+csemver --dry-run "$@" 2>&1 | sed 's/^/  /'
