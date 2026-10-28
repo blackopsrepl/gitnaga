@@ -51,3 +51,15 @@ qt_add_executable(gitnaga_controller_test
 )
 target_link_libraries(gitnaga_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_controller_test COMMAND gitnaga_controller_test)
+
+qt_add_executable(gitnaga_navigation_parse_test
+    navigation_parse_test.cpp
+)
+target_link_libraries(gitnaga_navigation_parse_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_navigation_parse_test COMMAND gitnaga_navigation_parse_test)
+
+qt_add_executable(gitnaga_navigation_git_test
+    navigation_git_test.cpp
+)
+target_link_libraries(gitnaga_navigation_git_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_navigation_git_test COMMAND gitnaga_navigation_git_test)

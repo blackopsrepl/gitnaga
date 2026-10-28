@@ -14,8 +14,14 @@ qt_standard_project_setup(REQUIRES 6.9.1)
 add_library(gitnaga_core STATIC
     src/avatar_provider.cpp
     src/avatar_provider.hpp
+    src/blame_model.cpp
+    src/blame_model.hpp
     src/commit_model.cpp
     src/commit_model.hpp
+    src/commit_search.cpp
+    src/commit_search.hpp
+    src/file_history_model.cpp
+    src/file_history_model.hpp
     src/filesystem_operations.cpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
@@ -29,6 +35,8 @@ add_library(gitnaga_core STATIC
     src/git_history.cpp
     src/git_status.cpp
     src/git_inspect.cpp
+    src/git_navigation.cpp
+    src/git_navigation.hpp
     src/git_parse.cpp
     src/git_parse.hpp
     src/git_remote.cpp
@@ -36,6 +44,8 @@ add_library(gitnaga_core STATIC
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
+    src/navigation_controller.cpp
+    src/navigation_controller.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
     src/repository_controller.cpp
@@ -45,6 +55,8 @@ add_library(gitnaga_core STATIC
     src/repository_operations.cpp
     src/repository_selection.cpp
     src/repository_references.cpp
+    src/search_controller.cpp
+    src/search_controller.hpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
