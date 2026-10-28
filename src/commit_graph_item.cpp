@@ -33,7 +33,12 @@ void CommitGraphItem::setModel(CommitModel *model)
         connect(m_model, &QAbstractItemModel::rowsInserted, this,
                 [this](const QModelIndex &, int first, int last) { rowsAppended(first, last); });
         connect(m_model, &QAbstractItemModel::dataChanged, this, [this] { update(); });
-        connect(m_model, &QAbstractItemModel::rowsRemoved, this, &CommitGraphItem::synchronizeRows);
+        connect(m_model, &QAbstractItemModel::rowsRemoved, this, [this](const QModelIndex &, int first, int last) {
+            if (first == 0 && last == 0)
+                topRowChanged();
+            else
+                synchronizeRows();
+        });
     }
     synchronizeRows();
     emit modelChanged();
@@ -73,6 +78,10 @@ void CommitGraphItem::rowsAppended(int first, int last)
 {
     // A streamed chunk lands below everything already shown: rows above it
     // keep their index, so only the new rows need measuring.
+    if (first == 0 && last == 0 && rows().size() > 1) {
+        topRowChanged();
+        return;
+    }
     if (first == 0 || last != rows().size() - 1) {
         synchronizeRows();
         return;
@@ -83,6 +92,21 @@ void CommitGraphItem::rowsAppended(int first, int last)
     // simply continue into the new rows when the viewport reaches them.
     if (m_headRow < 0)
         recomputeHeadRow();
+    emit metricsChanged();
+    update();
+}
+
+void CommitGraphItem::topRowChanged()
+{
+    // The uncommitted-work row came or went. It rides HEAD's lane, so the
+    // lane extent stands and a million rows need not be measured again; only
+    // the row numbers below it moved.
+    recomputeHeadRow();
+    if (m_hoveredRow >= rows().size())
+        m_hoveredRow = -1;
+    invalidateHighlight();
+    recomputeHighlight();
+    clampContent();
     emit metricsChanged();
     update();
 }

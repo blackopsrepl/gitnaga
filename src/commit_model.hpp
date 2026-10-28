@@ -48,7 +48,6 @@ public:
     const QVector<Commit> &commits() const;
     const Commit *commitAt(int row) const;
     int rowOf(const QString &oid) const;
-    const QHash<QString, int> &rowIndex() const;
     Q_INVOKABLE QVariantMap at(int row) const;
     Q_INVOKABLE int find(const QString &oid) const { return rowOf(oid); }
 
@@ -59,8 +58,11 @@ signals:
 
 private:
     void reindex(qsizetype from);
+    int offset() const;
 
     QVector<Commit> m_commits;
+    // Object id -> position in the history (the row without the
+    // uncommitted-work row on top).
     QHash<QString, int> m_rowByOid;
     bool m_workInProgress = false;
 };

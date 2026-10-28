@@ -102,6 +102,7 @@ private:
     void clampContent();
     void synchronizeRows();
     void rowsAppended(int first, int last);
+    void topRowChanged();
     const QVector<Commit> &rows() const;
     int rowOf(const QString &oid) const;
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
