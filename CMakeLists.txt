@@ -33,6 +33,7 @@ add_library(gitnaga_core STATIC
     src/git_parse.hpp
     src/git_remote.cpp
     src/git_repository.cpp
+    src/graph_emphasis.cpp
     src/graph_geometry.cpp
     src/perf_trace.cpp
     src/graph_geometry.hpp

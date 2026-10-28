@@ -2,6 +2,7 @@
 
 #include "avatar_provider.hpp"
 #include "commit_model.hpp"
+#include "graph_emphasis.hpp"
 #include "graph_geometry.hpp"
 
 #include <QPointF>
@@ -98,15 +99,15 @@ private:
     void recomputeHeadRow();
     void recomputeHighlight();
     void invalidateHighlight();
-    void rebuildEmphasisSpans();
     void clampContent();
     void synchronizeRows();
     void rowsAppended(int first, int last);
     const QVector<Commit> &rows() const;
-    const QHash<QString, int> &rowIndex() const;
+    int rowOf(const QString &oid) const;
     void paintEdges(QPainter *painter, int first, int last, const graph::GraphStyle &style) const;
     void paintWorkInProgressLink(QPainter *painter, int first, const graph::GraphStyle &style) const;
-    void paintNode(QPainter *painter, const Commit &commit, const graph::Node &node, qreal radius, bool isHead, bool selected, bool hovered) const;
+    void paintNode(QPainter *painter, int row, const graph::Node &node, qreal radius, bool isHead, bool selected,
+                   bool hovered) const;
 
     QPointer<CommitModel> m_model;
     qreal m_contentY = 0.0;
@@ -117,12 +118,7 @@ private:
     int m_hoveredRow = -1;
     int m_maximumLane = 0;
     int m_headRow = -1;
-    // Cache keys for the emphasis set: the row pair it was computed for. A
-    // value of -2 means "no valid computation yet".
-    int m_highlightSelectedRow = -2;
-    int m_highlightHoveredRow = -2;
-    QSet<QString> m_highlight;
-    QHash<int, QPair<int, int>> m_emphasisSpans;
+    graph::Emphasis m_emphasis;
     AvatarProvider m_avatars;
     QString m_headOid;
     QString m_workInProgressOid;

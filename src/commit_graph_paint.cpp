@@ -49,8 +49,8 @@ void CommitGraphItem::paintEdges(QPainter *painter, int first, int last, const g
             // trace crosses them. An edge leaving this commit belongs to the
             // line this commit sits on; a passing edge to the line it carries.
             const int line = edge.fromLane == commit.lane ? commit.colorIndex : edge.fromColor;
-            const qreal top = graph::spanStrength(m_emphasisSpans, line, row, emphasisFadeRows);
-            const qreal bottom = graph::spanStrength(m_emphasisSpans, line, row + 1, emphasisFadeRows);
+            const qreal top = m_emphasis.strength(line, row, emphasisFadeRows);
+            const qreal bottom = m_emphasis.strength(line, row + 1, emphasisFadeRows);
             const auto alphaAt = [](qreal strength) {
                 return static_cast<int>(std::lround(dimmedAlpha + (255 - dimmedAlpha) * strength));
             };
@@ -95,13 +95,14 @@ void CommitGraphItem::paintWorkInProgressLink(QPainter *painter, int first, cons
     painter->drawPath(path);
 }
 
-void CommitGraphItem::paintNode(QPainter *painter, const Commit &commit, const graph::Node &node, qreal radius,
-                                bool isHead, bool selected, bool hovered) const
+void CommitGraphItem::paintNode(QPainter *painter, int row, const graph::Node &node, qreal radius, bool isHead,
+                                bool selected, bool hovered) const
 {
+    const auto &commit = rows().at(row);
     const QColor base = laneColor(commit.colorIndex);
     const qreal scale = style().laneSpacing / 22.0;
     const bool isMerge = commit.parents.size() > 1;
-    const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(commit.oid);
+    const bool dimmed = !m_emphasis.contains(rows(), row);
     const int alpha = dimmed ? dimmedAlpha : 255;
     const qreal nodeRadius = isMerge ? radius * 1.2 : radius;
 
@@ -174,6 +175,7 @@ void CommitGraphItem::paint(QPainter *painter)
     const int last = graph::lastVisibleRow(m_contentY, height(), static_cast<int>(rows().size()), st);
     if (last < first)
         return;
+    m_emphasis.prepare(rows(), [this](const QString &oid) { return rowOf(oid); }, last, emphasisFadeRows);
 
     for (int row = first; row <= last; ++row) {
         const qreal y = graph::rowCenterY(row, m_contentY, st) - st.rowHeight / 2.0;
@@ -182,7 +184,7 @@ void CommitGraphItem::paint(QPainter *painter)
         // reads as a brighter version of the branch hue.
         const bool hoveredRow = row == m_hoveredRow && row != m_selectedRow;
         const QColor band = hoveredRow ? hoverColor : laneColor(rows().at(row).colorIndex);
-        const bool dimmed = !m_highlight.isEmpty() && !m_highlight.contains(rows().at(row).oid);
+        const bool dimmed = !m_emphasis.contains(rows(), row);
         int alpha = 26;
         if (row == m_selectedRow)
             alpha = 56;
@@ -204,7 +206,7 @@ void CommitGraphItem::paint(QPainter *painter)
     for (int row = first; row <= last; ++row) {
         const auto &commit = rows().at(row);
         const auto node = graph::nodeFor(commit, row, m_contentY, st);
-        paintNode(painter, commit, node, radius, row == m_headRow, row == m_selectedRow, row == m_hoveredRow);
+        paintNode(painter, row, node, radius, row == m_headRow, row == m_selectedRow, row == m_hoveredRow);
     }
     painter->restore();
 

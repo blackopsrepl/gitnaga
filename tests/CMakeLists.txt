@@ -51,3 +51,9 @@ qt_add_executable(gitnaga_controller_test
 )
 target_link_libraries(gitnaga_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_controller_test COMMAND gitnaga_controller_test)
+
+qt_add_executable(gitnaga_emphasis_test
+    graph_emphasis_test.cpp
+)
+target_link_libraries(gitnaga_emphasis_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_emphasis_test COMMAND gitnaga_emphasis_test)

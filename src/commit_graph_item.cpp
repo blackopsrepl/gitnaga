@@ -1,7 +1,5 @@
 #include "commit_graph_item.hpp"
 
-#include "perf_trace.hpp"
-
 #include <algorithm>
 #include <cmath>
 
@@ -47,10 +45,9 @@ const QVector<Commit> &CommitGraphItem::rows() const
     return m_model ? m_model->commits() : empty;
 }
 
-const QHash<QString, int> &CommitGraphItem::rowIndex() const
+int CommitGraphItem::rowOf(const QString &oid) const
 {
-    static const QHash<QString, int> empty;
-    return m_model ? m_model->rowIndex() : empty;
+    return m_model ? m_model->rowOf(oid) : -1;
 }
 
 void CommitGraphItem::synchronizeRows()
@@ -63,9 +60,8 @@ void CommitGraphItem::synchronizeRows()
         setSelectedRow(-1);
     if (m_hoveredRow >= rows().size())
         m_hoveredRow = -1;
-    // A new row set invalidates the cached ancestry: the same row index now
-    // refers to a different commit, so force a rebuild instead of reusing a set
-    // of object ids that no longer exists in the graph.
+    // A new row set invalidates the swept ancestry: the same row index now
+    // refers to a different commit.
     invalidateHighlight();
     recomputeHighlight();
     clampContent();
@@ -83,12 +79,10 @@ void CommitGraphItem::rowsAppended(int first, int last)
     }
     for (int row = first; row <= last; ++row)
         m_maximumLane = std::max(m_maximumLane, rows().at(row).lane);
+    // Rows below the old end leave every swept ancestry valid; the sweeps
+    // simply continue into the new rows when the viewport reaches them.
     if (m_headRow < 0)
         recomputeHeadRow();
-    if (!m_highlight.isEmpty()) {
-        invalidateHighlight();
-        recomputeHighlight();
-    }
     emit metricsChanged();
     update();
 }
@@ -155,18 +149,8 @@ void CommitGraphItem::recomputeHighlight()
     // Both sources matter: the selection is the durable emphasis and the hover
     // is a transient one, so hovering must never drop the selected commit's
     // ancestry (which would dim the selected node and hide its selection ring).
-    if (m_selectedRow == m_highlightSelectedRow && m_hoveredRow == m_highlightHoveredRow)
-        return;
-    const perf::Scope scope("emphasis");
-    m_highlightSelectedRow = m_selectedRow;
-    m_highlightHoveredRow = m_hoveredRow;
-    m_highlight = graph::emphasisOids(rows(), rowIndex(), m_selectedRow, m_hoveredRow);
-    rebuildEmphasisSpans();
-}
-
-void CommitGraphItem::rebuildEmphasisSpans()
-{
-    m_emphasisSpans = graph::emphasisSpans(rows(), m_highlight);
+    // Nothing is walked here; paint sweeps only as far as the viewport.
+    m_emphasis.setSources(m_selectedRow, m_hoveredRow);
 }
 
 int CommitGraphItem::hoveredRow() const { return m_hoveredRow; }
@@ -184,10 +168,7 @@ void CommitGraphItem::setHeadOid(const QString &oid)
 
 void CommitGraphItem::invalidateHighlight()
 {
-    m_highlightSelectedRow = -2;
-    m_highlightHoveredRow = -2;
-    m_highlight.clear();
-    m_emphasisSpans.clear();
+    m_emphasis.invalidate();
 }
 
 QString CommitGraphItem::workInProgressOid() const { return m_workInProgressOid; }
@@ -206,7 +187,7 @@ void CommitGraphItem::recomputeHeadRow()
     m_headRow = -1;
     if (m_headOid.isEmpty())
         return;
-    m_headRow = rowIndex().value(m_headOid, -1);
+    m_headRow = rowOf(m_headOid);
 }
 
 qreal CommitGraphItem::effectiveRowHeight() const { return m_baseRowHeight * m_zoom; }
