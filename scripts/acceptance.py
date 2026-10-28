@@ -26,6 +26,11 @@ def scenarios(zoo: Path, out: Path):
     def shot(name):
         return {"shot": str(out / f"{name}.png")}
 
+    def stash_oid(repo):
+        result = subprocess.run(["git", "-C", str(zoo / repo), "rev-parse", "-q", "--verify", "stash@{0}"],
+                                capture_output=True, text=True)
+        return result.stdout.strip()
+
     return {
         "branches": [
             {"open": str(zoo / "branches")}, {"idle": True}, shot("branches"),
@@ -47,7 +52,23 @@ def scenarios(zoo: Path, out: Path):
             {"open": str(zoo / "dirty")}, {"idle": True},
             {"select": "WORKTREE"}, {"idle": True}, shot("dirty-worktree"),
             {"print": "uncommittedCount"}, {"expect": {"uncommittedCount": "5"}},
-            {"file": 4}, {"idle": True}, shot("dirty-untracked"),
+            {"file": 1}, {"idle": True}, shot("dirty-untracked"),
+        ],
+        "staging": [
+            {"open": str(zoo / "hunks")}, {"idle": True},
+            {"select": "WORKTREE"}, {"idle": True}, shot("staging-sections"),
+            {"click": [1300, 416]}, {"click": [1300, 504], "modifiers": "Shift"}, {"wait": 300},
+            shot("staging-lines"),
+            {"click": [1352, 840]}, {"idle": True}, shot("staging-lines-staged"),
+            {"click": [1428, 348]}, {"idle": True}, shot("staging-hunk"),
+            {"click": [1020, 224]}, {"wait": 400}, shot("staging-stash-dialog"), {"key": "Escape"},
+            {"click": [954, 224]}, {"idle": True}, {"wait": 300}, shot("staging-amend"),
+        ],
+        "stash": [
+            {"open": str(zoo / "internal")}, {"idle": True},
+            {"rightClick": [120, 269]}, {"wait": 800}, shot("stash-menu"), {"key": "Escape"},
+            {"select": stash_oid("internal")}, {"idle": True}, shot("stash-review"),
+            {"file": 1}, {"idle": True}, shot("stash-untracked"),
         ],
         "detached": [
             {"open": str(zoo / "detached")}, {"idle": True}, shot("detached"),

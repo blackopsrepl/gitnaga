@@ -17,7 +17,7 @@ class RepositoryController;
 // GITNAGA_DRIVE=<script.json> gitnaga
 //
 // Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
-// {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
+// {"file": row} {"click": [x, y], "modifiers": "Shift"} {"doubleClick": [x, y]} {"rightClick": [x, y]}
 // {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}
 // {"shot": path} {"print": property} {"quit": true}
@@ -33,7 +33,7 @@ public:
 private:
     void next();
     bool settled() const;
-    void click(const QPointF &point, Qt::MouseButton button, bool twice);
+    void click(const QPointF &point, Qt::MouseButton button, bool twice, Qt::KeyboardModifiers modifiers = {});
     void key(const QString &sequence);
     void type(const QString &text);
 

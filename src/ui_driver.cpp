@@ -3,6 +3,7 @@
 #include "repository_controller.hpp"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -38,12 +39,14 @@ bool UiDriver::settled() const
     return !m_repository->loading() && !m_repository->historyLoading() && !m_repository->busy();
 }
 
-void UiDriver::click(const QPointF &point, Qt::MouseButton button, bool twice)
+void UiDriver::click(const QPointF &point, Qt::MouseButton button, bool twice, Qt::KeyboardModifiers modifiers)
 {
     const auto send = [&](QEvent::Type type, Qt::MouseButtons buttons) {
-        QMouseEvent event(type, point, m_window->mapToGlobal(point), button, buttons, Qt::NoModifier);
+        QMouseEvent event(type, point, m_window->mapToGlobal(point), button, buttons, modifiers);
         QCoreApplication::sendEvent(m_window, &event);
     };
+    // Menus open at the cursor, which synthetic events do not move.
+    QCursor::setPos(m_window->mapToGlobal(point).toPoint());
     QMouseEvent move(QEvent::MouseMove, point, m_window->mapToGlobal(point), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(m_window, &move);
     send(QEvent::MouseButtonPress, button);
@@ -110,7 +113,11 @@ void UiDriver::next()
         const bool right = step.contains(QStringLiteral("rightClick"));
         const auto point = step.value(twice ? QStringLiteral("doubleClick")
                                             : right ? QStringLiteral("rightClick") : QStringLiteral("click")).toArray();
-        click(QPointF(point.at(0).toDouble(), point.at(1).toDouble()), right ? Qt::RightButton : Qt::LeftButton, twice);
+        // "modifiers": "Shift" or "Ctrl" for shift- and control-clicks.
+        const auto modifiers = QKeySequence(step.value(QStringLiteral("modifiers")).toString()
+                                            + QStringLiteral("+A"))[0].keyboardModifiers();
+        click(QPointF(point.at(0).toDouble(), point.at(1).toDouble()), right ? Qt::RightButton : Qt::LeftButton, twice,
+              modifiers);
     } else if (step.contains(QStringLiteral("key"))) {
         key(step.value(QStringLiteral("key")).toString());
     } else if (step.contains(QStringLiteral("type"))) {

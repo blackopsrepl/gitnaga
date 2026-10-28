@@ -66,7 +66,8 @@ git -C internal update-ref refs/codex/snapshots/abc HEAD~1
 git -C internal update-ref refs/original/refs/heads/main HEAD~2
 git -C internal update-ref refs/prefetch/remotes/origin/main HEAD
 echo stash >>internal/a.txt
-git -C internal stash push -qm "work in flight"
+echo scratch >internal/scratch.txt
+git -C internal stash push -qum "work in flight"
 
 # dirty: staged, unstaged, both, untracked, rename, deletion.
 new_repo dirty
@@ -79,6 +80,19 @@ echo two >>dirty/both.txt && git -C dirty add both.txt && echo three >>dirty/bot
 git -C dirty rm -q gone.txt
 git -C dirty mv old-name.txt new-name.txt
 echo untracked >dirty/untracked.txt
+
+# hunks: one file with two separate unstaged hunks, one already staged.
+new_repo hunks
+seq 1 30 | sed 's/^/line /' >hunks/lines.txt
+git -C hunks add lines.txt && git -C hunks commit -qm "thirty lines"
+commit hunks notes.md "notes" "notes"
+# HEAD is published, so amending it warns.
+git clone -q --bare hunks hunks-remote.git
+git -C hunks remote add origin ../hunks-remote.git && git -C hunks fetch -q origin
+git -C hunks branch -q -u origin/main
+sed -i -e 's/^line 3$/line three/' -e '/^line 5$/a line 5.5' -e 's/^line 27$/line twenty-seven/' hunks/lines.txt
+echo "staged note" >>hunks/notes.md && git -C hunks add notes.md
+echo draft >hunks/draft.txt
 
 # detached: HEAD on an older commit.
 new_repo detached
