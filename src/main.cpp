@@ -4,6 +4,7 @@
 
 #include "askpass.hpp"
 #include "remote_sync.hpp"
+#include "diff_blob_provider.hpp"
 #include "repository_controller.hpp"
 #include "ui_driver.hpp"
 
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
     GitNaga::RemoteSync::setAskpassProgram(QCoreApplication::applicationFilePath());
 
     QQmlApplicationEngine engine;
+    engine.addImageProvider(QStringLiteral("diffblob"), new GitNaga::DiffBlobProvider);
     GitNaga::RepositoryController repository;
     engine.setInitialProperties({ { QStringLiteral("repository"), QVariant::fromValue(&repository) } });
     QObject::connect(

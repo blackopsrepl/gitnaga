@@ -92,15 +92,14 @@ void RepositoryController::selectFile(int row)
     const bool stashedUntracked = !worktree && file->untracked && m_selected.parents.size() >= 3;
     const auto oid = worktree ? m_repository.refs.headOid
                    : stashedUntracked ? m_selected.parents.at(2) : m_selected.oid;
-    const auto path = file->path;
-    const auto oldPath = file->oldPath;
-    const auto side = m_selectedSide;
-    const bool untracked = file->untracked && worktree;
-    const auto key = QString::number(static_cast<int>(side)) + QLatin1Char(':') + path;
+    const DiffRequest request{ repository, oid, file->path, file->oldPath, m_selectedSide,
+                               file->untracked && worktree };
+    const auto options = m_diffLines.options();
+    const auto key = QString::number(static_cast<int>(m_selectedSide)) + QLatin1Char(':') + file->path;
     m_diffKey.clear();
     emit fileSelectionChanged();
 
-    auto *watcher = new QFutureWatcher<GitResult<QVector<DiffLine>>>(this);
+    auto *watcher = new QFutureWatcher<GitResult<FileDiff>>(this);
     connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, generation, key] {
         const auto result = watcher->result();
         watcher->deleteLater();
@@ -113,9 +112,7 @@ void RepositoryController::selectFile(int row)
         m_diffLines.replace(*result);
         m_diffKey = key;
     });
-    watcher->setFuture(QtConcurrent::run([repository, oid, path, oldPath, side, untracked] {
-        return GitClient::loadDiff(repository, oid, path, oldPath, side, untracked);
-    }));
+    watcher->setFuture(QtConcurrent::run([request, options] { return GitClient::loadFileDiff(request, options); }));
 }
 
 void RepositoryController::restoreSelection()

@@ -51,6 +51,36 @@ QtObject {
     readonly property color info: "#7fb2ff"
     readonly property color violet: "#a78bfa"
 
+    // Diff surfaces: a quiet tint per changed line, a stronger one behind the
+    // words that changed, and gutters a step darker than the line.
+    readonly property color diffSurface: "#0a0f18"
+    readonly property color diffAddedFill: "#0f2a20"
+    readonly property color diffRemovedFill: "#2d151b"
+    readonly property color diffAddedGutter: "#113623"
+    readonly property color diffRemovedGutter: "#3a1820"
+    readonly property color diffAddedWord: "#1e6443"
+    readonly property color diffRemovedWord: "#76283a"
+    readonly property color diffAddedInk: "#4ade80"
+    readonly property color diffRemovedInk: "#ff7d8b"
+    readonly property color diffHunkFill: "#101b2c"
+    readonly property color diffHunkInk: "#7d97c2"
+    readonly property color diffLineNumber: "#4f5a6e"
+    readonly property color diffFiller: "#0c121c"
+    readonly property color diffNotice: "#fbbf24"
+    readonly property color checkerDark: "#1a2030"
+    readonly property color checkerLight: "#252d3e"
+
+    // Syntax colours, tuned against the diff fills above.
+    readonly property color syntaxPlain: "#d3d9e6"
+    readonly property color syntaxKeyword: "#c79bff"
+    readonly property color syntaxType: "#6fd0f2"
+    readonly property color syntaxFunction: "#82aaff"
+    readonly property color syntaxString: "#b8e38c"
+    readonly property color syntaxNumber: "#f7a072"
+    readonly property color syntaxConstant: "#ff9e64"
+    readonly property color syntaxComment: "#67748c"
+    readonly property color syntaxMeta: "#e8c27a"
+
     // Accent tints for selected/active surfaces, so no component has to invent
     // its own green.
     function accentTint(strength) {

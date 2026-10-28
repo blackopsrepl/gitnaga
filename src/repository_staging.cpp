@@ -156,16 +156,17 @@ void RepositoryController::discardAll()
     });
 }
 
-void RepositoryController::applyHunk(int hunkRow, const QString &action)
+void RepositoryController::applyHunk(int hunk, const QString &action)
 {
-    applyPatchRows(patch::hunkChanges(m_diffLines.lines(), hunkRow), action, tr("a hunk"));
+    applyPatchRows(patch::hunkChanges(m_diffLines.lines(), m_diffLines.sourceOfHunk(hunk)), action, tr("a hunk"));
 }
 
 void RepositoryController::applyLines(const QVariantList &rows, const QString &action)
 {
     QSet<int> selected;
     for (const auto &row : rows)
-        selected.insert(row.toInt());
+        if (const int source = m_diffLines.sourceOfRow(row.toInt()); source >= 0)
+            selected.insert(source);
     applyPatchRows(selected, action, selected.size() == 1 ? tr("a line") : tr("%1 lines").arg(selected.size()));
 }
 
@@ -177,6 +178,12 @@ void RepositoryController::applyPatchRows(const QSet<int> &rows, const QString &
                        : (action == QStringLiteral("stage") || action == QStringLiteral("discard")) && unstagedSide;
     if (m_selectedOid != worktreeOid() || !allowed || m_diffKey != expectedKey) {
         reportFailure(tr("The diff is still loading; try again"));
+        return;
+    }
+    // A whitespace-blind diff's context does not match the file, so git
+    // would refuse the patch.
+    if (m_diffLines.ignoreWhitespace()) {
+        reportFailure(tr("Turn off Ignore whitespace to stage parts of a file"));
         return;
     }
     const bool reverse = action != QStringLiteral("stage");

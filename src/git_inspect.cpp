@@ -29,6 +29,16 @@ QVector<DiffLine> boundedDiff(const QByteArray &output)
     return lines;
 }
 
+QStringList optionArguments(const DiffOptions &options)
+{
+    QStringList arguments;
+    if (options.ignoreWhitespace)
+        arguments.append(QStringLiteral("-w"));
+    // "The whole file": more context than any file has lines.
+    arguments.append(QStringLiteral("-U%1").arg(options.contextLines < 0 ? 1000000 : options.contextLines));
+    return arguments;
+}
+
 } // namespace
 
 GitResult<CommitInspection> GitClient::inspectCommit(const QString &worktree, const QString &oid)
@@ -86,7 +96,8 @@ GitResult<CommitInspection> GitClient::inspectCommit(const QString &worktree, co
 }
 
 GitResult<QVector<DiffLine>> GitClient::loadDiff(const QString &worktree, const QString &oid, const QString &path,
-                                                 const QString &oldPath, DiffSide side, bool untracked)
+                                                 const QString &oldPath, DiffSide side, bool untracked,
+                                                 const DiffOptions &diffOptions)
 {
     RunOptions options;
     QStringList arguments;
@@ -116,6 +127,13 @@ GitResult<QVector<DiffLine>> GitClient::loadDiff(const QString &worktree, const 
                           QStringLiteral("--no-ext-diff"), QStringLiteral("-M") };
             break;
         }
+    }
+    // Options go before the pathspec separator, in both branches above.
+    const auto separator = arguments.indexOf(QStringLiteral("--"));
+    const auto extra = optionArguments(diffOptions);
+    for (qsizetype index = 0; index < extra.size(); ++index)
+        arguments.insert((separator < 0 ? arguments.size() : separator + index), extra.at(index));
+    if (!untracked || side == DiffSide::Commit || side == DiffSide::Staged) {
         // A rename only diffs as a rename when both sides are named.
         arguments.append(QStringLiteral("--"));
         if (!oldPath.isEmpty())

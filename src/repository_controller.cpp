@@ -38,6 +38,8 @@ RepositoryController::RepositoryController(QObject *parent)
     connect(&m_messageTimer, &QTimer::timeout, this, [this] { setOperationMessage({}, m_lastOperationOk); });
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_syncTimer.start(); });
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_syncTimer.start(); });
+    // Whitespace and context options change what git is asked for.
+    connect(&m_diffLines, &DiffLineModel::optionsChanged, this, [this] { selectFile(m_selectedFile); });
     if (auto *application = qobject_cast<QGuiApplication *>(QCoreApplication::instance())) {
         connect(application, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
             if (state == Qt::ApplicationActive)

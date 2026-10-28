@@ -114,6 +114,24 @@ qt_add_executable(gitnaga_staging_controller_test
 target_link_libraries(gitnaga_staging_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_staging_controller_test COMMAND gitnaga_staging_controller_test)
 
+qt_add_executable(gitnaga_diff_algorithms_test
+    diff_algorithms_test.cpp
+)
+target_link_libraries(gitnaga_diff_algorithms_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_diff_algorithms_test COMMAND gitnaga_diff_algorithms_test)
+
+qt_add_executable(gitnaga_syntax_test
+    syntax_test.cpp
+)
+target_link_libraries(gitnaga_syntax_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_syntax_test COMMAND gitnaga_syntax_test)
+
+qt_add_executable(gitnaga_file_diff_test
+    file_diff_test.cpp
+)
+target_link_libraries(gitnaga_file_diff_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME gitnaga_file_diff_test COMMAND gitnaga_file_diff_test)
+
 # Every test runs headless with no desktop theme plugin: the GTK theme tries
 # to open a display and the run dies before a single test executes.
 get_property(gitnaga_tests DIRECTORY PROPERTY TESTS)

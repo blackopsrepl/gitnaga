@@ -156,7 +156,8 @@ public:
     Q_INVOKABLE void stageAll();
     Q_INVOKABLE void unstageAll();
     Q_INVOKABLE void discardAll();
-    Q_INVOKABLE void applyHunk(int hunkRow, const QString &action);
+    // `hunk` is a hunk index and `rows` are rows of diffLines, as the view shows them.
+    Q_INVOKABLE void applyHunk(int hunk, const QString &action);
     Q_INVOKABLE void applyLines(const QVariantList &rows, const QString &action);
     Q_INVOKABLE void loadAmendMessage();
     Q_INVOKABLE void stashWorktree(const QString &message, bool includeUntracked);

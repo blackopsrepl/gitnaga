@@ -46,10 +46,10 @@ class StagingControllerTest final : public QObject
     static QVector<int> rowsOfKind(RepositoryController &controller, DiffLine::Kind kind, const QString &text = {})
     {
         QVector<int> rows;
-        const auto &lines = controller.diffLines()->lines();
-        for (int row = 0; row < lines.size(); ++row)
-            if (lines.at(row).kind == kind && (text.isEmpty() || lines.at(row).text == text))
-                rows.append(row);
+        const auto &shown = controller.diffLines()->document().rows;
+        for (int row = 0; row < shown.size(); ++row)
+            if (shown.at(row).kind == kind && (text.isEmpty() || shown.at(row).text == text))
+                rows.append(kind == DiffLine::Kind::Hunk ? shown.at(row).hunk : row);
         return rows;
     }
 
