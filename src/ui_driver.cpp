@@ -165,7 +165,11 @@ void UiDriver::next()
                                   step.value(QStringLiteral("value")).toVariant());
     } else if (step.contains(QStringLiteral("print"))) {
         const auto name = step.value(QStringLiteral("print")).toString();
-        std::printf("%s=%s\n", qPrintable(name), qPrintable(m_repository->property(name.toUtf8()).toString()));
+        const auto value = m_repository->property(name.toUtf8());
+        // Lists print joined, so a scenario can expect them as one string.
+        const auto text = value.typeId() == QMetaType::QStringList ? value.toStringList().join(QLatin1Char(','))
+                                                                   : value.toString();
+        std::printf("%s=%s\n", qPrintable(name), qPrintable(text));
         std::fflush(stdout);
     } else if (step.contains(QStringLiteral("shot"))) {
         const auto path = step.value(QStringLiteral("shot")).toString();

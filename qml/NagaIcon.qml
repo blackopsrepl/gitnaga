@@ -56,6 +56,23 @@ Canvas {
             ctx.lineTo(cx + r * 0.28, cy - r * 0.42)
             ctx.closePath()
             ctx.fill()
+        } else if (name === "eye" || name === "eye-off") {
+            // An almond outline and a pupil; the "off" form is struck through.
+            ctx.beginPath()
+            ctx.moveTo(1.5, 8)
+            ctx.quadraticCurveTo(8, 1, 14.5, 8)
+            ctx.quadraticCurveTo(8, 15, 1.5, 8)
+            ctx.closePath()
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.arc(8, 8, 2.2, 0, Math.PI * 2)
+            ctx.fill()
+            if (name === "eye-off") {
+                ctx.beginPath()
+                ctx.moveTo(2.5, 13.5)
+                ctx.lineTo(13.5, 2.5)
+                ctx.stroke()
+            }
         } else if (name === "branch") {
             // Two dots joined by a rail through a third dot.
             ctx.beginPath()

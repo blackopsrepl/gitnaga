@@ -86,6 +86,32 @@ def scenarios(zoo: Path, out: Path):
             shot("branch-drop-confirm"), {"click": [703, 487]}, {"idle": True}, shot("branch-drop-result"),
             {"print": "commitCount"}, {"expect": {"commitCount": "7"}},
         ],
+        "hide-solo": [
+            {"open": str(zoo / "branches")}, {"idle": True}, {"call": "showAllRefs"}, {"idle": True},
+            {"click": [282, 195]}, {"idle": True}, {"click": [282, 245]}, {"idle": True}, shot("hidden-refs"),
+            {"print": "hiddenRefs"},
+            {"expect": {"hiddenRefs": "refs/heads/topic/merged,refs/remotes/origin/feature/search"}},
+        ],
+        # A second process: hidden refs must have survived the restart.
+        "hide-persist": [
+            {"open": str(zoo / "branches")}, {"idle": True}, shot("hidden-after-restart"),
+            {"print": "hiddenRefs"},
+            {"expect": {"hiddenRefs": "refs/heads/topic/merged,refs/remotes/origin/feature/search"}},
+        ],
+        "hide-clear": [
+            {"open": str(zoo / "branches")}, {"idle": True},
+            {"click": [285, 859]}, {"idle": True},
+            {"call": "setSoloRef", "args": ["refs/remotes/origin/main"]}, {"idle": True}, shot("solo-remote"),
+            {"call": "setSoloRef", "args": ["refs/remotes/origin/main"]}, {"idle": True},
+            {"print": "hiddenRefs"}, {"expect": {"hiddenRefs": ""}},
+        ],
+        "solo-tag": [
+            {"open": str(zoo / "tags")}, {"idle": True},
+            {"call": "setSoloRef", "args": ["refs/tags/v0.2.0"]}, {"idle": True}, shot("solo-tag"),
+            {"print": "soloRef"}, {"print": "commitCount"},
+            {"call": "setSoloRef", "args": ["refs/tags/v0.2.0"]}, {"idle": True},
+            {"expect": {"soloRef": "refs/tags/v0.2.0"}},
+        ],
         "submodule": [
             {"open": str(zoo / "submodule")}, {"idle": True}, {"select": "WORKTREE"}, {"idle": True},
             shot("submodule"),
