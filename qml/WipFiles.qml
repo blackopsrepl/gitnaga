@@ -8,6 +8,7 @@ Item {
     id: wip
     required property var repository
     signal fileMenuRequested(string path, point scenePosition)
+    signal fileChosen()
 
     function rowIn(side) {
         if (repository.wipSide !== side)
@@ -64,6 +65,7 @@ Item {
             onFileAction: (row, action) => wip.fileAction("unstaged", row, action)
             onBulkAction: (action) => wip.bulkAction(action)
             onFileMenuRequested: (path, position) => wip.fileMenuRequested(path, position)
+            onFileChosen: wip.fileChosen()
         }
         WipFileSection {
             Layout.fillWidth: true
@@ -76,6 +78,7 @@ Item {
             onFileAction: (row, action) => wip.fileAction("staged", row, action)
             onBulkAction: (action) => wip.bulkAction(action)
             onFileMenuRequested: (path, position) => wip.fileMenuRequested(path, position)
+            onFileChosen: wip.fileChosen()
         }
         Item { Layout.fillHeight: true }
     }

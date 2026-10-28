@@ -10,6 +10,9 @@ Rectangle {
     property bool diffInCenter: false
     signal closeRequested()
     signal fileMenuRequested(string path, point scenePosition)
+    // A person picked a file (click or Enter), as opposed to the first file
+    // being shown when a commit is chosen: only this opens the full diff.
+    signal fileChosen()
     function focusFiles() { files.forceActiveFocus() }
 
     // True while the reviewed row is the uncommitted-work snapshot: that is
@@ -113,6 +116,7 @@ Rectangle {
                     visible: pane.viewingWorktree
                     repository: pane.repository
                     onFileMenuRequested: (path, position) => pane.fileMenuRequested(path, position)
+                    onFileChosen: pane.fileChosen()
                 }
                 ColumnLayout {
                     visible: !pane.viewingWorktree
@@ -139,6 +143,8 @@ Rectangle {
                         ScrollBar.vertical: ScrollBar {}
                         Keys.onUpPressed: repository.selectFile(Math.max(0, files.currentIndex - 1))
                         Keys.onDownPressed: repository.selectFile(Math.min(files.count - 1, files.currentIndex + 1))
+                        Keys.onReturnPressed: pane.fileChosen()
+                        Keys.onEnterPressed: pane.fileChosen()
                         // Custom row rather than ItemDelegate: the control
                         // default painted its own highlight, which was the one
                         // surface whose hover and selection did not follow the
@@ -173,6 +179,7 @@ Rectangle {
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 onTapped: (point, button) => {
                                     repository.selectFile(fileRow.index)
+                                    if (button !== Qt.RightButton) pane.fileChosen()
                                     if (button === Qt.RightButton) pane.fileMenuRequested(fileRow.path, point.scenePosition)
                                 }
                             }

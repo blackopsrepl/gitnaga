@@ -23,7 +23,7 @@ Item {
         palette.openPalette(initial)
     }
 
-    Action { id: searchAction; text: qsTr("Search commits"); shortcut: "Ctrl+F"; enabled: layer.repository.repositoryPath.length > 0; onTriggered: layer.graphPane.focusSearch() }
+    Action { id: searchAction; text: qsTr("Search commits"); shortcut: "Ctrl+F"; enabled: layer.repository.repositoryPath.length > 0; onTriggered: { layer.window.showGraph(); layer.graphPane.focusSearch() } }
     Action { id: nextMatchAction; text: qsTr("Next search match"); shortcut: "F3"; enabled: layer.navigation.search.count > 0; onTriggered: layer.navigation.search.next() }
     Action { id: previousMatchAction; text: qsTr("Previous search match"); shortcut: "Shift+F3"; enabled: layer.navigation.search.count > 0; onTriggered: layer.navigation.search.previous() }
     Action { id: clearSearchAction; text: qsTr("Clear search"); enabled: layer.navigation.search.active; onTriggered: layer.navigation.search.clear() }
@@ -31,7 +31,7 @@ Item {
     Action { id: fileHistoryAction; text: qsTr("File history"); shortcut: "Ctrl+Shift+H"; enabled: layer.fileSelected; onTriggered: layer.navigation.showFileHistory(layer.navigation.selectedPath(), layer.repository.selectedOid) }
     Action { id: blameAction; text: qsTr("Blame"); shortcut: "Ctrl+Shift+B"; enabled: layer.fileSelected; onTriggered: layer.navigation.showBlame(layer.navigation.selectedPath(), layer.repository.selectedOid) }
     Action { id: headAction; text: qsTr("Go to HEAD"); enabled: layer.repository.headOid.length > 0; onTriggered: layer.repository.selectOid(layer.repository.headOid) }
-    Action { id: graphFocusAction; text: qsTr("Focus commit graph"); shortcut: "Ctrl+G"; onTriggered: layer.graphPane.focusGraph() }
+    Action { id: graphFocusAction; text: qsTr("Focus commit graph"); shortcut: "Ctrl+G"; onTriggered: { layer.window.showGraph(); layer.graphPane.focusGraph() } }
     // VS Code's palette chord, for hands that already know it.
     Shortcut { sequence: "Ctrl+Shift+P"; onActivated: layer.openPalette("") }
 

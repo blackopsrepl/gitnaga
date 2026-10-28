@@ -51,9 +51,9 @@ ApplicationWindow {
     Action { id: quitAction; text: qsTr("&Quit"); shortcut: "Ctrl+Q"; onTriggered: Qt.quit() }
     Action { id: toggleReferencesAction; text: qsTr("References sidebar"); checkable: true; checked: true; shortcut: "Ctrl+1"; onTriggered: referencesVisible = checked }
     Action { id: toggleReviewAction; text: qsTr("Review sidebar"); checkable: true; checked: true; shortcut: "Ctrl+2"; onTriggered: reviewVisible = checked }
-    Action { id: zoomInAction; text: qsTr("Zoom graph in"); shortcut: "Ctrl+="; onTriggered: graphPane.zoomIn() }
-    Action { id: zoomOutAction; text: qsTr("Zoom graph out"); shortcut: "Ctrl+-"; onTriggered: graphPane.zoomOut() }
-    Action { id: resetZoomAction; text: qsTr("Reset graph zoom"); shortcut: "Ctrl+0"; onTriggered: graphPane.resetZoom() }
+    Action { id: zoomInAction; text: qsTr("Zoom graph in"); shortcut: "Ctrl+="; onTriggered: centerPane.graph.zoomIn() }
+    Action { id: zoomOutAction; text: qsTr("Zoom graph out"); shortcut: "Ctrl+-"; onTriggered: centerPane.graph.zoomOut() }
+    Action { id: resetZoomAction; text: qsTr("Reset graph zoom"); shortcut: "Ctrl+0"; onTriggered: centerPane.graph.resetZoom() }
     Action { id: previousAction; text: qsTr("Previous commit"); shortcut: "Alt+Up"; enabled: repository.selectedRow > 0; onTriggered: root.step(-1) }
     Action { id: nextAction; text: qsTr("Next commit"); shortcut: "Alt+Down"; enabled: repository.selectedRow + 1 < repository.commits.count; onTriggered: root.step(1) }
 
@@ -151,25 +151,10 @@ ApplicationWindow {
         onOpenRequested: repositoryDialog.open()
     }
 
-    // Choosing a file opens its diff in the middle; choosing another commit
-    // (which clears the file) or Back returns to the graph.
-    property bool diffOpen: false
-    Connections {
-        target: root.repository
-        function onFileSelectionChanged() {
-            if (root.repository.selectedFile >= 0)
-                root.diffOpen = true
-        }
-        function onSelectionChanged() {
-            if (root.repository.selectedFile < 0)
-                root.diffOpen = false
-        }
-    }
-    Shortcut {
-        sequence: "Escape"
-        enabled: root.diffOpen
-        onActivated: root.diffOpen = false
-    }
+    // The window's scripted driver opens a file the way a click does.
+    function openDiff() { centerPane.openDiff() }
+    function showGraph() { centerPane.diffOpen = false }
+    readonly property real graphZoom: centerPane.graph.zoom
 
     SplitView {
         anchors.fill: parent
@@ -184,35 +169,25 @@ ApplicationWindow {
             repository: root.repository
             onCloseRequested: root.referencesVisible = false
         }
-        // The middle shows the graph, or a selected file's diff in its place.
-        Item {
+        CenterPane {
+            id: centerPane
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
-            GraphPane {
-                id: graphPane
-                anchors.fill: parent
-                visible: !root.diffOpen
-                repository: root.repository
-                navigation: root.navigation
-                onFocusReviewRequested: if (root.reviewVisible) reviewPane.focusFiles()
-            }
-            CenterDiff {
-                anchors.fill: parent
-                visible: root.diffOpen
-                repository: root.repository
-                side: reviewPane.viewingWorktree ? root.repository.wipSide : ""
-                onCloseRequested: root.diffOpen = false
-            }
+            repository: root.repository
+            navigation: root.navigation
+            side: reviewPane.viewingWorktree ? root.repository.wipSide : ""
+            onFocusReviewRequested: if (root.reviewVisible) reviewPane.focusFiles()
         }
         InspectorPane {
             id: reviewPane
             visible: root.reviewVisible
             SplitView.preferredWidth: root.width * 0.38
             SplitView.minimumWidth: 320
-            diffInCenter: root.diffOpen
+            diffInCenter: centerPane.diffOpen
             repository: root.repository
             onCloseRequested: root.reviewVisible = false
             onFileMenuRequested: (path, position) => navigationLayer.showFileMenu(path, position)
+            onFileChosen: centerPane.openDiff()
         }
     }
 
@@ -221,7 +196,7 @@ ApplicationWindow {
         repository: root.repository
         navigation: root.navigation
         window: root
-        graphPane: graphPane
+        graphPane: centerPane.graph
     }
 
     footer: Rectangle {

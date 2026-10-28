@@ -139,6 +139,7 @@ qt_add_qml_module(gitnaga
         qml/BlamePanel.qml
         qml/CommandPalette.qml
         qml/CenterDiff.qml
+        qml/CenterPane.qml
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml

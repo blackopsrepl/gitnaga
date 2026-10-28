@@ -19,6 +19,7 @@ Rectangle {
     function ensureVisible(row) {
         graph.ensureVisible(row)
     }
+    readonly property real zoom: graph.zoom
     function zoomIn() { graph.zoomIn() }
     function zoomOut() { graph.zoomOut() }
     function resetZoom() { graph.resetZoom() }
