@@ -83,6 +83,12 @@ Rectangle {
             }
         }
 
+        OperationBanner {
+            Layout.fillWidth: true
+            Layout.preferredHeight: implicitHeight
+            repository: pane.repository
+        }
+
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true

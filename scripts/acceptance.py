@@ -74,6 +74,29 @@ def scenarios(zoo: Path, out: Path):
             {"open": str(zoo / "rebase")}, {"idle": True}, shot("rebase"),
             {"print": "operationInProgress"}, {"expect": {"operationInProgress": "rebase"}},
         ],
+        "conflict-view": [
+            {"open": str(zoo / "conflict-blocks")}, {"idle": True}, shot("conflict-banner"),
+            {"click": [639, 181]}, {"wait": 600}, shot("conflict-view-open"),
+            {"click": [1074, 149]}, {"click": [1153, 371]}, {"wait": 300}, shot("conflict-view-chosen"),
+            {"click": [1278, 830]}, {"idle": True}, shot("conflict-view-saved"),
+            {"print": "operationInProgress"}, {"expect": {"operationInProgress": "merge"}},
+        ],
+        "conflict-resolve": [
+            {"open": str(zoo / "conflict")}, {"idle": True},
+            {"call": "resolveConflict", "args": ["f.txt", "theirs"]}, {"idle": True}, shot("conflict-resolved"),
+            {"call": "continueOperation"}, {"idle": True}, shot("conflict-continued"),
+            {"print": "operationInProgress"}, {"expect": {"operationInProgress": ""}},
+        ],
+        "bisect": [
+            {"open": str(zoo / "bisect")}, {"idle": True}, shot("bisect"),
+            {"print": "operationInProgress"}, {"expect": {"operationInProgress": "bisect"}},
+        ],
+        "undo": [
+            {"open": str(zoo / "branches")}, {"idle": True},
+            {"call": "deleteBranch", "args": ["topic/merged"]}, {"idle": True}, shot("undo-available"),
+            {"key": "Ctrl+Z"}, {"idle": True}, shot("undo-done"),
+            {"print": "operationMessage"}, {"expect": {"operationMessage": "Undid delete branch topic/merged"}},
+        ],
         "submodule": [
             {"open": str(zoo / "submodule")}, {"idle": True}, {"select": "WORKTREE"}, {"idle": True},
             shot("submodule"),

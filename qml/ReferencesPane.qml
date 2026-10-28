@@ -35,7 +35,7 @@ Rectangle {
                 var label = stashes[s].selector + "  " + stashes[s].message
                 if (needle.length > 0 && label.toLowerCase().indexOf(needle) < 0)
                     continue
-                out.push({ kind: "stash", name: label, selector: stashes[s].selector, oid: stashes[s].oid,
+                out.push({ kind: "stash", name: label, selector: stashes[s].selector, message: stashes[s].message, oid: stashes[s].oid,
                            shortOid: stashes[s].shortOid, color: "#7c8698" })
             }
             return out

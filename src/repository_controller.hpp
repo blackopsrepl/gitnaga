@@ -4,6 +4,8 @@
 #include "diff_line_model.hpp"
 #include "file_change_model.hpp"
 #include "git_client.hpp"
+#include "operation_status.hpp"
+#include "undo_stack.hpp"
 
 #include <QFileSystemWatcher>
 #include <QObject>
@@ -11,6 +13,7 @@
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantMap>
 #include <QVariantList>
 
 #include <functional>
@@ -37,6 +40,8 @@ class RepositoryController final : public QObject
     Q_PROPERTY(QString workInProgressOid READ workInProgressOid NOTIFY statusChanged)
     Q_PROPERTY(int uncommittedCount READ uncommittedCount NOTIFY statusChanged)
     Q_PROPERTY(QString operationInProgress READ operationInProgress NOTIFY statusChanged)
+    Q_PROPERTY(GitNaga::OperationStatus *inProgress READ inProgress CONSTANT)
+    Q_PROPERTY(GitNaga::UndoStack *undoStack READ undoStack CONSTANT)
     Q_PROPERTY(QString upstream READ upstream NOTIFY statusChanged)
     Q_PROPERTY(int ahead READ ahead NOTIFY statusChanged)
     Q_PROPERTY(int behind READ behind NOTIFY statusChanged)
@@ -80,6 +85,8 @@ public:
     QString workInProgressOid() const;
     int uncommittedCount() const;
     QString operationInProgress() const;
+    OperationStatus *inProgress() { return &m_inProgress; }
+    UndoStack *undoStack() { return &m_undo; }
     QString upstream() const;
     int ahead() const;
     int behind() const;
@@ -156,6 +163,23 @@ public:
     Q_INVOKABLE void mergeCommit(const QString &oid, const QString &branch = {});
     Q_INVOKABLE void resetTo(const QString &oid, const QString &mode);
     Q_INVOKABLE void rebaseOnto(const QString &oid, const QString &branch = {});
+    Q_INVOKABLE void dropStash(const QString &selector, const QString &message);
+
+    // The operation git left half done (repository_conflicts.cpp).
+    Q_INVOKABLE void continueOperation();
+    Q_INVOKABLE void skipOperation();
+    Q_INVOKABLE void abortOperation();
+    Q_INVOKABLE void bisect(const QString &verdict);
+    Q_INVOKABLE void resolveConflict(const QString &path, const QString &side);
+    Q_INVOKABLE void markResolved(const QString &path);
+    Q_INVOKABLE void openInEditor(const QString &path) const;
+    Q_INVOKABLE void openMergetool(const QString &path) const;
+    // The working file split into text and conflict blocks for the conflict view.
+    Q_INVOKABLE QVariantMap conflictDocument(const QString &path) const;
+    // One choice per conflict ("ours", "theirs", "ours-theirs", "theirs-ours").
+    Q_INVOKABLE void saveConflictResolution(const QString &path, const QStringList &choices);
+    // Take back the last undoable operation GitNaga ran (repository_undo.cpp).
+    Q_INVOKABLE void undo();
 
     // Off-thread git work: the worktree it runs in and the run options that
     // carry the cancel token and the progress reporter.
@@ -166,6 +190,10 @@ public:
     void runAsyncOperation(const QString &successMessage, OperationWork work, OperationResult result = {});
     void runOperation(const QString &operation, const QStringList &arguments, const QString &successMessage);
     void reportFailure(const QString &message);
+    // Like runAsyncOperation, but records how to take the operation back.
+    void runUndoable(const QString &successMessage, UndoCapture capture, OperationWork work);
+    void runUndoable(const QString &operation, const QStringList &arguments, const QString &successMessage,
+                     UndoCapture capture);
 
 signals:
     void repositoryChanged();
@@ -213,6 +241,8 @@ private:
     CommitModel m_commits;
     FileChangeModel m_changedFiles;
     DiffLineModel m_diffLines;
+    OperationStatus m_inProgress;
+    UndoStack m_undo;
     QFileSystemWatcher m_watcher;
     QTimer m_syncTimer;
     QTimer m_statusTimer;

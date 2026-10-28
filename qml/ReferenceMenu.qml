@@ -93,7 +93,14 @@ NagaMenu {
         onTriggered: menu.confirm.ask(qsTr("Delete tag ") + menu.name + qsTr("?"),
                                       function() { menu.repository.deleteTag(menu.name) })
     }
-    NagaMenuSeparator { visible: menu.isLocal || menu.isRemote || menu.isTag; height: visible ? implicitHeight : 0 }
+    NagaMenuItem {
+        visible: menu.isStash
+        height: visible ? implicitHeight : 0
+        text: qsTr("Drop ") + (menu.target ? menu.target.selector : "") + qsTr("…")
+        onTriggered: menu.confirm.ask(qsTr("Drop ") + menu.target.selector + qsTr("? Undo (Ctrl+Z) can bring it back."),
+                                      function() { menu.repository.dropStash(menu.target.selector, menu.target.message) })
+    }
+    NagaMenuSeparator { visible: menu.isLocal || menu.isRemote || menu.isTag || menu.isStash; height: visible ? implicitHeight : 0 }
     NagaMenuItem {
         text: qsTr("Show commit ") + (menu.target ? menu.target.shortOid : "")
         onTriggered: menu.repository.selectOid(menu.target.oid)

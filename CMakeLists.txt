@@ -16,6 +16,8 @@ add_library(gitnaga_core STATIC
     src/avatar_provider.hpp
     src/commit_model.cpp
     src/commit_model.hpp
+    src/conflict_parser.cpp
+    src/conflict_parser.hpp
     src/filesystem_operations.cpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
@@ -38,8 +40,11 @@ add_library(gitnaga_core STATIC
     src/graph_geometry.cpp
     src/graph_geometry.hpp
     src/graph_palette.hpp
+    src/operation_status.cpp
+    src/operation_status.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
+    src/repository_conflicts.cpp
     src/repository_controller.cpp
     src/repository_controller.hpp
     src/repository_worktrees.cpp
@@ -50,6 +55,10 @@ add_library(gitnaga_core STATIC
     src/remote_sync.cpp
     src/remote_sync.hpp
     src/remote_sync_refs.cpp
+    src/repository_undo.cpp
+    src/undo_capture.cpp
+    src/undo_stack.cpp
+    src/undo_stack.hpp
 )
 
 target_include_directories(gitnaga_core PUBLIC src)
@@ -82,6 +91,9 @@ qt_add_qml_module(gitnaga
         qml/CommitLabels.qml
         qml/CommitMenu.qml
         qml/ConfirmDialog.qml
+        qml/ConflictBlockView.qml
+        qml/ConflictDialog.qml
+        qml/ConflictFileRow.qml
         qml/EmptyState.qml
         qml/GraphPane.qml
         qml/GraphScrollBar.qml
@@ -92,6 +104,7 @@ qt_add_qml_module(gitnaga
         qml/NagaMenuSeparator.qml
         qml/NagaMenu.qml
         qml/OpenRepositoryDialog.qml
+        qml/OperationBanner.qml
         qml/AddWorktreeDialog.qml
         qml/WorktreeDialog.qml
         qml/NagaIconButton.qml
@@ -105,6 +118,7 @@ qt_add_qml_module(gitnaga
         qml/SyncButton.qml
         qml/SyncToolbar.qml
         qml/UpstreamDialog.qml
+        qml/UndoButton.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE
