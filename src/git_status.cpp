@@ -45,6 +45,8 @@ FileChange trackedChange(const QByteArray &record, int pathField)
     file.staged = staged != '.';
     file.unstaged = unstaged != '.';
     file.status = statusLetter(file.staged ? staged : unstaged);
+    if (file.unstaged)
+        file.worktreeStatus = statusLetter(unstaged);
     file.submodule = record.size() > 5 && record.at(5) == 'S';
     file.path = fieldTail(record, pathField);
     return file;

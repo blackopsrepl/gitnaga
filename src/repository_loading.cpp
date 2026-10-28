@@ -231,15 +231,7 @@ void RepositoryController::applyStatus(WorktreeStatus status)
         } else if (changed) {
             // Keep the file the user is reading; reload it, since its diff is
             // what just changed.
-            const auto path = m_selectedPath;
-            const auto inspection = GitClient::inspectWorktree(m_repository.status);
-            m_changedFiles.replace(inspection.files);
-            int row = 0;
-            for (qsizetype index = 0; index < inspection.files.size(); ++index) {
-                if (inspection.files.at(index).path == path)
-                    row = static_cast<int>(index);
-            }
-            selectFile(row);
+            showWorktree();
         }
     }
     restoreSelection();

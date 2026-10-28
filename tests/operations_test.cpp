@@ -1,5 +1,6 @@
 #include "git_client.hpp"
 #include "git_test_helpers.hpp"
+#include "operation_controller.hpp"
 #include "repository_controller.hpp"
 
 #include <QFile>
@@ -79,10 +80,10 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->title(), QStringLiteral("Merging other into main"), 5000);
         QVERIFY(!controller.lastOperationOk());
 
-        controller.resolveConflict(QStringLiteral("f.txt"), QStringLiteral("theirs"));
+        controller.operation()->resolveConflict(QStringLiteral("f.txt"), QStringLiteral("theirs"));
         QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 0, 5000);
         settle(controller);
-        controller.continueOperation();
+        controller.operation()->continueOperation();
         QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QString(), 5000);
         settle(controller);
 
@@ -103,9 +104,9 @@ private slots:
         controller.mergeCommit(git(root, { QStringLiteral("rev-parse"), QStringLiteral("other") }), QStringLiteral("other"));
         QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 1, 5000);
 
-        const auto document = controller.conflictDocument(QStringLiteral("f.txt"));
+        const auto document = controller.operation()->conflictDocument(QStringLiteral("f.txt"));
         QCOMPARE(document.value(QStringLiteral("conflicts")).toInt(), 1);
-        controller.saveConflictResolution(QStringLiteral("f.txt"), { QStringLiteral("ours-theirs") });
+        controller.operation()->saveConflictResolution(QStringLiteral("f.txt"), { QStringLiteral("ours-theirs") });
         QTRY_COMPARE_WITH_TIMEOUT(controller.inProgress()->conflictCount(), 0, 5000);
         QCOMPARE(contents(root), QStringLiteral("ours\ntheirs\n"));
         // Staged: the index has no unmerged entries left.
@@ -130,7 +131,7 @@ private slots:
         QVERIFY(controller.inProgress()->canSkip());
         settle(controller);
 
-        controller.abortOperation();
+        controller.operation()->abortOperation();
         QTRY_COMPARE_WITH_TIMEOUT(controller.operationInProgress(), QString(), 5000);
         settle(controller);
         QCOMPARE(controller.headOid(), before);

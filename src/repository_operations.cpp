@@ -72,21 +72,6 @@ void RepositoryController::createBranch(const QString &name, const QString &oid)
                 undo::fixed(tr("create branch %1").arg(name), { { QStringLiteral("branch"), QStringLiteral("-D"), name } }));
 }
 
-void RepositoryController::commitWorktree(const QString &summary, const QString &description)
-{
-    const auto include = m_changedFiles.selectedPaths();
-    const auto unstage = m_changedFiles.stagedUnselectedPaths();
-    if (include.isEmpty()) {
-        reportFailure(tr("Select at least one file to commit"));
-        return;
-    }
-    // Undone with a soft reset, so the commit's changes come back as staged work.
-    runUndoable(tr("Committed %1").arg(summary.left(48)), undo::resetHead(tr("commit"), QStringLiteral("--soft")),
-                      [include, unstage, summary, description](const QString &worktree, const RunOptions &) {
-                          return GitClient::commitWorktree(worktree, include, unstage, summary, description);
-                      });
-}
-
 void RepositoryController::deleteBranch(const QString &name)
 {
     if (name.isEmpty())

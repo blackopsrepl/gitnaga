@@ -173,4 +173,25 @@ void RepositoryController::saveViewSettings() const
     settings.setValue(QStringLiteral("solo"), m_view.solo);
 }
 
+QVariantList RepositoryController::worktrees() const
+{
+    QVariantList entries;
+    for (const auto &worktree : m_repository.worktrees) {
+        QVariantMap entry;
+        entry.insert(QStringLiteral("path"), worktree.path);
+        entry.insert(QStringLiteral("head"), worktree.head);
+        entry.insert(QStringLiteral("branch"), worktree.branch);
+        entry.insert(QStringLiteral("lockReason"), worktree.lockReason);
+        entry.insert(QStringLiteral("pruneReason"), worktree.pruneReason);
+        entry.insert(QStringLiteral("isMain"), worktree.isMain);
+        entry.insert(QStringLiteral("isBare"), worktree.isBare);
+        entry.insert(QStringLiteral("isDetached"), worktree.isDetached);
+        entry.insert(QStringLiteral("isLocked"), worktree.isLocked);
+        entry.insert(QStringLiteral("isPrunable"), worktree.isPrunable);
+        entry.insert(QStringLiteral("isCurrent"), worktree.path == m_repository.location.worktree);
+        entries.append(entry);
+    }
+    return entries;
+}
+
 } // namespace GitNaga

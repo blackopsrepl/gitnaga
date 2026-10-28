@@ -19,6 +19,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     void replace(QVector<DiffLine> lines);
     void clear();
+    const QVector<DiffLine> &lines() const { return m_lines; }
 
 private:
     QVector<DiffLine> m_lines;

@@ -1,4 +1,5 @@
 #include "git_client.hpp"
+#include "git_staging.hpp"
 #include "git_test_helpers.hpp"
 #include "recent_projects.hpp"
 
@@ -98,7 +99,7 @@ private slots:
                                        + QStringLiteral("?? scratch.txt"));
     }
 
-    void commitsSelectedWorktreeFiles()
+    void commitsTheIndexAndAmends()
     {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
@@ -106,52 +107,46 @@ private slots:
         runGit(root, { QStringLiteral("init"), QStringLiteral("-b"), QStringLiteral("main") });
         runGit(root, { QStringLiteral("config"), QStringLiteral("user.name"), QStringLiteral("GitNaga Test") });
         runGit(root, { QStringLiteral("config"), QStringLiteral("user.email"), QStringLiteral("test@gitnaga.invalid") });
-
         writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("one\n"));
         runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
-        runGit(root, { QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial"), QStringLiteral("tracked.txt") });
+        runGit(root, { QStringLiteral("commit"), QStringLiteral("-m"), QStringLiteral("initial") });
 
-        // staged edit of tracked.txt, then a further unstaged edit; a staged
-        // new file; and an untracked file the user wants included.
+        // A staged edit with a further unstaged edit on top, and an untracked
+        // file: the file edited twice is on both sides.
         writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("two\n"));
         runGit(root, { QStringLiteral("add"), QStringLiteral("tracked.txt") });
         writeFile(root + QStringLiteral("/tracked.txt"), QByteArrayLiteral("three\n"));
-        writeFile(root + QStringLiteral("/staged.txt"), QByteArrayLiteral("staged\n"));
-        runGit(root, { QStringLiteral("add"), QStringLiteral("staged.txt") });
         writeFile(root + QStringLiteral("/scratch.txt"), QByteArrayLiteral("scratch\n"));
+        const auto status = GitClient::loadStatus(*GitClient::locate(root));
+        QVERIFY(status.has_value());
+        QVector<FileChange> unstaged;
+        QVector<FileChange> staged;
+        staging::splitStatus(status->files, &unstaged, &staged);
+        QCOMPARE(unstaged.size(), 2);
+        QCOMPARE(staged.size(), 1);
+        QCOMPARE(staged.front().path, QStringLiteral("tracked.txt"));
 
-        const auto result = GitClient::commitWorktree(root,
-                                                      { QStringLiteral("tracked.txt"), QStringLiteral("scratch.txt") },
-                                                      { QStringLiteral("staged.txt") },
-                                                      QStringLiteral("wip commit"), QString());
-        QVERIFY2(result.has_value(), qPrintable(result.has_value() ? QString()
-            : result.error().operation + QStringLiteral(": ") + result.error().message));
-
-        auto head = GitClient::mutate(root, { QStringLiteral("rev-parse"), QStringLiteral("--verify"), QStringLiteral("HEAD") },
-                                      QStringLiteral("read HEAD"));
-        QVERIFY(head.has_value());
-        QCOMPARE(head->trimmed(), result->trimmed());
-
-        const auto names = GitClient::mutate(root,
-                                             { QStringLiteral("show"), QStringLiteral("--name-status"),
-                                               QStringLiteral("--format="), QStringLiteral("HEAD") },
-                                             QStringLiteral("list committed files"));
-        QVERIFY(names.has_value());
-        QVERIFY(names->contains(QStringLiteral("tracked.txt")));
-        QVERIFY(names->contains(QStringLiteral("scratch.txt")));
-        QVERIFY(!names->contains(QStringLiteral("staged.txt")));
-
+        // The commit takes the index only: "two", not "three" or scratch.
+        const auto committed = staging::commit(root, QStringLiteral("wip commit"), QString(), false);
+        QVERIFY2(committed.has_value(), qPrintable(committed ? QString() : committed.error().message));
         const auto contents = GitClient::mutate(root, { QStringLiteral("show"), QStringLiteral("HEAD:tracked.txt") },
                                                 QStringLiteral("read committed content"));
-        QVERIFY(contents.has_value());
-        QCOMPARE(contents->trimmed(), QStringLiteral("three"));
+        QCOMPARE(contents->trimmed(), QStringLiteral("two"));
+        const auto porcelain = GitClient::mutate(root, { QStringLiteral("status"), QStringLiteral("--porcelain") },
+                                                 QStringLiteral("read status"));
+        QCOMPARE(porcelain->trimmed(), QStringLiteral("M tracked.txt\n?? scratch.txt"));
 
-        // The excluded file keeps its worktree state, unstaged; the included
-        // ones are committed and clean.
-        const auto status = GitClient::mutate(root, { QStringLiteral("status"), QStringLiteral("--porcelain") },
-                                              QStringLiteral("read status"));
-        QVERIFY(status.has_value());
-        QCOMPARE(status->trimmed(), QStringLiteral("?? staged.txt"));
+        // Amending with nothing staged rewrites the message only.
+        const auto head = staging::headMessage(root);
+        QVERIFY(head.has_value());
+        QCOMPARE(head->summary, QStringLiteral("wip commit"));
+        QVERIFY(!head->published);
+        const auto amended = staging::commit(root, QStringLiteral("better"), QStringLiteral("body"), true);
+        QVERIFY(amended.has_value());
+        QVERIFY(*amended != *committed);
+        const auto log = GitClient::mutate(root, { QStringLiteral("log"), QStringLiteral("--format=%s|%b") },
+                                           QStringLiteral("read log"));
+        QCOMPARE(log->trimmed(), QStringLiteral("better|body\n\ninitial|"));
     }
 
     void remembersProjectsAndFuzzyMatches()

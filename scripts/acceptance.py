@@ -38,6 +38,10 @@ def scenarios(zoo: Path, out: Path):
         subprocess.run(["git", "-C", str(root / "branches"), "remote", "set-url", "origin",
                         str(root / "remote.git")], check=True)
         return str(root / "branches")
+    def stash_oid(repo):
+        result = subprocess.run(["git", "-C", str(zoo / repo), "rev-parse", "-q", "--verify", "stash@{0}"],
+                                capture_output=True, text=True)
+        return result.stdout.strip()
 
     return {
         "branches": [
@@ -60,7 +64,23 @@ def scenarios(zoo: Path, out: Path):
             {"open": str(zoo / "dirty")}, {"idle": True},
             {"select": "WORKTREE"}, {"idle": True}, shot("dirty-worktree"),
             {"print": "uncommittedCount"}, {"expect": {"uncommittedCount": "5"}},
-            {"file": 4}, {"idle": True}, shot("dirty-untracked"),
+            {"file": 1}, {"idle": True}, shot("dirty-untracked"),
+        ],
+        "staging": [
+            {"open": str(zoo / "hunks")}, {"idle": True},
+            {"select": "WORKTREE"}, {"idle": True}, shot("staging-sections"),
+            {"click": [1300, 416]}, {"click": [1300, 504], "modifiers": "Shift"}, {"wait": 300},
+            shot("staging-lines"),
+            {"click": [1352, 840]}, {"idle": True}, shot("staging-lines-staged"),
+            {"click": [1428, 348]}, {"idle": True}, shot("staging-hunk"),
+            {"click": [1020, 224]}, {"wait": 400}, shot("staging-stash-dialog"), {"key": "Escape"},
+            {"click": [954, 224]}, {"idle": True}, {"wait": 300}, shot("staging-amend"),
+        ],
+        "stash": [
+            {"open": str(zoo / "internal")}, {"idle": True},
+            {"rightClick": [120, 269]}, {"wait": 800}, shot("stash-menu"), {"key": "Escape"},
+            {"select": stash_oid("internal")}, {"idle": True}, shot("stash-review"),
+            {"file": 1}, {"idle": True}, shot("stash-untracked"),
         ],
         "detached": [
             {"open": str(zoo / "detached")}, {"idle": True}, shot("detached"),
@@ -83,8 +103,8 @@ def scenarios(zoo: Path, out: Path):
         ],
         "conflict-resolve": [
             {"open": str(zoo / "conflict")}, {"idle": True},
-            {"call": "resolveConflict", "args": ["f.txt", "theirs"]}, {"idle": True}, shot("conflict-resolved"),
-            {"call": "continueOperation"}, {"idle": True}, shot("conflict-continued"),
+            {"call": "operation.resolveConflict", "args": ["f.txt", "theirs"]}, {"idle": True}, shot("conflict-resolved"),
+            {"call": "operation.continueOperation"}, {"idle": True}, shot("conflict-continued"),
             {"print": "operationInProgress"}, {"expect": {"operationInProgress": ""}},
         ],
         "bisect": [
@@ -223,7 +243,7 @@ def sync_scenarios(zoo: Path, shot, sandbox):
         "sync-upstream": [
             {"open": sandbox("upstream")}, {"idle": True},
             {"rightClick": [100, 195]}, {"wait": 300}, shot("sync-branch-menu"),
-            {"click": [85, 81]}, {"wait": 400}, shot("sync-upstream-dialog"),
+            {"click": [150, 270]}, {"wait": 400}, shot("sync-upstream-dialog"),
             {"click": [807, 502]}, {"idle": True}, shot("sync-upstream-set"),
             {"rightClick": [100, 195]}, {"wait": 300}, shot("sync-branch-menu-tracking"), {"key": "Escape"},
             {"call": "checkoutBranch", "args": ["topic/merged"]}, {"idle": True},

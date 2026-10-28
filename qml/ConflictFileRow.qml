@@ -55,28 +55,28 @@ Rectangle {
         SmallButton {
             text: qsTr("Ours")
             hint: qsTr("Take %1's whole version of this file").arg(row.repository.inProgress.oursName)
-            onClicked: row.repository.resolveConflict(row.path, "ours")
+            onClicked: row.repository.operation.resolveConflict(row.path, "ours")
         }
         SmallButton {
             text: qsTr("Theirs")
             hint: qsTr("Take %1's whole version of this file").arg(row.repository.inProgress.theirsName)
-            onClicked: row.repository.resolveConflict(row.path, "theirs")
+            onClicked: row.repository.operation.resolveConflict(row.path, "theirs")
         }
         SmallButton {
             text: qsTr("Mark resolved")
             hint: qsTr("Stage the file as it is in the working tree")
-            onClicked: row.repository.markResolved(row.path)
+            onClicked: row.repository.operation.markResolved(row.path)
         }
         SmallButton {
             text: qsTr("Edit")
             hint: qsTr("Open in your editor")
-            onClicked: row.repository.openInEditor(row.path)
+            onClicked: row.repository.operation.openInEditor(row.path)
         }
         SmallButton {
             visible: row.repository.inProgress.mergeToolConfigured
             text: qsTr("Tool")
             hint: qsTr("Open in the configured merge tool")
-            onClicked: row.repository.openMergetool(row.path)
+            onClicked: row.repository.operation.openMergetool(row.path)
         }
     }
 }

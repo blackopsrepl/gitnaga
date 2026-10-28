@@ -1,3 +1,5 @@
+#include "operation_controller.hpp"
+
 #include "repository_controller.hpp"
 
 #include "conflict_parser.hpp"
@@ -50,65 +52,71 @@ std::expected<QString, QString> readConflictFile(const QString &path)
 
 } // namespace
 
-void RepositoryController::continueOperation()
+OperationController::OperationController(RepositoryController *repository)
+    : QObject(repository)
+    , m_repository(repository)
 {
-    const auto operation = m_repository.status.operation;
+}
+
+void OperationController::continueOperation()
+{
+    const auto operation = m_repository->repository().status.operation;
     if (operation.isEmpty() || operation == QStringLiteral("bisect"))
         return;
-    const auto remaining = std::count_if(m_repository.status.files.cbegin(), m_repository.status.files.cend(),
+    const auto remaining = std::count_if(m_repository->repository().status.files.cbegin(), m_repository->repository().status.files.cend(),
                                          [](const FileChange &file) { return file.conflicted; });
     if (remaining > 0) {
-        reportFailure(remaining == 1 ? tr("Resolve the conflicted file first")
+        m_repository->reportFailure(remaining == 1 ? tr("Resolve the conflicted file first")
                                      : tr("Resolve the %1 conflicted files first").arg(remaining));
         return;
     }
     if (operation == QStringLiteral("merge")) {
-        runUndoable(QStringLiteral("commit merge"), { QStringLiteral("commit"), QStringLiteral("--no-edit") },
+        m_repository->runUndoable(QStringLiteral("commit merge"), { QStringLiteral("commit"), QStringLiteral("--no-edit") },
                     tr("Merge committed"), undo::resetHead(tr("merge"), QStringLiteral("--keep")));
     } else if (operation == QStringLiteral("rebase") || operation == QStringLiteral("am")) {
-        runUndoable(QStringLiteral("continue ") + operation, { operation, QStringLiteral("--continue") },
+        m_repository->runUndoable(QStringLiteral("continue ") + operation, { operation, QStringLiteral("--continue") },
                     tr("Continued %1").arg(operation), undo::finishRebase(operation));
     } else {
-        runUndoable(QStringLiteral("continue ") + operation, { operation, QStringLiteral("--continue") },
+        m_repository->runUndoable(QStringLiteral("continue ") + operation, { operation, QStringLiteral("--continue") },
                     tr("Continued %1").arg(operation), undo::resetHead(operation, QStringLiteral("--keep")));
     }
 }
 
-void RepositoryController::skipOperation()
+void OperationController::skipOperation()
 {
-    const auto operation = m_repository.status.operation;
-    if (!m_inProgress.canSkip())
+    const auto operation = m_repository->repository().status.operation;
+    if (!m_repository->inProgress()->canSkip())
         return;
-    runOperation(QStringLiteral("skip ") + operation, { operation, QStringLiteral("--skip") },
+    m_repository->runOperation(QStringLiteral("skip ") + operation, { operation, QStringLiteral("--skip") },
                  tr("Skipped the current commit"));
 }
 
-void RepositoryController::abortOperation()
+void OperationController::abortOperation()
 {
-    const auto operation = m_repository.status.operation;
+    const auto operation = m_repository->repository().status.operation;
     if (operation.isEmpty())
         return;
     if (operation == QStringLiteral("bisect")) {
         bisect(QStringLiteral("reset"));
         return;
     }
-    runOperation(QStringLiteral("abort ") + operation, { operation, QStringLiteral("--abort") },
+    m_repository->runOperation(QStringLiteral("abort ") + operation, { operation, QStringLiteral("--abort") },
                  tr("Aborted %1").arg(operation));
 }
 
-void RepositoryController::bisect(const QString &verdict)
+void OperationController::bisect(const QString &verdict)
 {
     if (!bisectVerdicts.contains(verdict))
         return;
-    runOperation(QStringLiteral("bisect ") + verdict, { QStringLiteral("bisect"), verdict },
+    m_repository->runOperation(QStringLiteral("bisect ") + verdict, { QStringLiteral("bisect"), verdict },
                  verdict == QStringLiteral("reset") ? tr("Bisect ended") : tr("Marked %1").arg(verdict));
 }
 
-void RepositoryController::resolveConflict(const QString &path, const QString &side)
+void OperationController::resolveConflict(const QString &path, const QString &side)
 {
     if (path.isEmpty() || (side != QStringLiteral("ours") && side != QStringLiteral("theirs")))
         return;
-    runAsyncOperation(tr("Resolved %1 with %2").arg(path, side),
+    m_repository->runAsyncOperation(tr("Resolved %1 with %2").arg(path, side),
                       [path, side](const QString &worktree, const RunOptions &options) -> GitResult<QString> {
         auto checkout = GitClient::mutate(worktree, { QStringLiteral("checkout"), QStringLiteral("--") + side,
                                                       QStringLiteral("--"), path },
@@ -125,32 +133,32 @@ void RepositoryController::resolveConflict(const QString &path, const QString &s
     });
 }
 
-void RepositoryController::markResolved(const QString &path)
+void OperationController::markResolved(const QString &path)
 {
     if (path.isEmpty())
         return;
-    runOperation(QStringLiteral("mark resolved"), { QStringLiteral("add"), QStringLiteral("-A"), QStringLiteral("--"), path },
+    m_repository->runOperation(QStringLiteral("mark resolved"), { QStringLiteral("add"), QStringLiteral("-A"), QStringLiteral("--"), path },
                  tr("Marked %1 resolved").arg(path));
 }
 
-void RepositoryController::openInEditor(const QString &path) const
+void OperationController::openInEditor(const QString &path) const
 {
-    QDesktopServices::openUrl(QUrl::fromLocalFile(QDir(m_repository.location.worktree).filePath(path)));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QDir(m_repository->repository().location.worktree).filePath(path)));
 }
 
-void RepositoryController::openMergetool(const QString &path) const
+void OperationController::openMergetool(const QString &path) const
 {
     // Detached: the tool is the person's own window and outlives nothing of ours.
     QProcess::startDetached(QStringLiteral("git"),
                             { QStringLiteral("mergetool"), QStringLiteral("--no-prompt"), QStringLiteral("--"), path },
-                            m_repository.location.worktree);
+                            m_repository->repository().location.worktree);
 }
 
-QVariantMap RepositoryController::conflictDocument(const QString &path) const
+QVariantMap OperationController::conflictDocument(const QString &path) const
 {
     QVariantMap result;
     result.insert(QStringLiteral("path"), path);
-    const auto text = readConflictFile(QDir(m_repository.location.worktree).filePath(path));
+    const auto text = readConflictFile(QDir(m_repository->repository().location.worktree).filePath(path));
     if (!text) {
         result.insert(QStringLiteral("error"), text.error());
         return result;
@@ -177,16 +185,16 @@ QVariantMap RepositoryController::conflictDocument(const QString &path) const
     return result;
 }
 
-void RepositoryController::saveConflictResolution(const QString &path, const QStringList &choices)
+void OperationController::saveConflictResolution(const QString &path, const QStringList &choices)
 {
     QVector<conflicts::Choice> picked;
     for (const auto &choice : choices)
         picked.append(choiceFor(choice));
     if (picked.contains(conflicts::Choice::Unresolved)) {
-        reportFailure(tr("Choose a side for every conflict before saving"));
+        m_repository->reportFailure(tr("Choose a side for every conflict before saving"));
         return;
     }
-    runAsyncOperation(tr("Saved the resolution of %1").arg(path),
+    m_repository->runAsyncOperation(tr("Saved the resolution of %1").arg(path),
                       [path, picked](const QString &worktree, const RunOptions &options) -> GitResult<QString> {
         const auto absolute = QDir(worktree).filePath(path);
         const auto text = readConflictFile(absolute);

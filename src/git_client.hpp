@@ -96,9 +96,6 @@ public:
     // accepts the deletion.
     static GitResult<QString> deleteRemoteBranch(const QString &worktree, const QString &remote,
                                                  const QString &branch, const RunOptions &options = {});
-    static GitResult<QString> commitWorktree(const QString &worktree, const QStringList &include,
-                                             const QStringList &unstage, const QString &summary,
-                                             const QString &description);
     static GitResult<QString> mutate(const QString &worktree, const QStringList &arguments, const QString &operation,
                                      const RunOptions &options = {});
 

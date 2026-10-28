@@ -20,16 +20,33 @@
 
 namespace GitNaga {
 
+class HistoryEditor;
+class OperationController;
+class ProjectBrowser;
+class WorktreeManager;
 class RemoteSync;
 
 class RepositoryController final : public QObject
 {
     Q_OBJECT
     Q_MOC_INCLUDE("remote_sync.hpp")
+    Q_MOC_INCLUDE("history_editor.hpp")
+    Q_MOC_INCLUDE("operation_controller.hpp")
+    Q_MOC_INCLUDE("project_browser.hpp")
+    Q_MOC_INCLUDE("worktree_manager.hpp")
     Q_PROPERTY(CommitModel *commits READ commits CONSTANT)
     Q_PROPERTY(GitNaga::RemoteSync *sync READ sync CONSTANT)
+    Q_PROPERTY(GitNaga::HistoryEditor *history READ history CONSTANT)
+    Q_PROPERTY(GitNaga::OperationController *operation READ operation CONSTANT)
+    Q_PROPERTY(GitNaga::WorktreeManager *worktreeManager READ worktreeManager CONSTANT)
+    Q_PROPERTY(GitNaga::ProjectBrowser *projects READ projects CONSTANT)
     Q_PROPERTY(FileChangeModel *changedFiles READ changedFiles CONSTANT)
     Q_PROPERTY(DiffLineModel *diffLines READ diffLines CONSTANT)
+    Q_PROPERTY(FileChangeModel *unstagedFiles READ unstagedFiles CONSTANT)
+    Q_PROPERTY(FileChangeModel *stagedFiles READ stagedFiles CONSTANT)
+    // "unstaged" or "staged" while a work-in-progress file is shown.
+    Q_PROPERTY(QString wipSide READ wipSide NOTIFY fileSelectionChanged)
+    Q_PROPERTY(int stagedCount READ stagedCount NOTIFY statusChanged)
     Q_PROPERTY(QString repositoryPath READ repositoryPath NOTIFY repositoryChanged)
     Q_PROPERTY(QString repositoryName READ repositoryName NOTIFY repositoryChanged)
     Q_PROPERTY(QString currentBranch READ currentBranch NOTIFY referencesChanged)
@@ -61,11 +78,8 @@ class RepositoryController final : public QObject
     Q_PROPERTY(QString soloRef READ soloRef NOTIFY referencesChanged)
     Q_PROPERTY(QVariantList worktrees READ worktrees NOTIFY repositoryChanged)
     Q_PROPERTY(QString selectedOid READ selectedOid NOTIFY selectionChanged)
-    Q_PROPERTY(QString selectedSubject READ selectedSubject NOTIFY selectionChanged)
-    Q_PROPERTY(QString selectedAuthor READ selectedAuthor NOTIFY selectionChanged)
-    Q_PROPERTY(QString selectedDate READ selectedDate NOTIFY selectionChanged)
-    Q_PROPERTY(QString selectedBody READ selectedBody NOTIFY selectionChanged)
-    Q_PROPERTY(QStringList selectedParents READ selectedParents NOTIFY selectionChanged)
+    // {subject, author, date, body, parents} of the reviewed commit.
+    Q_PROPERTY(QVariantMap selectedCommit READ selectedCommit NOTIFY selectionChanged)
 
 public:
     explicit RepositoryController(QObject *parent = nullptr);
@@ -75,6 +89,14 @@ public:
     FileChangeModel *changedFiles();
     DiffLineModel *diffLines();
     RemoteSync *sync() const { return m_sync; }
+    HistoryEditor *history() const { return m_history; }
+    OperationController *operation() const { return m_operation; }
+    WorktreeManager *worktreeManager() const { return m_worktreeManager; }
+    ProjectBrowser *projects() const { return m_projects; }
+    FileChangeModel *unstagedFiles() { return &m_unstagedFiles; }
+    FileChangeModel *stagedFiles() { return &m_stagedFiles; }
+    QString wipSide() const;
+    int stagedCount() const;
     QString repositoryPath() const;
     QString repositoryName() const;
     QString currentBranch() const;
@@ -107,11 +129,7 @@ public:
     QString soloRef() const;
     QVariantList worktrees() const;
     QString selectedOid() const;
-    QString selectedSubject() const;
-    QString selectedAuthor() const;
-    QString selectedDate() const;
-    QString selectedBody() const;
-    QStringList selectedParents() const;
+    QVariantMap selectedCommit() const;
     const RepositorySnapshot &repository() const { return m_repository; }
 
     Q_INVOKABLE void openRepository(const QUrl &url);
@@ -127,22 +145,22 @@ public:
     Q_INVOKABLE void setRefHidden(const QString &fullName, bool hidden);
     Q_INVOKABLE void setSoloRef(const QString &fullName);
     Q_INVOKABLE void copyToClipboard(const QString &text) const;
-    Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description);
-    Q_INVOKABLE QVariantList directories(const QString &path) const;
-    Q_INVOKABLE QString homeDirectory() const;
-    Q_INVOKABLE bool looksLikeRepository(const QString &path) const;
-    Q_INVOKABLE QStringList recentProjects() const;
-    Q_INVOKABLE QVariantList fuzzyMatchProjects(const QString &needle) const;
-    Q_INVOKABLE void openWorktree(const QString &path);
-    Q_INVOKABLE void addWorktree(const QString &path, const QString &branch, const QString &mode,
-                                 const QString &startPoint);
-    Q_INVOKABLE void removeWorktree(const QString &path, bool force);
-    Q_INVOKABLE void lockWorktree(const QString &path, const QString &reason);
-    Q_INVOKABLE void unlockWorktree(const QString &path);
-    Q_INVOKABLE void moveWorktree(const QString &path, const QString &newPath);
-    Q_INVOKABLE void pruneWorktrees();
-    Q_INVOKABLE void repairWorktrees();
-
+    // Commits the index; amending rewrites HEAD with it.
+    Q_INVOKABLE void commitWorktree(const QString &summary, const QString &description, bool amend = false);
+    // Staging (repository_staging.cpp). Rows index the side's own list;
+    // `action` is "stage", "unstage" or "discard".
+    Q_INVOKABLE void selectWorktreeFile(const QString &side, int row);
+    Q_INVOKABLE void stageFile(int row);
+    Q_INVOKABLE void unstageFile(int row);
+    Q_INVOKABLE void discardFile(int row);
+    Q_INVOKABLE void stageAll();
+    Q_INVOKABLE void unstageAll();
+    Q_INVOKABLE void discardAll();
+    Q_INVOKABLE void applyHunk(int hunkRow, const QString &action);
+    Q_INVOKABLE void applyLines(const QVariantList &rows, const QString &action);
+    Q_INVOKABLE void loadAmendMessage();
+    Q_INVOKABLE void stashWorktree(const QString &message, bool includeUntracked);
+    Q_INVOKABLE void stashAction(const QString &action, const QString &selector, const QString &oid);
     Q_INVOKABLE void checkoutCommit(const QString &oid);
     Q_INVOKABLE void checkoutBranch(const QString &name);
     // A remote branch checks out as the local branch that tracks it, created
@@ -150,9 +168,7 @@ public:
     Q_INVOKABLE void checkoutRemoteBranch(const QString &reference);
     Q_INVOKABLE void createBranch(const QString &name, const QString &oid);
     Q_INVOKABLE void deleteBranch(const QString &name);
-    // Delete a branch on one remote, addressed by its remote-tracking ref short
-    // name ("<remote>/<branch>"). The ref is named, not the remote URL, because
-    // GitHub redirects a renamed repository and the stale URL would fail.
+    // Addressed as "<remote>/<branch>"; see GitClient::deleteRemoteBranch.
     Q_INVOKABLE void deleteRemoteBranch(const QString &reference);
     Q_INVOKABLE void createTag(const QString &name, const QString &oid);
     Q_INVOKABLE void deleteTag(const QString &name);
@@ -165,36 +181,9 @@ public:
     Q_INVOKABLE void rebaseOnto(const QString &oid, const QString &branch = {});
     Q_INVOKABLE void dropStash(const QString &selector, const QString &message);
 
-    // The operation git left half done (repository_conflicts.cpp).
-    Q_INVOKABLE void continueOperation();
-    Q_INVOKABLE void skipOperation();
-    Q_INVOKABLE void abortOperation();
-    Q_INVOKABLE void bisect(const QString &verdict);
-    Q_INVOKABLE void resolveConflict(const QString &path, const QString &side);
-    Q_INVOKABLE void markResolved(const QString &path);
-    Q_INVOKABLE void openInEditor(const QString &path) const;
-    Q_INVOKABLE void openMergetool(const QString &path) const;
-    // The working file split into text and conflict blocks for the conflict view.
-    Q_INVOKABLE QVariantMap conflictDocument(const QString &path) const;
-    // One choice per conflict ("ours", "theirs", "ours-theirs", "theirs-ours").
-    Q_INVOKABLE void saveConflictResolution(const QString &path, const QStringList &choices);
     // Take back the last undoable operation GitNaga ran (repository_undo.cpp).
     Q_INVOKABLE void undo();
 
-    // Interactive rebase and history editing (repository_rebase.cpp).
-    // Answers through rebasePlanReady: the commits from `oid` to HEAD.
-    Q_INVOKABLE void requestRebasePlan(const QString &oid);
-    // `base` empty means --root; steps are {oid, action, original, message}.
-    Q_INVOKABLE void startInteractiveRebase(const QString &base, const QVariantList &steps, bool autostash);
-    Q_INVOKABLE void rewordCommit(const QString &oid, const QString &message);
-    Q_INVOKABLE void squashIntoParent(const QString &oid);
-    Q_INVOKABLE void dropCommit(const QString &oid);
-    Q_INVOKABLE bool reachableFromHead(const QString &oid) const;
-    Q_INVOKABLE QString combineMessages(const QStringList &messages) const;
-    // Branch drag and drop (repository_rebase.cpp).
-    Q_INVOKABLE void moveBranch(const QString &name, const QString &oid);
-    Q_INVOKABLE void rebaseBranch(const QString &branch, const QString &onto);
-    Q_INVOKABLE void mergeBranchInto(const QString &source, const QString &target);
     Q_INVOKABLE void showAllRefs();
 
     // Off-thread git work: the worktree it runs in and the run options that
@@ -227,8 +216,7 @@ signals:
     void revealRow(int row);
     void fileSelectionChanged();
     void referencesChanged();
-    // {ok, error, oid, base, steps: [{oid, shortOid, subject, original}]}
-    void rebasePlanReady(const QVariantMap &plan);
+    void amendMessageLoaded(const QString &summary, const QString &description, bool published);
 
 private:
     struct PendingOperation {
@@ -255,12 +243,18 @@ private:
     void rebuildReferences();
     void loadViewSettings();
     void saveViewSettings() const;
+    void showWorktree();
+    void runStaging(const QString &successMessage, OperationWork work);
+    void applyPatchRows(const QSet<int> &rows, const QString &action, const QString &what);
+    bool isStash(const QString &oid) const;
 
     CommitModel m_commits;
     FileChangeModel m_changedFiles;
     DiffLineModel m_diffLines;
     OperationStatus m_inProgress;
     UndoStack m_undo;
+    FileChangeModel m_unstagedFiles;
+    FileChangeModel m_stagedFiles;
     QFileSystemWatcher m_watcher;
     QTimer m_syncTimer;
     QTimer m_statusTimer;
@@ -269,6 +263,10 @@ private:
     CommitDetails m_selected;
     QString m_selectedOid;
     QString m_selectedPath;
+    DiffSide m_selectedSide = DiffSide::Commit;
+    // The (side, path) the loaded diff belongs to; line actions refuse a
+    // diff that is still catching up with the selection.
+    QString m_diffKey;
     QString m_requestedPath;
     QString m_recordedWorktree;
     QString m_error;
@@ -278,6 +276,10 @@ private:
     HistoryRequest m_view;
     QQueue<PendingOperation> m_operations;
     RemoteSync *m_sync = nullptr;
+    HistoryEditor *m_history = nullptr;
+    OperationController *m_operation = nullptr;
+    WorktreeManager *m_worktreeManager = nullptr;
+    ProjectBrowser *m_projects = nullptr;
     CancelToken m_operationCancel;
     CancelToken m_historyCancel;
     int m_selectedRow = -1;

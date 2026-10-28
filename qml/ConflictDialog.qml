@@ -31,7 +31,7 @@ Dialog {
 
     function openFor(file) {
         path = file
-        document = repository.conflictDocument(file)
+        document = repository.operation.conflictDocument(file)
         var empty = []
         for (var i = 0; i < (document.conflicts || 0); ++i)
             empty.push("")
@@ -171,7 +171,7 @@ Dialog {
                     active: enabled
                     enabled: dialog.total > 0 && dialog.resolved === dialog.total && !dialog.repository.busy
                     onClicked: {
-                        dialog.repository.saveConflictResolution(dialog.path, dialog.choices)
+                        dialog.repository.operation.saveConflictResolution(dialog.path, dialog.choices)
                         dialog.close()
                     }
                 }

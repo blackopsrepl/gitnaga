@@ -153,17 +153,17 @@ Popup {
 
         // History editing only reaches commits HEAD contains: anything else
         // would not be rewritten by a rebase of the current line.
-        if (repository.reachableFromHead(target)) {
+        if (repository.history.reachableFromHead(target)) {
             var parents = info.parents || []
             entries.push({ separator: true })
             entries.push({ label: qsTr("Interactive rebase from here…"), run: function() { menu.rebaseEditor.openFor(target) } })
             entries.push({ label: qsTr("Edit message…"), run: function() { menu.rewordDialog.openFor(target) } })
             entries.push({ label: qsTr("Squash into parent"), enabled: parents.length === 1,
-                           run: function() { repository.squashIntoParent(target) } })
+                           run: function() { repository.history.squashIntoParent(target) } })
             entries.push({ label: qsTr("Drop commit…"), destructive: true, run: function() {
                 menu.confirm.ask(qsTr("Drop ") + shortOid + qsTr(" from ") + branch
                                  + qsTr("? The commits above it are replayed without it."),
-                                 function() { repository.dropCommit(target) })
+                                 function() { repository.history.dropCommit(target) })
             } })
         }
 

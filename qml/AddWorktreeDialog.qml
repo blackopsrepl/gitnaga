@@ -125,7 +125,7 @@ Dialog {
                     onClicked: {
                         const mode = ["new", "existing", "detached"][modeBox.currentIndex]
                         const startPoint = mode === "existing" ? "" : startPointField.text.trim()
-                        repository.addWorktree(pathField.text.trim(), branchField.text.trim(), mode, startPoint)
+                        repository.worktreeManager.addWorktree(pathField.text.trim(), branchField.text.trim(), mode, startPoint)
                         dialog.close()
                     }
                 }

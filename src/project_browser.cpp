@@ -1,4 +1,4 @@
-#include "repository_controller.hpp"
+#include "project_browser.hpp"
 
 #include "recent_projects.hpp"
 
@@ -8,7 +8,12 @@
 
 namespace GitNaga {
 
-QVariantList RepositoryController::directories(const QString &path) const
+ProjectBrowser::ProjectBrowser(QObject *parent)
+    : QObject(parent)
+{
+}
+
+QVariantList ProjectBrowser::directories(const QString &path) const
 {
     QVariantList entries;
     QDir directory(path.isEmpty() ? QDir::homePath() : path);
@@ -28,22 +33,22 @@ QVariantList RepositoryController::directories(const QString &path) const
     return entries;
 }
 
-QString RepositoryController::homeDirectory() const
+QString ProjectBrowser::homeDirectory() const
 {
     return QDir::homePath();
 }
 
-QStringList RepositoryController::recentProjects() const
+QStringList ProjectBrowser::recentProjects() const
 {
     return RecentProjects::load();
 }
 
-QVariantList RepositoryController::fuzzyMatchProjects(const QString &needle) const
+QVariantList ProjectBrowser::fuzzyMatchProjects(const QString &needle) const
 {
     return RecentProjects::fuzzyMatch(needle);
 }
 
-bool RepositoryController::looksLikeRepository(const QString &path) const
+bool ProjectBrowser::looksLikeRepository(const QString &path) const
 {
     if (path.isEmpty())
         return false;

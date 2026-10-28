@@ -90,7 +90,7 @@ Rectangle {
                     active: enabled
                     implicitHeight: 26
                     enabled: banner.conflicts === 0 && !banner.repository.busy
-                    onClicked: banner.repository.continueOperation()
+                    onClicked: banner.repository.operation.continueOperation()
                 }
                 ToolTip.visible: continueHover.hovered && banner.conflicts > 0
                 ToolTip.text: banner.conflicts === 1 ? qsTr("Resolve the conflicted file first")
@@ -104,7 +104,7 @@ Rectangle {
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Drop the commit being applied and go on with the next")
                 onClicked: confirm.ask(qsTr("Skip the commit being applied? Its changes are left out of the result."),
-                                       function() { banner.repository.skipOperation() })
+                                       function() { banner.repository.operation.skipOperation() })
             }
             Repeater {
                 model: banner.bisecting ? [["good", qsTr("Good")], ["bad", qsTr("Bad")], ["skip", qsTr("Skip")]] : []
@@ -115,7 +115,7 @@ Rectangle {
                     enabled: !banner.repository.busy
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Mark the checked-out commit %1").arg(modelData[0])
-                    onClicked: banner.repository.bisect(modelData[0])
+                    onClicked: banner.repository.operation.bisect(modelData[0])
                 }
             }
             NagaButton {
@@ -125,7 +125,7 @@ Rectangle {
                 onClicked: confirm.ask(banner.bisecting
                                        ? qsTr("End the bisect and return to where it started?")
                                        : qsTr("Abort the %1 and put everything back the way it was before it started?").arg(banner.kind),
-                                       function() { banner.repository.abortOperation() })
+                                       function() { banner.repository.operation.abortOperation() })
             }
         }
 

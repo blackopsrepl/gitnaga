@@ -13,7 +13,7 @@ CommitMenu {
         if (!current) {
             entries.push({ label: qsTr("Reset ") + name + qsTr(" to here…"), run: function() {
                 menu.confirm.ask(qsTr("Move ") + name + qsTr(" to ") + shortOid + qsTr("? Commits only it reached become unreachable."),
-                                 function() { repository.moveBranch(name, target) })
+                                 function() { repository.history.moveBranch(name, target) })
             } })
             return
         }
@@ -35,15 +35,15 @@ CommitMenu {
     }
 
     function addBranchPair(entries: var, source: string, target: string) {
-        entries.push({ label: qsTr("Merge ") + target + qsTr(" into ") + source, run: function() { repository.mergeBranchInto(target, source) } })
-        entries.push({ label: qsTr("Merge ") + source + qsTr(" into ") + target, run: function() { repository.mergeBranchInto(source, target) } })
+        entries.push({ label: qsTr("Merge ") + target + qsTr(" into ") + source, run: function() { repository.history.mergeBranchInto(target, source) } })
+        entries.push({ label: qsTr("Merge ") + source + qsTr(" into ") + target, run: function() { repository.history.mergeBranchInto(source, target) } })
         entries.push({ label: qsTr("Rebase ") + source + qsTr(" onto ") + target + qsTr("…"), destructive: true, run: function() {
             menu.confirm.ask(qsTr("Rebase ") + source + qsTr(" onto ") + target + qsTr("?"),
-                             function() { repository.rebaseBranch(source, target) })
+                             function() { repository.history.rebaseBranch(source, target) })
         } })
         entries.push({ label: qsTr("Rebase ") + target + qsTr(" onto ") + source + qsTr("…"), destructive: true, run: function() {
             menu.confirm.ask(qsTr("Rebase ") + target + qsTr(" onto ") + source + qsTr("?"),
-                             function() { repository.rebaseBranch(target, source) })
+                             function() { repository.history.rebaseBranch(target, source) })
         } })
     }
 
@@ -62,12 +62,12 @@ CommitMenu {
         var onOwnCommit = target === reference.oid
         var current = repository.currentBranch
         if (!onOwnCommit && current.length > 0 && name !== current && target === repository.headOid && !chip)
-            entries.push({ label: qsTr("Merge ") + name + qsTr(" into ") + current, run: function() { repository.mergeBranchInto(name, current) } })
+            entries.push({ label: qsTr("Merge ") + name + qsTr(" into ") + current, run: function() { repository.history.mergeBranchInto(name, current) } })
         if (!onOwnCommit && !chip) {
             var onto = label
             entries.push({ label: qsTr("Rebase ") + name + qsTr(" onto ") + onto + qsTr("…"), destructive: true, run: function() {
                 menu.confirm.ask(qsTr("Rebase ") + name + qsTr(" onto ") + onto + qsTr("?"),
-                                 function() { repository.rebaseBranch(name, onto === shortOid ? target : onto) })
+                                 function() { repository.history.rebaseBranch(name, onto === shortOid ? target : onto) })
             } })
         }
         if (!onOwnCommit)

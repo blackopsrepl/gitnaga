@@ -1,5 +1,9 @@
 #include "repository_controller.hpp"
 
+#include "history_editor.hpp"
+#include "operation_controller.hpp"
+#include "project_browser.hpp"
+#include "worktree_manager.hpp"
 #include "remote_sync.hpp"
 #include "perf_trace.hpp"
 
@@ -16,6 +20,10 @@ namespace GitNaga {
 RepositoryController::RepositoryController(QObject *parent)
     : QObject(parent)
     , m_sync(new RemoteSync(this))
+    , m_history(new HistoryEditor(this))
+    , m_operation(new OperationController(this))
+    , m_worktreeManager(new WorktreeManager(this))
+    , m_projects(new ProjectBrowser(this))
 {
     m_syncTimer.setSingleShot(true);
     m_syncTimer.setInterval(150);
@@ -81,14 +89,17 @@ int RepositoryController::selectedRow() const { return m_selectedRow; }
 int RepositoryController::selectedFile() const { return m_selectedFile; }
 QVariantList RepositoryController::references() const { return m_references; }
 QString RepositoryController::selectedOid() const { return m_selectedOid; }
-QString RepositoryController::selectedSubject() const { return m_selected.subject; }
-QString RepositoryController::selectedAuthor() const { return m_selected.author; }
-QString RepositoryController::selectedBody() const { return m_selected.body; }
-QStringList RepositoryController::selectedParents() const { return m_selected.parents; }
 
-QString RepositoryController::selectedDate() const
+QVariantMap RepositoryController::selectedCommit() const
 {
-    return m_selected.authoredAt.isValid() ? QLocale().toString(m_selected.authoredAt, QLocale::LongFormat) : QString();
+    return {
+        { QStringLiteral("subject"), m_selected.subject },
+        { QStringLiteral("author"), m_selected.author },
+        { QStringLiteral("date"), m_selected.authoredAt.isValid()
+                                      ? QLocale().toString(m_selected.authoredAt, QLocale::LongFormat) : QString() },
+        { QStringLiteral("body"), m_selected.body },
+        { QStringLiteral("parents"), m_selected.parents },
+    };
 }
 
 void RepositoryController::openRepository(const QUrl &url)

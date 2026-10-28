@@ -106,6 +106,8 @@ struct FileChange {
     // git tracks the path at all.
     bool staged = false;
     bool unstaged = false;
+    // The worktree's own status letter when it differs from the index's.
+    QString worktreeStatus;
     bool untracked = false;
     bool conflicted = false;
     bool submodule = false;

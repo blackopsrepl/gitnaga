@@ -17,7 +17,7 @@ class RepositoryController;
 // GITNAGA_DRIVE=<script.json> gitnaga
 //
 // Steps: {"open": path} {"idle": true} {"wait": ms} {"select": row|oid}
-// {"file": row} {"click": [x, y]} {"doubleClick": [x, y]} {"rightClick": [x, y]}
+// {"file": row} {"click": [x, y], "modifiers": "Shift"} {"doubleClick": [x, y]} {"rightClick": [x, y]}
 // {"hover": [x, y]} {"wheel": [x, y, angleDelta]} {"key": "Ctrl+K"} {"type": "text"} {"call": name, "args": [...]}
 // {"set": property, "value": v}  (names may be "sync.<member>")
 // {"drag": [x1, y1, x2, y2], "release": false} {"release": [x, y]}
@@ -34,7 +34,7 @@ public:
 private:
     void next();
     bool settled() const;
-    void click(const QPointF &point, Qt::MouseButton button, bool twice);
+    void click(const QPointF &point, Qt::MouseButton button, bool twice, Qt::KeyboardModifiers modifiers = {});
     void drag(const QPointF &from, const QPointF &to, bool release);
     void send(QEvent::Type type, const QPointF &point, Qt::MouseButton button, Qt::MouseButtons buttons);
     void hover(const QPointF &point);

@@ -1,6 +1,7 @@
 #include "git_client.hpp"
 #include "git_test_helpers.hpp"
 #include "repository_controller.hpp"
+#include "worktree_manager.hpp"
 
 #include <QDir>
 #include <QFile>
@@ -171,20 +172,20 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(controller.repositoryPath(), root, 5000);
         QCOMPARE(controller.worktrees().size(), 1);
 
-        controller.addWorktree(linkedPath, QStringLiteral("topic"), QStringLiteral("new"), {});
+        controller.worktreeManager()->addWorktree(linkedPath, QStringLiteral("topic"), QStringLiteral("new"), {});
         QTRY_COMPARE_WITH_TIMEOUT(controller.worktrees().size(), 2, 5000);
         QCOMPARE(operations.count(), 1);
         QVERIFY(operations.takeFirst().at(0).toBool());
-        controller.openWorktree(linkedPath);
+        controller.worktreeManager()->openWorktree(linkedPath);
         QTRY_COMPARE_WITH_TIMEOUT(controller.repositoryPath(), linkedPath, 5000);
-        controller.removeWorktree(linkedPath, true);
+        controller.worktreeManager()->removeWorktree(linkedPath, true);
         QCOMPARE(operations.count(), 1);
         QVERIFY(!operations.takeFirst().at(0).toBool());
         QVERIFY(QFile::exists(linkedPath + QStringLiteral("/base.txt")));
 
-        controller.openWorktree(root);
+        controller.worktreeManager()->openWorktree(root);
         QTRY_COMPARE_WITH_TIMEOUT(controller.repositoryPath(), root, 5000);
-        controller.removeWorktree(linkedPath, false);
+        controller.worktreeManager()->removeWorktree(linkedPath, false);
         QTRY_COMPARE_WITH_TIMEOUT(controller.worktrees().size(), 1, 5000);
         QVERIFY(!QDir(linkedPath).exists());
     }
@@ -199,7 +200,7 @@ private slots:
         QSignalSpy operations(&controller, &RepositoryController::operationFinished);
         controller.openRepositoryPath(root);
         QTRY_COMPARE_WITH_TIMEOUT(controller.repositoryPath(), root, 5000);
-        controller.addWorktree(linkedPath, QStringLiteral("topic"), QStringLiteral("new"), {});
+        controller.worktreeManager()->addWorktree(linkedPath, QStringLiteral("topic"), QStringLiteral("new"), {});
         QTRY_COMPARE_WITH_TIMEOUT(controller.worktrees().size(), 2, 5000);
         QTRY_COMPARE_WITH_TIMEOUT(operations.count(), 1, 5000);
         operations.clear();
@@ -208,11 +209,11 @@ private slots:
         runGit(root, { QStringLiteral("config"), QStringLiteral("gc.worktreePruneExpire"), QStringLiteral("now") });
         controller.refresh();
         QTRY_VERIFY_WITH_TIMEOUT(controller.worktrees().at(1).toMap().value(QStringLiteral("isPrunable")).toBool(), 5000);
-        controller.openWorktree(linkedPath);
+        controller.worktreeManager()->openWorktree(linkedPath);
         QCOMPARE(operations.count(), 1);
         QVERIFY(!operations.takeFirst().at(0).toBool());
         QCOMPARE(controller.repositoryPath(), root);
-        controller.removeWorktree(linkedPath, true);
+        controller.worktreeManager()->removeWorktree(linkedPath, true);
         QCOMPARE(operations.count(), 1);
         QVERIFY(!operations.takeFirst().at(0).toBool());
     }

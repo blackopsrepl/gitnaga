@@ -186,7 +186,7 @@ Dialog {
                             keepFocus: true
                             enabled: !dialog.repository.busy && !row.modelData.isCurrent && !row.modelData.isPrunable
                             onClicked: {
-                                dialog.repository.openWorktree(row.modelData.path)
+                                dialog.repository.worktreeManager.openWorktree(row.modelData.path)
                                 dialog.close()
                             }
                         }
@@ -196,8 +196,8 @@ Dialog {
                             keepFocus: true
                             enabled: !dialog.repository.busy
                             onClicked: row.modelData.isLocked
-                                ? dialog.repository.unlockWorktree(row.modelData.path)
-                                : dialog.repository.lockWorktree(row.modelData.path, lockReason.text.trim())
+                                ? dialog.repository.worktreeManager.unlockWorktree(row.modelData.path)
+                                : dialog.repository.worktreeManager.lockWorktree(row.modelData.path, lockReason.text.trim())
                         }
                         NagaButton {
                             visible: !row.modelData.isMain && !row.modelData.isBare && !row.modelData.isCurrent && !row.modelData.isPrunable
@@ -264,7 +264,7 @@ Dialog {
         standardButtons: Dialog.Ok | Dialog.Cancel
         title: qsTr("Move Worktree")
         onAccepted: if (destination.text.trim().length > 0)
-            dialog.repository.moveWorktree(sourcePath, destination.text.trim())
+            dialog.repository.worktreeManager.moveWorktree(sourcePath, destination.text.trim())
 
         function openFor(path) {
             sourcePath = path
@@ -289,11 +289,11 @@ Dialog {
         property string targetPath: ""
         onConfirmed: {
             if (action === "remove")
-                dialog.repository.removeWorktree(targetPath, forceRemoval.checked)
+                dialog.repository.worktreeManager.removeWorktree(targetPath, forceRemoval.checked)
             else if (action === "prune")
-                dialog.repository.pruneWorktrees()
+                dialog.repository.worktreeManager.pruneWorktrees()
             else if (action === "repair")
-                dialog.repository.repairWorktrees()
+                dialog.repository.worktreeManager.repairWorktrees()
         }
     }
 }

@@ -28,13 +28,13 @@ Dialog {
         error = ""
         messageArea.text = ""
         open()
-        repository.requestRebasePlan(target)
+        repository.history.requestRebasePlan(target)
     }
 
-    onAccepted: if (messageArea.text.trim().length > 0) repository.rewordCommit(oid, messageArea.text)
+    onAccepted: if (messageArea.text.trim().length > 0) repository.history.rewordCommit(oid, messageArea.text)
 
     Connections {
-        target: dialog.repository
+        target: dialog.repository.history
         function onRebasePlanReady(plan) {
             if (!dialog.loading || plan.oid !== dialog.oid)
                 return

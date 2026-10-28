@@ -18,7 +18,8 @@ add_library(gitnaga_core STATIC
     src/commit_model.hpp
     src/conflict_parser.cpp
     src/conflict_parser.hpp
-    src/filesystem_operations.cpp
+    src/project_browser.cpp
+    src/project_browser.hpp
     src/diff_line_model.cpp
     src/diff_line_model.hpp
     src/file_change_model.cpp
@@ -30,6 +31,8 @@ add_library(gitnaga_core STATIC
     src/git_worktrees.cpp
     src/git_history.cpp
     src/git_status.cpp
+    src/git_staging.cpp
+    src/git_staging.hpp
     src/git_inspect.cpp
     src/git_parse.cpp
     src/git_parse.hpp
@@ -48,16 +51,23 @@ add_library(gitnaga_core STATIC
     src/operation_status.hpp
     src/rebase_todo.cpp
     src/rebase_todo.hpp
+    src/patch_builder.cpp
+    src/patch_builder.hpp
     src/recent_projects.cpp
     src/recent_projects.hpp
-    src/repository_conflicts.cpp
+    src/operation_controller.cpp
+    src/operation_controller.hpp
     src/repository_controller.cpp
     src/repository_controller.hpp
-    src/repository_worktrees.cpp
+    src/worktree_manager.cpp
+    src/worktree_manager.hpp
     src/repository_loading.cpp
     src/repository_operations.cpp
-    src/repository_rebase.cpp
+    src/history_editor.cpp
+    src/history_editor.hpp
     src/repository_selection.cpp
+    src/repository_staging.cpp
+    src/repository_commit.cpp
     src/repository_references.cpp
     src/remote_sync.cpp
     src/remote_sync.hpp
@@ -133,6 +143,15 @@ qt_add_qml_module(gitnaga
         qml/SyncToolbar.qml
         qml/UpstreamDialog.qml
         qml/UndoButton.qml
+        qml/DiffSelection.qml
+        qml/HunkActions.qml
+        qml/LineActionBar.qml
+        qml/StageableDiff.qml
+        qml/StashDialog.qml
+        qml/WipComposer.qml
+        qml/WipFileRow.qml
+        qml/WipFileSection.qml
+        qml/WipFiles.qml
 )
 
 target_compile_definitions(gitnaga PRIVATE

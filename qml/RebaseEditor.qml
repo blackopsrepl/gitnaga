@@ -55,7 +55,7 @@ Popup {
         stepsModel.clear()
         open()
         if (loading)
-            repository.requestRebasePlan(oid)
+            repository.history.requestRebasePlan(oid)
     }
 
     function step(i) { return stepsModel.get(i) }
@@ -113,7 +113,7 @@ Popup {
             if (step(j).action === "squash")
                 messages.push(step(j).original)
         }
-        return repository.combineMessages(messages).replace(/\s+$/, "")
+        return repository.history.combineMessages(messages).replace(/\s+$/, "")
     }
     function setMessage(i, text) {
         stepsModel.setProperty(i, "message", text)
@@ -183,7 +183,7 @@ Popup {
         }
         error = ""
         running = true
-        repository.startInteractiveRebase(base, steps, body.autostash)
+        repository.history.startInteractiveRebase(base, steps, body.autostash)
     }
     function openActionMenu(i: int, anchor: Item) {
         actionMenu.row = i
@@ -194,7 +194,7 @@ Popup {
     }
 
     Connections {
-        target: editor.repository
+        target: editor.repository.history
         function onRebasePlanReady(plan) {
             if (plan.oid !== editor.pendingOid || !editor.loading)
                 return

@@ -12,9 +12,9 @@ Dialog {
 
     property string currentPath: ""
     property var entries: []
-    readonly property bool currentIsRepository: repository.looksLikeRepository(currentPath)
+    readonly property bool currentIsRepository: repository.projects.looksLikeRepository(currentPath)
     // Remembered projects that match the search, best first.
-    readonly property var recentsModel: repository.fuzzyMatchProjects(searchField.text)
+    readonly property var recentsModel: repository.projects.fuzzyMatchProjects(searchField.text)
     signal acceptedPath(string path)
 
     modal: true
@@ -30,13 +30,13 @@ Dialog {
     }
 
     function openAt(path) {
-        currentPath = path && path.length > 0 ? path : repository.homeDirectory()
+        currentPath = path && path.length > 0 ? path : repository.projects.homeDirectory()
         searchField.text = currentPath
         refresh()
         open()
     }
     function refresh() {
-        entries = repository.directories(currentPath)
+        entries = repository.projects.directories(currentPath)
     }
     function navigateTo(path) {
         if (path && path.length > 0) {
@@ -89,8 +89,8 @@ Dialog {
             selectByMouse: true
             onTextChanged: dialog.navigateTo(text)
             onAccepted: {
-                const matches = repository.fuzzyMatchProjects(text)
-                if (matches.length > 0 && repository.looksLikeRepository(matches[0].path))
+                const matches = repository.projects.fuzzyMatchProjects(text)
+                if (matches.length > 0 && repository.projects.looksLikeRepository(matches[0].path))
                     dialog.accept(matches[0].path)
                 else if (dialog.currentIsRepository)
                     dialog.accept(dialog.currentPath)

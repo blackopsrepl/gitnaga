@@ -1,5 +1,6 @@
 #include "git_client.hpp"
 #include "git_test_helpers.hpp"
+#include "history_editor.hpp"
 #include "repository_controller.hpp"
 
 #include <QSignalSpy>
@@ -76,18 +77,18 @@ private slots:
         controller.openRepositoryPath(m_root);
         settle(controller);
         const auto head = controller.headOid();
-        QVERIFY(controller.reachableFromHead(git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD~2") })));
-        QVERIFY(!controller.reachableFromHead(git({ QStringLiteral("rev-parse"), QStringLiteral("topic") })));
+        QVERIFY(controller.history()->reachableFromHead(git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD~2") })));
+        QVERIFY(!controller.history()->reachableFromHead(git({ QStringLiteral("rev-parse"), QStringLiteral("topic") })));
 
-        controller.rebaseBranch(QStringLiteral("topic"), QStringLiteral("main"));
+        controller.history()->rebaseBranch(QStringLiteral("topic"), QStringLiteral("main"));
         settle(controller);
         QCOMPARE(git({ QStringLiteral("rev-parse"), QStringLiteral("topic~1") }), head);
 
-        controller.mergeBranchInto(QStringLiteral("main"), QStringLiteral("topic"));
+        controller.history()->mergeBranchInto(QStringLiteral("main"), QStringLiteral("topic"));
         settle(controller);
         QCOMPARE(controller.currentBranch(), QStringLiteral("topic"));
 
-        controller.moveBranch(QStringLiteral("main"), git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD") }));
+        controller.history()->moveBranch(QStringLiteral("main"), git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD") }));
         settle(controller);
         QCOMPARE(git({ QStringLiteral("rev-parse"), QStringLiteral("main") }), git({ QStringLiteral("rev-parse"), QStringLiteral("topic") }));
         QVERIFY(controller.lastOperationOk());
@@ -98,8 +99,8 @@ private slots:
         RepositoryController controller;
         controller.openRepositoryPath(m_root);
         settle(controller);
-        QSignalSpy plans(&controller, &RepositoryController::rebasePlanReady);
-        controller.requestRebasePlan(git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD~1") }));
+        QSignalSpy plans(controller.history(), &HistoryEditor::rebasePlanReady);
+        controller.history()->requestRebasePlan(git({ QStringLiteral("rev-parse"), QStringLiteral("HEAD~1") }));
         QTRY_COMPARE_WITH_TIMEOUT(plans.size(), 1, 5000);
         auto plan = plans.first().first().toMap();
         QVERIFY(plan.value(QStringLiteral("ok")).toBool());
@@ -110,7 +111,7 @@ private slots:
         first.insert(QStringLiteral("message"), QStringLiteral("renamed"));
         auto second = steps.at(1).toMap();
         second.insert(QStringLiteral("action"), QStringLiteral("squash"));
-        controller.startInteractiveRebase(plan.value(QStringLiteral("base")).toString(), { first, second }, false);
+        controller.history()->startInteractiveRebase(plan.value(QStringLiteral("base")).toString(), { first, second }, false);
         settle(controller);
         QVERIFY2(controller.lastOperationOk(), qPrintable(controller.operationMessage()));
         QCOMPARE(git({ QStringLiteral("log"), QStringLiteral("-1"), QStringLiteral("--format=%B") }),
