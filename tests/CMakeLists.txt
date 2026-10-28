@@ -51,3 +51,9 @@ qt_add_executable(gitnaga_controller_test
 )
 target_link_libraries(gitnaga_controller_test PRIVATE gitnaga_core Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME gitnaga_controller_test COMMAND gitnaga_controller_test)
+
+qt_add_executable(gitnaga_sync_test
+    git_sync_test.cpp
+)
+target_link_libraries(gitnaga_sync_test PRIVATE gitnaga_core Qt6::Core Qt6::Test)
+add_test(NAME gitnaga_sync_test COMMAND gitnaga_sync_test)
